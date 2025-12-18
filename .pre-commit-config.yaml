@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-xml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        entry: prettier --write --ignore-unknown
+        language: node
+        additional_dependencies: ["prettier@3.7.4"]
+      - id: spotless-apply
+        name: Spotless Apply
+        entry: ./gradlew spotlessApply
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: check
+        name: Check
+        entry: ./gradlew check
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
