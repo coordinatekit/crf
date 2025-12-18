@@ -1,0 +1,7 @@
+dependencies {
+    api project(":core")
+    implementation("cc.mallet:mallet:2.0.8") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "ch.qos.logback:logback-classic:1.5.22"
+}

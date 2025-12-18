@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
-import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.jspecify.annotations.NullMarked;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
