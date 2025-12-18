@@ -1,0 +1,22 @@
+<!--
+  ~ Copyright 2025-present Andy Marek
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<Collection>
+	<Sequence><StreetNumber>5521</StreetNumber> <Unknown>W</Unknown> <Unknown>Center</Unknown> <Unknown>St,</Unknown> <Unknown>Milwaukee,</Unknown> <Unknown>WI</Unknown> <Unknown>53210</Unknown></Sequence>
+	<Sequence><StreetNumber>210</StreetNumber> <Unknown>E</Unknown> <Unknown>400</Unknown> <Unknown>S,</Unknown> <Unknown>Salt</Unknown> <Unknown>Lake</Unknown> <Unknown>City,</Unknown> <Unknown>UT</Unknown> <Unknown>84111</Unknown></Sequence>
+	<Sequence><StreetNumber>W180</StreetNumber> <StreetNumber>N8000</StreetNumber> <Unknown>Town</Unknown> <Unknown>Hall</Unknown> <Unknown>Rd,</Unknown> <Unknown>Menomonee</Unknown> <Unknown>Falls,</Unknown> <Unknown>WI</Unknown> <Unknown>53051</Unknown></Sequence>
+	<Sequence><StreetNumber>N416</StreetNumber> <Unknown>Co</Unknown> <Unknown>Rd</Unknown> <Unknown>577,</Unknown> <Unknown>Menominee,</Unknown> <Unknown>MI</Unknown> <Unknown>49858</Unknown></Sequence>
+	<Sequence><StreetNumber>13207</StreetNumber> <Unknown>County</Unknown> <Unknown>Rd</Unknown> <Unknown>G,</Unknown> <Unknown>Caledonia,</Unknown> <Unknown>WI</Unknown></Sequence>
+</Collection>

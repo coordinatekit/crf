@@ -1,3 +1,4 @@
 rootProject.name = "crf"
 
 include "core"
+include "mallet"
