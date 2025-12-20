@@ -62,8 +62,7 @@ class MalletCrfTrainerTest {
             TagProvider<String> tagProvider,
             Map<String, Double> expectedStates,
             Map<String, Set<String>> expectedTransitions
-    ) {
-    }
+    ) {}
 
     static Stream<CreateCrfParameters> createCrf() {
         return Stream.of(
@@ -203,8 +202,7 @@ class MalletCrfTrainerTest {
             @Nullable MalletCrfTrainerConfiguration configuration,
             boolean expectedUseSparseWeights,
             boolean expectedUseSomeUnsupportedTrick
-    ) {
-    }
+    ) {}
 
     static Stream<CreateCrfTrainerParameters> createCrfTrainer() {
         return Stream.of(
@@ -304,8 +302,7 @@ class MalletCrfTrainerTest {
             @Nullable MalletCrfTrainerConfiguration configuration,
             int expectedTrainingSize,
             int expectedTestSize
-    ) {
-    }
+    ) {}
 
     static Stream<SplitTrainingDataParameters> splitTrainingData() {
         return Stream.of(
@@ -397,8 +394,7 @@ class MalletCrfTrainerTest {
         assertEquals("StreetNumber", ((LabelSequence) actual.getTarget()).getLabelAtPosition(0).getEntry());
     }
 
-    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {
-    }
+    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {}
 
     static Stream<TrainParameters> train() {
         return Stream.of(
@@ -516,8 +512,7 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_producesDeserializableModel(@TempDir Path temporaryDirectory)
-            throws IOException {
+    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException {
         // ARRANGE
         var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
         Path modelPath = temporaryDirectory.resolve("model.ser");
