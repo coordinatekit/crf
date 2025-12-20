@@ -33,6 +33,8 @@ public interface Tokenizer {
      *
      * @param input the raw text to tokenize
      * @return a sequence containing the tokens
+     * @throws InvalidInputException if the input string is empty or blank
+     * @throws NullPointerException if the input string is null
      */
     InputSequence tokenize(String input);
 }

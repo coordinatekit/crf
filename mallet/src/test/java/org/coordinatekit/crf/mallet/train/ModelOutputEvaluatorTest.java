@@ -19,17 +19,12 @@ import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByLabelLikelihood;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
-import cc.mallet.types.Alphabet;
-import cc.mallet.types.FeatureVector;
-import cc.mallet.types.FeatureVectorSequence;
-import cc.mallet.types.Instance;
-import cc.mallet.types.InstanceList;
-import cc.mallet.types.LabelAlphabet;
-import cc.mallet.types.LabelSequence;
+import cc.mallet.types.*;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.read.ListAppender;
+import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +35,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,12 +46,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @NullMarked
 class ModelOutputEvaluatorTest {
@@ -146,7 +135,7 @@ class ModelOutputEvaluatorTest {
 
     @MethodSource
     @ParameterizedTest
-    void evaluate(EvaluateParameters parameters) throws ClassNotFoundException, IOException {
+    void evaluate(EvaluateParameters parameters) throws IOException {
         // ARRANGE //
         InstanceList trainingData = createTrainingData();
 
@@ -183,7 +172,7 @@ class ModelOutputEvaluatorTest {
         // ASSERT //
         assertIterableEquals(new TreeSet<>(parameters.expectedFiles()), listDirectory(temporaryDirectory));
         for (Path expectedFile : parameters.expectedFiles()) {
-            CRF readCrf = deserialize(CRF.class, temporaryDirectory.resolve(expectedFile));
+            CRF readCrf = Serializables.deserialize(CRF.class, temporaryDirectory.resolve(expectedFile));
             assertAll(
                     String.format("expectedFile: %s", expectedFile),
                     () -> assertEquals(trainingData.getAlphabet(), readCrf.getInputAlphabet()),
@@ -335,15 +324,6 @@ class ModelOutputEvaluatorTest {
                 );
 
         return instances;
-    }
-
-    @SuppressWarnings({"SameParameterValue", "unchecked"})
-    private static <T> T deserialize(Class<T> clazz, Path file) throws ClassNotFoundException, IOException {
-        try (ObjectInputStream s = new ObjectInputStream(Files.newInputStream(file))) {
-            Object readObject = s.readObject();
-            assertInstanceOf(clazz, readObject, "Deserialized object should be of expected type");
-            return (T) readObject;
-        }
     }
 
     private static SortedSet<Path> listDirectory(Path directory) throws IOException {

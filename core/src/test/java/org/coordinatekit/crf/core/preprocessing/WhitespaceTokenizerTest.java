@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WhitespaceTokenizerTest {
     record TokenizeParameters(String input, List<String> expectedTokens) {}
@@ -36,7 +37,7 @@ class WhitespaceTokenizerTest {
                 new TokenizeParameters("Hello  world", List.of("Hello", "world")),
                 new TokenizeParameters("Hello\tworld", List.of("Hello", "world")),
                 new TokenizeParameters("Hello\nworld", List.of("Hello", "world")),
-                new TokenizeParameters("  Hello  world  ", List.of("", "Hello", "world")),
+                new TokenizeParameters("  Hello  world  ", List.of("Hello", "world")),
                 new TokenizeParameters("one two three four", List.of("one", "two", "three", "four"))
         );
     }
@@ -49,6 +50,40 @@ class WhitespaceTokenizerTest {
         var result = tokenizer.tokenize(parameters.input());
 
         assertIterableEquals(parameters.expectedTokens(), result.stream().map(PositionedToken::token).toList());
+    }
+
+    record TokenizeExceptionParameters(
+            String input,
+            Class<? extends RuntimeException> expectedClass,
+            String expectedMessage
+    ) {}
+
+    static Stream<TokenizeExceptionParameters> tokenize_exception() {
+        return Stream.of(
+                new TokenizeExceptionParameters(null, NullPointerException.class, "The input string may not be null."),
+                new TokenizeExceptionParameters(
+                        "",
+                        InvalidInputException.class,
+                        "The input sequence `` is invalid with the following reason: `The input string is empty`."
+                ),
+                new TokenizeExceptionParameters(
+                        "   ",
+                        InvalidInputException.class,
+                        "The input sequence `   ` is invalid with the following reason: `The input string is blank`."
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void tokenize_exception(TokenizeExceptionParameters parameters) {
+        var tokenizer = new WhitespaceTokenizer();
+
+        RuntimeException exception = assertThrows(
+                parameters.expectedClass(),
+                () -> tokenizer.tokenize(parameters.input())
+        );
+        assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
     @Test
