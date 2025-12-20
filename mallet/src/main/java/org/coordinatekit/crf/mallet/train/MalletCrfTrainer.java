@@ -30,13 +30,12 @@ import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.train.CrfTrainer;
+import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -296,8 +295,6 @@ public class MalletCrfTrainer<F, T> implements CrfTrainer {
             }
         }
 
-        try (ObjectOutputStream s = new ObjectOutputStream(Files.newOutputStream(modelPath))) {
-            s.writeObject(crf);
-        }
+        Serializables.serialize(crf, modelPath);
     }
 }

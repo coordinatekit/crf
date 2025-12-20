@@ -19,12 +19,12 @@ import cc.mallet.fst.Transducer;
 import cc.mallet.fst.TransducerEvaluator;
 import cc.mallet.fst.TransducerTrainer;
 import cc.mallet.types.InstanceList;
+import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -120,8 +120,6 @@ public class ModelOutputEvaluator extends TransducerEvaluator {
             Files.createDirectories(parentDir);
         }
 
-        try (ObjectOutputStream objectOut = new ObjectOutputStream(Files.newOutputStream(outputFile))) {
-            objectOut.writeObject(transducer);
-        }
+        Serializables.serialize(transducer, outputFile);
     }
 }

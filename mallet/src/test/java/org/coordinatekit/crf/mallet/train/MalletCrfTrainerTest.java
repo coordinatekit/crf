@@ -18,17 +18,14 @@ package org.coordinatekit.crf.mallet.train;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
-import cc.mallet.types.Alphabet;
-import cc.mallet.types.FeatureVectorSequence;
-import cc.mallet.types.InstanceList;
-import cc.mallet.types.LabelAlphabet;
-import cc.mallet.types.LabelSequence;
+import cc.mallet.types.*;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.XmlTrainingDataSequencer;
+import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -38,30 +35,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @NullMarked
 class MalletCrfTrainerTest {
@@ -440,8 +421,7 @@ class MalletCrfTrainerTest {
 
     @MethodSource
     @ParameterizedTest
-    void train(TrainParameters parameters, @TempDir Path temporaryDirectory)
-            throws IOException, ClassNotFoundException {
+    void train(TrainParameters parameters, @TempDir Path temporaryDirectory) throws IOException {
         // ARRANGE
         var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
         Path modelPath = temporaryDirectory.resolve("model.ser");
@@ -461,7 +441,7 @@ class MalletCrfTrainerTest {
         assertTrue(Files.size(modelPath) > 0, "Model file should not be empty");
 
         // Verify model can be deserialized and has correct structure
-        CRF deserializedCrf = deserializeCrf(modelPath);
+        CRF deserializedCrf = Serializables.deserialize(CRF.class, modelPath);
         assertNotNull(deserializedCrf, "Deserialized CRF should not be null");
         assertEquals(
                 parameters.expectedNumStates(),
@@ -532,8 +512,7 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_producesDeserializableModel(@TempDir Path temporaryDirectory)
-            throws IOException, ClassNotFoundException {
+    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException {
         // ARRANGE
         var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
         Path modelPath = temporaryDirectory.resolve("model.ser");
@@ -552,7 +531,7 @@ class MalletCrfTrainerTest {
         trainer.train(trainingPath, modelPath);
 
         // ASSERT
-        CRF deserializedCrf = deserializeCrf(modelPath);
+        CRF deserializedCrf = Serializables.deserialize(CRF.class, modelPath);
 
         // Verify alphabets are preserved
         assertNotNull(deserializedCrf.getInputAlphabet(), "Input alphabet should not be null");
@@ -635,13 +614,5 @@ class MalletCrfTrainerTest {
         // ASSERT - same seed should produce identical splits
         assertEquals(split1.training().size(), split2.training().size(), "Training sizes should be equal");
         assertEquals(split1.test().size(), split2.test().size(), "Test sizes should be equal");
-    }
-
-    private static CRF deserializeCrf(Path modelPath) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(modelPath))) {
-            Object obj = ois.readObject();
-            assertInstanceOf(CRF.class, obj, "Deserialized object should be a CRF");
-            return (CRF) obj;
-        }
     }
 }

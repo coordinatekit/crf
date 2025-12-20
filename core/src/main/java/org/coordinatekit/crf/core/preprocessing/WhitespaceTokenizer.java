@@ -18,6 +18,7 @@ package org.coordinatekit.crf.core.preprocessing;
 import org.coordinatekit.crf.core.InputSequence;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * A tokenizer that splits input on whitespace characters.
@@ -35,9 +36,20 @@ public class WhitespaceTokenizer implements Tokenizer {
      *
      * <p>
      * Splits the input on whitespace using the regex pattern {@code \s+}.
+     *
+     * @throws InvalidInputException if the input string is empty or blank
+     * @throws NullPointerException if the input string is null
      */
     @Override
     public InputSequence tokenize(String input) {
-        return new InputSequence(Arrays.asList(input.split("\\s+")));
+        Objects.requireNonNull(input, "The input string may not be null.");
+
+        if (input.isEmpty()) {
+            throw new InvalidInputException(input, "The input string is empty");
+        } else if (input.isBlank()) {
+            throw new InvalidInputException(input, "The input string is blank");
+        }
+
+        return new InputSequence(Arrays.asList(input.stripLeading().split("\\s+")));
     }
 }
