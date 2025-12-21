@@ -17,8 +17,8 @@ package org.coordinatekit.crf.mallet.model;
 
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.XmlTrainingDataSequencer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
 import org.jspecify.annotations.NullMarked;
@@ -61,7 +61,7 @@ public enum PartsOfSpeechModel {
         var trainer = new MalletCrfTrainer<>(
                 featureExtractor(),
                 tagProvider(),
-                new XmlTrainingDataSequencer<>(tagProvider()),
+                new XmlTrainingData<>(tagProvider()),
                 MalletCrfTrainerConfiguration.builder().conllOutputEnabled(false).modelOutputEnabled(false)
                         .trainingFraction(1).build()
         );

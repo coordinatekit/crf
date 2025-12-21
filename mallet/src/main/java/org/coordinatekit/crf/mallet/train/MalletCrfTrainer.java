@@ -26,8 +26,8 @@ import cc.mallet.types.InstanceList;
 import cc.mallet.types.LabelAlphabet;
 import cc.mallet.types.LabelSequence;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.train.CrfTrainer;
 import org.coordinatekit.crf.core.util.Serializables;
@@ -37,9 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Random;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A CRF trainer implementation using the MALLET (MAchine Learning for LanguagE Toolkit) library.
@@ -72,7 +73,7 @@ import java.util.stream.Collectors;
  * @see CrfTrainer
  */
 @NullMarked
-public class MalletCrfTrainer<F, T> implements CrfTrainer {
+public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer {
     private static final Logger logger = LoggerFactory.getLogger(MalletCrfTrainer.class);
 
     protected final FeatureExtractor<F> featureExtractor;
@@ -222,7 +223,7 @@ public class MalletCrfTrainer<F, T> implements CrfTrainer {
      * Reads training data and splits it into training and test sets.
      *
      * <p>
-     * This method reads sequences from the specified path using the configured
+     * This method reads sequences from the specified paths using the configured
      * {@link TrainingDataSequencer}, converts each sequence to a MALLET {@link Instance}, and splits
      * the resulting data according to {@link MalletCrfTrainerConfiguration#trainingFraction()}.
      *
@@ -231,17 +232,22 @@ public class MalletCrfTrainer<F, T> implements CrfTrainer {
      * reproducibility. If the training fraction is 1.0 or greater, all data is placed in the training
      * set and the test set will be empty.
      *
-     * @param trainingPath the path to the training data file
+     * @param trainingPaths the paths to the training data file
      * @return a {@link TrainingTestSplit} containing the partitioned data
      * @throws IOException if an error occurs reading the training data
      */
-    protected TrainingTestSplit splitTrainingData(Path trainingPath) throws IOException {
+    protected TrainingTestSplit splitTrainingData(Collection<Path> trainingPaths) throws IOException {
         Alphabet dataAlphabet = new Alphabet();
         LabelAlphabet targetAlphabet = new LabelAlphabet();
+        InstanceList allTrainingData = new InstanceList(dataAlphabet, targetAlphabet);
 
-        var allTrainingData = trainingDataSequencer.read(trainingPath)
-                .map(trainingSequence -> mapSequenceToInstance(dataAlphabet, targetAlphabet, trainingSequence))
-                .collect(Collectors.toCollection(() -> new InstanceList(dataAlphabet, targetAlphabet)));
+        for (Path trainingPath : trainingPaths) {
+            try (Stream<TrainingSequence<T>> trainingData = trainingDataSequencer.read(trainingPath)) {
+                trainingData
+                        .map(trainingSequence -> mapSequenceToInstance(dataAlphabet, targetAlphabet, trainingSequence))
+                        .forEach(allTrainingData::add);
+            }
+        }
 
         if (configuration.trainingFraction() >= 1.0) {
             return new SimpleTrainingTestSplit(allTrainingData, new InstanceList(dataAlphabet, targetAlphabet));
@@ -256,8 +262,8 @@ public class MalletCrfTrainer<F, T> implements CrfTrainer {
     }
 
     @Override
-    public void train(Path trainingPath, Path modelPath) throws IOException {
-        TrainingTestSplit trainingTestSplit = splitTrainingData(trainingPath);
+    public void train(Collection<Path> trainingPaths, Path modelPath) throws IOException {
+        TrainingTestSplit trainingTestSplit = splitTrainingData(trainingPaths);
         CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(trainingTestSplit.test(), "test");
 
         CRF crf = createCrf(trainingTestSplit.training());
