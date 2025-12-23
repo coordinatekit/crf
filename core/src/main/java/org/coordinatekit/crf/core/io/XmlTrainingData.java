@@ -94,9 +94,9 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingSchemaG
      * The target namespace is used when generating XSD schemas and defines the namespace for tag
      * elements in the schema.
      *
-     * @param tagProvider     the provider for encoding and decoding tags
+     * @param tagProvider the provider for encoding and decoding tags
      * @param targetNamespace the target namespace URI for generated schemas, or {@code null} if schema
-     *                        generation is not needed
+     *        generation is not needed
      */
     public XmlTrainingData(TagProvider<T> tagProvider, @Nullable String targetNamespace) {
         this.tagProvider = tagProvider;
@@ -213,7 +213,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingSchemaG
     /**
      * Writes a single element declaration for a tag.
      *
-     * @param writer  the XML stream writer to write the element declaration to
+     * @param writer the XML stream writer to write the element declaration to
      * @param tagName the name of the tag element to declare
      * @throws XMLStreamException if an error occurs while writing
      */
@@ -272,7 +272,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingSchemaG
          * Constructs a new sequence iterator.
          *
          * @param tagProvider the provider for decoding tag names
-         * @param reader      the XML stream reader positioned at the start of the document
+         * @param reader the XML stream reader positioned at the start of the document
          */
         SequenceIterator(TagProvider<T> tagProvider, XMLStreamReader reader) {
             this.reader = reader;
