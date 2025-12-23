@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.core.preprocessing;
 
 import org.coordinatekit.crf.core.Sequence;
+import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Iterator;
@@ -68,7 +69,7 @@ public class TrainingSequence<T> implements Sequence<TrainingPositionedToken<T>>
 
         this.tokens = IntStream.range(0, tokens.size())
                 .<TrainingPositionedToken<T>>mapToObj(
-                        index -> new TrainingSequenceToken<T>(index, tags.get(index), tokens.get(index))
+                        index -> new TrainingSequenceToken<>(index, tags.get(index), tokens.get(index))
                 ).toList();
     }
 

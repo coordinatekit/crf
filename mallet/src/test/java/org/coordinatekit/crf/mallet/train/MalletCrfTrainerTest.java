@@ -21,10 +21,10 @@ import cc.mallet.fst.Transducer;
 import cc.mallet.types.*;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.io.TrainingDataSequencer;
+import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
-import org.coordinatekit.crf.core.preprocessing.XmlTrainingDataSequencer;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -159,11 +159,11 @@ class MalletCrfTrainerTest {
 
     @MethodSource
     @ParameterizedTest
-    void createCrf(CreateCrfParameters parameters) throws IOException {
+    void createCrf(CreateCrfParameters parameters) {
         var trainer = createMalletCrfTrainer(
                 SIMPLE_FEATURE_EXTRACTOR,
                 parameters.tagProvider(),
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 parameters.configuration()
         );
 
@@ -229,12 +229,11 @@ class MalletCrfTrainerTest {
 
     @MethodSource
     @ParameterizedTest
-    void createCrfTrainer(CreateCrfTrainerParameters parameters)
-            throws IOException, NoSuchFieldException, IllegalAccessException {
+    void createCrfTrainer(CreateCrfTrainerParameters parameters) throws NoSuchFieldException, IllegalAccessException {
         var trainer = createMalletCrfTrainer(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 parameters.configuration()
         );
 
@@ -258,7 +257,7 @@ class MalletCrfTrainerTest {
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static <F, T> MalletCrfTrainer<F, T> createMalletCrfTrainer(
+    private static <F, T extends Comparable<T>> MalletCrfTrainer<F, T> createMalletCrfTrainer(
             FeatureExtractor<F> featureExtractor,
             TagProvider<T> tagProvider,
             TrainingDataSequencer<T> trainingDataSequencer,
@@ -269,13 +268,13 @@ class MalletCrfTrainerTest {
                 : new MalletCrfTrainer<>(featureExtractor, tagProvider, trainingDataSequencer);
     }
 
-    private InstanceList createTrainingInstanceList(MalletCrfTrainer<String, String> trainer) throws IOException {
+    private InstanceList createTrainingInstanceList(MalletCrfTrainer<String, String> trainer) {
         Alphabet dataAlphabet = new Alphabet();
         LabelAlphabet targetAlphabet = new LabelAlphabet();
 
         InputStream trainingDataStream = Objects.requireNonNull(getClass().getResourceAsStream(TRAINING_DATA_RESOURCE));
-        List<TrainingSequence<String>> trainingSequences = new XmlTrainingDataSequencer<>(TAG_PROVIDER)
-                .read(trainingDataStream).toList();
+        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER).read(trainingDataStream)
+                .toList();
 
         return trainingSequences.stream().map(seq -> trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, seq))
                 .collect(Collectors.toCollection(() -> new InstanceList(dataAlphabet, targetAlphabet)));
@@ -335,12 +334,12 @@ class MalletCrfTrainerTest {
         var trainer = createMalletCrfTrainer(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 parameters.configuration()
         );
 
         var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
-        var split = trainer.splitTrainingData(trainingPath);
+        var split = trainer.splitTrainingData(Collections.singleton(trainingPath));
 
         assertNotNull(split);
         assertNotNull(split.training());
@@ -354,7 +353,7 @@ class MalletCrfTrainerTest {
 
     @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
     @Test
-    void mapSequenceToInstance() throws IOException {
+    void mapSequenceToInstance() {
         List<String> sequence = List.of("5521", "W", "Center", "St,", "Milwaukee,", "WI", "53210");
 
         SortedSet<String> expectedFeatures = new TreeSet<>();
@@ -364,7 +363,7 @@ class MalletCrfTrainerTest {
         Alphabet dataAlphabet = new Alphabet();
         LabelAlphabet targetAlphabet = new LabelAlphabet();
 
-        List<TrainingSequence<String>> trainingSequences = new XmlTrainingDataSequencer<>(TAG_PROVIDER).read(
+        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER).read(
                 Objects.requireNonNull(
                         getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
                 )
@@ -372,7 +371,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER)
+                new XmlTrainingData<>(TAG_PROVIDER)
         );
         var actual = trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, trainingSequences.get(0));
 
@@ -429,7 +428,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 parameters.configuration()
         );
 
@@ -471,7 +470,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 configuration
         );
 
@@ -499,7 +498,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 configuration
         );
 
@@ -523,7 +522,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 configuration
         );
 
@@ -565,20 +564,20 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer1 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 config1
         );
 
         MalletCrfTrainer<String, String> trainer2 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 config2
         );
 
         // ACT
-        var split1 = trainer1.splitTrainingData(trainingPath);
-        var split2 = trainer2.splitTrainingData(trainingPath);
+        var split1 = trainer1.splitTrainingData(Collections.singleton(trainingPath));
+        var split2 = trainer2.splitTrainingData(Collections.singleton(trainingPath));
 
         // ASSERT - different seeds should produce same sizes but potentially different instances
         assertEquals(split1.training().size(), split2.training().size(), "Training sizes should be equal");
@@ -596,20 +595,20 @@ class MalletCrfTrainerTest {
         MalletCrfTrainer<String, String> trainer1 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 config
         );
 
         MalletCrfTrainer<String, String> trainer2 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingDataSequencer<>(TAG_PROVIDER),
+                new XmlTrainingData<>(TAG_PROVIDER),
                 config
         );
 
         // ACT
-        var split1 = trainer1.splitTrainingData(trainingPath);
-        var split2 = trainer2.splitTrainingData(trainingPath);
+        var split1 = trainer1.splitTrainingData(Collections.singleton(trainingPath));
+        var split2 = trainer2.splitTrainingData(Collections.singleton(trainingPath));
 
         // ASSERT - same seed should produce identical splits
         assertEquals(split1.training().size(), split2.training().size(), "Training sizes should be equal");

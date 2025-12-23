@@ -18,7 +18,7 @@ package org.coordinatekit.crf.core;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Set;
+import java.util.SortedSet;
 
 /**
  * Provides tag information for CRF models, including conversion, enumeration, and the starting
@@ -28,7 +28,7 @@ import java.util.Set;
  * @see StringTagProvider
  */
 @NullMarked
-public interface TagProvider<T> {
+public interface TagProvider<T extends Comparable<T>> {
     /**
      * Converts a string representation to a typed tag value.
      *
@@ -63,8 +63,8 @@ public interface TagProvider<T> {
      * <p>
      * If the returned set is empty, the valid tags will be determined from the training data.
      *
-     * @return an unmodifiable set of all valid tags, or an empty set if tags should be inferred from
-     *         training data
+     * @return an unmodifiable sorted set of all valid tags, or an empty set if tags should be inferred
+     *         from training data
      */
-    Set<T> tags();
+    SortedSet<T> tags();
 }

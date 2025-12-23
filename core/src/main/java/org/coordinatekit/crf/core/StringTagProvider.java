@@ -19,7 +19,10 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * A tag provider for string tags with a defined tag set and starting tag.
@@ -32,7 +35,7 @@ import java.util.Set;
  */
 @NullMarked
 public class StringTagProvider implements TagProvider<String> {
-    private final Set<String> tags;
+    private final SortedSet<String> tags;
     private final String startingTag;
 
     /**
@@ -58,7 +61,7 @@ public class StringTagProvider implements TagProvider<String> {
         }
 
         this.startingTag = startingTag;
-        this.tags = Set.copyOf(tags);
+        this.tags = Collections.unmodifiableSortedSet(new TreeSet<>(tags));
     }
 
     @Override
@@ -81,7 +84,7 @@ public class StringTagProvider implements TagProvider<String> {
     }
 
     @Override
-    public Set<String> tags() {
-        return Set.copyOf(tags);
+    public SortedSet<String> tags() {
+        return tags;
     }
 }

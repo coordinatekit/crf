@@ -19,6 +19,8 @@ import org.jspecify.annotations.NullMarked;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Interface for training Conditional Random Field (CRF) models.
@@ -38,5 +40,17 @@ public interface CrfTrainer {
      * @param modelPath the path where the trained model should be saved
      * @throws IOException if an error occurs during training or model serialization
      */
-    void train(Path trainingPath, Path modelPath) throws IOException;
+    default void train(Path trainingPath, Path modelPath) throws IOException {
+        train(Collections.singleton(trainingPath), modelPath);
+    }
+
+    /**
+     * Trains a CRF model using the training data at the specified paths and saves the model to the
+     * specified output path.
+     *
+     * @param trainingPaths the paths to the training data files
+     * @param modelPath the path where the trained model should be saved
+     * @throws IOException if an error occurs during training or model serialization
+     */
+    void train(Collection<Path> trainingPaths, Path modelPath) throws IOException;
 }
