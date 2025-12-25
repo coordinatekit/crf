@@ -22,6 +22,7 @@ import cc.mallet.fst.TransducerTrainer;
 import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.Sequence;
+import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,7 +157,7 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
         SumLatticeDefault lattice = new SumLatticeDefault(transducer, input);
 
         for (int i = 0; i < input.size(); i++) {
-            String token = input.get(i).toString();
+            String token = ((TrainingSequence<?>) instance.getSource()).get(i).token();
             String actual = actualOutput.get(i).toString();
             String predicted = predictedOutput.get(i).toString();
             double confidence = getConfidence(transducer, lattice, i, predicted);

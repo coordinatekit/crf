@@ -216,7 +216,7 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
                 .mapToInt(token -> targetAlphabet.lookupIndex(token.tag(), true)).toArray();
         LabelSequence target = new LabelSequence(targetAlphabet, labelIndices);
 
-        return new Instance(data, target, null, null);
+        return new Instance(data, target, null, trainingSequence);
     }
 
     /**

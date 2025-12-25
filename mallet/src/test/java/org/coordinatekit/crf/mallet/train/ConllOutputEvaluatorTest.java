@@ -18,17 +18,12 @@ package org.coordinatekit.crf.mallet.train;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
-import cc.mallet.types.Alphabet;
-import cc.mallet.types.FeatureVector;
-import cc.mallet.types.FeatureVectorSequence;
-import cc.mallet.types.Instance;
-import cc.mallet.types.InstanceList;
-import cc.mallet.types.LabelAlphabet;
-import cc.mallet.types.LabelSequence;
+import cc.mallet.types.*;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.read.ListAppender;
+import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,18 +37,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @NullMarked
 class ConllOutputEvaluatorTest {
@@ -286,7 +276,7 @@ class ConllOutputEvaluatorTest {
         return crf;
     }
 
-    private Instance createInstance(String[][] features, String[] labels) {
+    private Instance createInstance(String[][] features, String[] labels, String[] tokens) {
         FeatureVector[] featureVectors = new FeatureVector[features.length];
         for (int i = 0; i < features.length; i++) {
             int[] indices = new int[features[i].length];
@@ -305,7 +295,7 @@ class ConllOutputEvaluatorTest {
                 new FeatureVectorSequence(featureVectors),
                 new LabelSequence(targetAlphabet, labelIndices),
                 null,
-                null
+                new TrainingSequence<>(Arrays.asList(tokens), Arrays.asList(labels))
         );
     }
 
@@ -315,14 +305,16 @@ class ConllOutputEvaluatorTest {
         instances.add(
                 createInstance(
                         new String[][] {{"word=visit", "cap=no"}, {"word=paris", "cap=yes"}},
-                        new String[] {"O", "B-LOC"}
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"visit", "Paris"}
                 )
         );
 
         instances.add(
                 createInstance(
                         new String[][] {{"word=in", "cap=no"}, {"word=rome", "cap=yes"}},
-                        new String[] {"O", "B-LOC"}
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"in", "Rome"}
                 )
         );
 
@@ -341,7 +333,13 @@ class ConllOutputEvaluatorTest {
         InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
 
         // Feature vectors don't contain spaces, so this tests that the output format is correct
-        instances.add(createInstance(new String[][] {{"word=new_york", "cap=yes"}}, new String[] {"B-LOC"}));
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=new_york", "cap=yes"}},
+                        new String[] {"B-LOC"},
+                        new String[] {"New York"}
+                )
+        );
 
         return instances;
     }
@@ -354,14 +352,16 @@ class ConllOutputEvaluatorTest {
                         createInstance(
                                 new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
                                                 {"word=city", "cap=yes"}},
-                                new String[] {"B-LOC", "I-LOC", "I-LOC"}
+                                new String[] {"B-LOC", "I-LOC", "I-LOC"},
+                                new String[] {"New", "York", "City"}
                         )
                 );
 
         instances.add(
                 createInstance(
                         new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
-                        new String[] {"O", "O", "O"}
+                        new String[] {"O", "O", "O"},
+                        new String[] {"the", "cat", "sat"}
                 )
         );
 
@@ -370,7 +370,8 @@ class ConllOutputEvaluatorTest {
                         createInstance(
                                 new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
                                                 {"word=today", "cap=no"}},
-                                new String[] {"O", "B-LOC", "O"}
+                                new String[] {"O", "B-LOC", "O"},
+                                new String[] {"in", "London", "today"}
                         )
                 );
 
@@ -386,6 +387,7 @@ class ConllOutputEvaluatorTest {
 
     private static void validateOutputFile(Path outputFile) throws IOException {
         String content = Files.readString(outputFile);
+        List<String> lines = content.lines().toList();
 
         // Verify file contains header
         assertTrue(
@@ -412,6 +414,17 @@ class ConllOutputEvaluatorTest {
         );
 
         // Verify file contains a confidence score (decimal number)
+        if (lines.size() >= 3) {
+            Pattern linePattern = Pattern.compile("^(?:|\\S+\\s\\S+\\s\\S+\\s\\d+\\.\\d+)$");
+            assertAll(
+                    IntStream.range(1, lines.size()).mapToObj(
+                            i -> () -> assertTrue(
+                                    linePattern.matcher(lines.get(i)).matches(),
+                                    String.format("Line %d should match pattern: '%s'", i + 1, lines.get(i))
+                            )
+                    )
+            );
+        }
         assertTrue(
                 content.matches("(?s).*\\d+\\.\\d+.*"),
                 String.format("File %s should contain a confidence score", outputFile)
