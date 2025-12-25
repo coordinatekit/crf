@@ -78,8 +78,7 @@ class ConllOutputEvaluatorTest {
             TestSequenceFixture testSequenceFixture,
             int iterations,
             Set<Path> expectedFiles
-    ) {
-    }
+    ) {}
 
     static Stream<EvaluateParameters> evaluate() {
         return Stream.of(
@@ -261,7 +260,7 @@ class ConllOutputEvaluatorTest {
 
         String startName = crf.addOrderNStates(
                 trainingData,
-                new int[]{1},
+                new int[] {1},
                 null,
                 "O",
                 Pattern.compile("\\s"),
@@ -305,17 +304,17 @@ class ConllOutputEvaluatorTest {
 
         instances.add(
                 createInstance(
-                        new String[][]{{"word=visit", "cap=no"}, {"word=paris", "cap=yes"}},
-                        new String[]{"O", "B-LOC"},
-                        new String[]{"visit", "Paris"}
+                        new String[][] {{"word=visit", "cap=no"}, {"word=paris", "cap=yes"}},
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"visit", "Paris"}
                 )
         );
 
         instances.add(
                 createInstance(
-                        new String[][]{{"word=in", "cap=no"}, {"word=rome", "cap=yes"}},
-                        new String[]{"O", "B-LOC"},
-                        new String[]{"in", "Rome"}
+                        new String[][] {{"word=in", "cap=no"}, {"word=rome", "cap=yes"}},
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"in", "Rome"}
                 )
         );
 
@@ -336,9 +335,9 @@ class ConllOutputEvaluatorTest {
         // Feature vectors don't contain spaces, so this tests that the output format is correct
         instances.add(
                 createInstance(
-                        new String[][]{{"word=new_york", "cap=yes"}},
-                        new String[]{"B-LOC"},
-                        new String[]{"New York"}
+                        new String[][] {{"word=new_york", "cap=yes"}},
+                        new String[] {"B-LOC"},
+                        new String[] {"New York"}
                 )
         );
 
@@ -351,28 +350,28 @@ class ConllOutputEvaluatorTest {
         instances
                 .add(
                         createInstance(
-                                new String[][]{{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
-                                        {"word=city", "cap=yes"}},
-                                new String[]{"B-LOC", "I-LOC", "I-LOC"},
-                                new String[]{"New", "York", "City"}
+                                new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
+                                                {"word=city", "cap=yes"}},
+                                new String[] {"B-LOC", "I-LOC", "I-LOC"},
+                                new String[] {"New", "York", "City"}
                         )
                 );
 
         instances.add(
                 createInstance(
-                        new String[][]{{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
-                        new String[]{"O", "O", "O"},
-                        new String[]{"the", "cat", "sat"}
+                        new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
+                        new String[] {"O", "O", "O"},
+                        new String[] {"the", "cat", "sat"}
                 )
         );
 
         instances
                 .add(
                         createInstance(
-                                new String[][]{{"word=in", "cap=no"}, {"word=london", "cap=yes"},
-                                        {"word=today", "cap=no"}},
-                                new String[]{"O", "B-LOC", "O"},
-                                new String[]{"in", "London", "today"}
+                                new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
+                                                {"word=today", "cap=no"}},
+                                new String[] {"O", "B-LOC", "O"},
+                                new String[] {"in", "London", "today"}
                         )
                 );
 
