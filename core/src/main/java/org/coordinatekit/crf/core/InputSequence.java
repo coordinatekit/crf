@@ -33,13 +33,12 @@ import java.util.stream.Stream;
  * Example usage:
  *
  * <pre>
- * {
- *     &#64;code
- *     List<String> words = List.of("Hello", "world");
- *     Sequence<PositionedToken> sequence = new InputSequence(words);
- *     // sequence.get(0).token() returns "Hello"
- *     // sequence.get(1).token() returns "world"
- * }
+ * <code>
+ * List&lt;String&gt; words = List.of("Hello", "world");
+ * Sequence&lt;PositionedToken&gt; sequence = new InputSequence(words);
+ * // sequence.get(0).token() returns "Hello"
+ * // sequence.get(1).token() returns "world"
+ * </code>
  * </pre>
  *
  * @see Sequence

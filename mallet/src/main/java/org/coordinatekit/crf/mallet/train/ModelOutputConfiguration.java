@@ -32,11 +32,10 @@ import java.util.Objects;
  * Example usage:
  *
  * <pre>
- * {
- *     &#64;code
- *     ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
- *             .filePrefix("crf_model").fileSuffix("ser").iterationInterval(10).build();
- * }
+ * <code>
+ * ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
+ *         .filePrefix("crf_model").fileSuffix("ser").iterationInterval(10).build();
+ * </code>
  * </pre>
  *
  * @see ModelOutputEvaluator
@@ -135,11 +134,10 @@ public final class ModelOutputConfiguration {
      * Example:
      *
      * <pre>
-     * {
-     *     &#64;code
-     *     ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
-     *             .filePrefix("crf_model").iterationInterval(5).build();
-     * }
+     * <code>
+     * ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
+     *         .filePrefix("crf_model").iterationInterval(5).build();
+     * </code>
      * </pre>
      */
     @NullMarked

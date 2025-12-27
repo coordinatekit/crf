@@ -45,15 +45,14 @@ import java.nio.file.Paths;
  * Example usage:
  *
  * <pre>
- * {
- *     &#64;code
- *     ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
- *             .filePrefix("crf_model").fileSuffix("ser").iterationInterval(10).build();
- *     ModelOutputEvaluator evaluator = new ModelOutputEvaluator(config);
+ * <code>
+ * ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(Path.of("models"))
+ *         .filePrefix("crf_model").fileSuffix("ser").iterationInterval(10).build();
+ * ModelOutputEvaluator evaluator = new ModelOutputEvaluator(config);
  *
- *     // Add to trainer
- *     trainer.addEvaluator(evaluator);
- * }
+ * // Add to trainer
+ * trainer.addEvaluator(evaluator);
+ * </code>
  * </pre>
  *
  * @see ModelOutputConfiguration

@@ -55,12 +55,11 @@ import java.util.stream.Stream;
  * Use the {@link #builder(InputStream, String)} factory method to create instances:
  *
  * <pre>
- * {
- *     &#64;code
- *     XPathFeatureExtractor<String> extractor = XPathFeatureExtractor
- *             .<String>builder(getClass().getResourceAsStream("conjunctions.xml"), "/conjunctions/conjunction")
- *             .caseSensitive(false).presentFeature("CONJUNCTION").notPresentFeature("NOT_CONJUNCTION").build();
- * }
+ * <code>
+ * XPathFeatureExtractor&lt;String&gt; extractor = XPathFeatureExtractor
+ *         .&lt;String&gt;builder(getClass().getResourceAsStream("conjunctions.xml"), "/conjunctions/conjunction")
+ *         .caseSensitive(false).presentFeature("CONJUNCTION").notPresentFeature("NOT_CONJUNCTION").build();
+ * </code>
  * </pre>
  *
  * @param <F> the type of features produced by this extractor

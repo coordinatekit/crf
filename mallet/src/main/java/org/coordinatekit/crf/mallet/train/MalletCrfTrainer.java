@@ -55,16 +55,16 @@ import java.util.stream.Stream;
  * Example usage:
  *
  * <pre>
- * {@code
- * FeatureExtractor<String> extractor = ...;
- * TagProvider<String> tagProvider = new StringTagProvider("O");
- * TrainingDataSequencer<String> sequencer = new XmlTrainingDataSequencer<>(tagProvider);
+ * <code>
+ * FeatureExtractor&lt;String&gt; extractor = ...;
+ * TagProvider&lt;String&gt; tagProvider = new StringTagProvider("O");
+ * TrainingDataSequencer&lt;String&gt; sequencer = new XmlTrainingDataSequencer&lt;&gt;(tagProvider);
  *
- * MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+ * MalletCrfTrainer&lt;String, String&gt; trainer = new MalletCrfTrainer&lt;&gt;(
  *     extractor, tagProvider, sequencer
  * );
  * trainer.train(Path.of("training.xml"), Path.of("model.ser"));
- * }
+ * </code>
  * </pre>
  *
  * @param <F> the type of features produced by the feature extractor

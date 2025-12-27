@@ -33,7 +33,7 @@ import java.util.*;
  *
  * <pre>
  * <code>
- * CompositeFeatureExtractor<String> extractor = new CompositeFeatureExtractor<>(
+ * CompositeFeatureExtractor&lt;String&gt; extractor = new CompositeFeatureExtractor&lt;&gt;(
  *         List.of(lengthExtractor, caseExtractor, prefixExtractor)
  * );
  * </code>
