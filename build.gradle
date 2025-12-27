@@ -64,7 +64,10 @@ tasks.register('aggregateJavadoc', Javadoc) {
     options {
         title = "CoordinateKit CRF ${version} API"
         windowTitle = "CoordinateKit CRF API"
-        links = ["https://docs.oracle.com/en/java/javase/21/docs/api/"]
+        links = [
+                "https://docs.oracle.com/en/java/javase/21/docs/api/",
+                "https://jspecify.dev/docs/api/"
+        ]
         encoding = "UTF-8"
         docEncoding = "UTF-8"
         charSet = "UTF-8"
