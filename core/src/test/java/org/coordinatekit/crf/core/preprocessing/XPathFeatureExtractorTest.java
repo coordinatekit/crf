@@ -71,8 +71,7 @@ class XPathFeatureExtractorTest {
             List<String> tokens,
             int position,
             Set<String> expectedResult
-    ) {
-    }
+    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
@@ -182,8 +181,7 @@ class XPathFeatureExtractorTest {
             Supplier<InputStream> resource,
             String xpath,
             List<String> expectedResult
-    ) {
-    }
+    ) {}
 
     static Stream<GetXPathValuesParameters> getXPathValues() {
         return Stream.of(

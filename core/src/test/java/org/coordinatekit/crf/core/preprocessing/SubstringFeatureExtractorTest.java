@@ -36,8 +36,7 @@ class SubstringFeatureExtractorTest {
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
-    ) {
-    }
+    ) {}
 
     @SuppressWarnings("WriteOnlyObject")
     static Stream<BuilderExceptionParameters> builder__exception() {
@@ -76,8 +75,7 @@ class SubstringFeatureExtractorTest {
             List<String> tokens,
             int position,
             Set<String> expectedResult
-    ) {
-    }
+    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
@@ -238,9 +236,9 @@ class SubstringFeatureExtractorTest {
     @ParameterizedTest
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
-        SubstringFeatureExtractor<String> extractor = SubstringFeatureExtractor
-                .builder(parameters.featureMapper()).ending(parameters.ending())
-                .includeIfLessThanLength(parameters.includeIfLessThanLength()).length(parameters.length()).build();
+        SubstringFeatureExtractor<String> extractor = SubstringFeatureExtractor.builder(parameters.featureMapper())
+                .ending(parameters.ending()).includeIfLessThanLength(parameters.includeIfLessThanLength())
+                .length(parameters.length()).build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //
