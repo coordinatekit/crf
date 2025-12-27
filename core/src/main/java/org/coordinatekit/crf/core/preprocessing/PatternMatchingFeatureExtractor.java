@@ -36,11 +36,10 @@ import java.util.regex.Pattern;
  * Use one of the {@code builder} factory methods to create instances:
  *
  * <pre>
- * {
- *     &#64;code
- *     PatternMatcherFeatureExtractor<String> extractor = PatternMatcherFeatureExtractor
- *             .<String>builder("[A-Z]+", false).matchedFeature("IS_CAPS").notMatchedFeature("NOT_CAPS").build();
- * }
+ * <code>
+ * PatternMatcherFeatureExtractor&lt;String&gt; extractor = PatternMatcherFeatureExtractor
+ *         .&lt;String&gt;builder("[A-Z]+", false).matchedFeature("IS_CAPS").notMatchedFeature("NOT_CAPS").build();
+ * </code>
  * </pre>
  *
  * @param <F> the type of feature produced by the extractor

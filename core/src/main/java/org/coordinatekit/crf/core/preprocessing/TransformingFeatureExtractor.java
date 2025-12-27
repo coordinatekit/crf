@@ -34,7 +34,7 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * TransformingFeatureExtractor<String> extractor = new TransformingFeatureExtractor<>(
+ * TransformingFeatureExtractor&lt;String&gt; extractor = new TransformingFeatureExtractor&lt;&gt;(
  *         token -> Set.of("LENGTH=" + token.length(), "LOWER=" + token.toLowerCase())
  * );
  * </code>

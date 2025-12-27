@@ -31,11 +31,10 @@ import java.util.Objects;
  * Example usage:
  *
  * <pre>
- * {
- *     &#64;code
- *     MalletCrfTrainerConfig config = MalletCrfTrainerConfig.builder().gaussianVariance(5.0).iterations(1000)
- *             .numThreads(8).build();
- * }
+ * <code>
+ * MalletCrfTrainerConfig config = MalletCrfTrainerConfig.builder().gaussianVariance(5.0).iterations(1000)
+ *         .numThreads(8).build();
+ * </code>
  * </pre>
  *
  * @see MalletCrfTrainer
@@ -245,11 +244,10 @@ public final class MalletCrfTrainerConfiguration {
      * Example:
      *
      * <pre>
-     * {
-     *     &#64;code
-     *     MalletCrfTrainerConfig config = MalletCrfTrainerConfig.builder().gaussianVariance(5.0).trainingFraction(0.8)
-     *             .iterations(1000).build();
-     * }
+     * <code>
+     * MalletCrfTrainerConfig config = MalletCrfTrainerConfig.builder().gaussianVariance(5.0).trainingFraction(0.8)
+     *         .iterations(1000).build();
+     * </code>
      * </pre>
      */
     @NullMarked

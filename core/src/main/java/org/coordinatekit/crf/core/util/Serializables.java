@@ -37,13 +37,13 @@ import java.util.Objects;
  * Example usage:
  *
  * <pre>
- * {@code
+ * <code>
  * // Serialize an object to a file
  * Serializables.serialize(myObject, Path.of("data.ser"));
  *
  * // Deserialize an object from a file
  * MyClass restored = Serializables.deserialize(MyClass.class, Path.of("data.ser"));
- * }
+ * </code>
  * </pre>
  */
 @NullMarked

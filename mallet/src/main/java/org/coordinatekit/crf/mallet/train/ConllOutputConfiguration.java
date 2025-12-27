@@ -33,12 +33,11 @@ import java.util.Objects;
  * Example usage:
  *
  * <pre>
- * {
- *     &#64;code
- *     ConllOutputEvaluatorConfiguration config = ConllOutputEvaluatorConfiguration.builder()
- *             .outputDirectory(Path.of("output")).filePrefix("predictions").fileSuffix("tsv").iterationInterval(10)
- *             .build();
- * }
+ * <code>
+ * ConllOutputEvaluatorConfiguration config = ConllOutputEvaluatorConfiguration.builder()
+ *         .outputDirectory(Path.of("output")).filePrefix("predictions").fileSuffix("tsv").iterationInterval(10)
+ *         .build();
+ * </code>
  * </pre>
  *
  * @see ConllOutputEvaluator
@@ -138,11 +137,10 @@ public final class ConllOutputConfiguration {
      * Example:
      *
      * <pre>
-     * {
-     *     &#64;code
-     *     ConllOutputEvaluatorConfiguration config = ConllOutputEvaluatorConfiguration.builder()
-     *             .outputDirectory(Path.of("results")).filePrefix("test_predictions").iterationInterval(5).build();
-     * }
+     * <code>
+     * ConllOutputEvaluatorConfiguration config = ConllOutputEvaluatorConfiguration.builder()
+     *         .outputDirectory(Path.of("results")).filePrefix("test_predictions").iterationInterval(5).build();
+     * </code>
      * </pre>
      */
     @NullMarked
