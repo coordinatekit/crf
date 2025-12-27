@@ -53,3 +53,28 @@ subprojects {
         }
     }
 }
+
+tasks.register('aggregateJavadoc', Javadoc) {
+    description = "Generate aggregated Javadoc for all modules"
+    group = "documentation"
+
+    source subprojects.collect { it.sourceSets.main.allJava }
+    classpath = files(subprojects.collect { it.sourceSets.main.compileClasspath })
+
+    options {
+        title = "CoordinateKit CRF ${version} API"
+        windowTitle = "CoordinateKit CRF API"
+        links = ["https://docs.oracle.com/en/java/javase/21/docs/api/"]
+        encoding = "UTF-8"
+        docEncoding = "UTF-8"
+        charSet = "UTF-8"
+
+        subprojects.each { subproject ->
+            def pkgPattern = "org.coordinatekit.crf.${subproject.name}*"
+            //noinspection GroovyAssignabilityCheck, ForeignDelegate
+            group("${subproject.name.capitalize()} Module", [pkgPattern])
+        }
+
+        addBooleanOption('Werror', true)
+    }
+}

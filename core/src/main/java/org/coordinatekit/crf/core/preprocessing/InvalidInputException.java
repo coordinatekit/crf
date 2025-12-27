@@ -27,7 +27,10 @@ import org.jspecify.annotations.Nullable;
  */
 @NullMarked
 public class InvalidInputException extends IllegalArgumentException {
+    /** The invalid input string that caused this exception. */
     private final String input;
+
+    /** The reason why the input is invalid, or {@code null} if unspecified. */
     private final @Nullable String reason;
 
     /**

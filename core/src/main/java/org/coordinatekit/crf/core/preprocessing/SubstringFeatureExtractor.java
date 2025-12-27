@@ -34,7 +34,7 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * SubstringFeatureExtractor<String> extractor = SubstringFeatureExtractor.<String>builder(s -> "PREFIX_" + s)
+ * SubstringFeatureExtractor&lt;String&gt; extractor = SubstringFeatureExtractor.&lt;String&gt;builder(s -> "PREFIX_" + s)
  *         .length(3).ending(false).includeIfLessThanLength(true).build();
  * </code>
  * </pre>

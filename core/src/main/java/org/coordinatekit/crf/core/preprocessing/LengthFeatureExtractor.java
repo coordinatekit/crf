@@ -40,7 +40,7 @@ import static java.util.stream.Collectors.toSet;
  *
  * <pre>
  * <code>
- * LengthFeatureExtractor<String> extractor = LengthFeatureExtractor.<String>builder(5)
+ * LengthFeatureExtractor&lt;String&gt; extractor = LengthFeatureExtractor.&lt;String&gt;builder(5)
  *         .hasLengthFeatureMapper(len -> "HAS_LENGTH_" + len)
  *         .lacksLengthFeatureMapper(len -> "LACKS_LENGTH_" + len).build();
  * </code>
