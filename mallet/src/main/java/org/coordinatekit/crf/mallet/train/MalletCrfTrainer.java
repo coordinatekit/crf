@@ -213,7 +213,7 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
         FeatureVectorSequence data = new FeatureVectorSequence(featureVectors);
 
         int[] labelIndices = featureTrainingSequence.stream()
-                .mapToInt(token -> targetAlphabet.lookupIndex(token.tag(), true)).toArray();
+                .mapToInt(token -> targetAlphabet.lookupIndex(tagProvider.encode(token.tag()), true)).toArray();
         LabelSequence target = new LabelSequence(targetAlphabet, labelIndices);
 
         return new Instance(data, target, null, trainingSequence);
