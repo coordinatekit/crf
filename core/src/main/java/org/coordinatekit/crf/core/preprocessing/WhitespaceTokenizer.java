@@ -31,6 +31,9 @@ import java.util.Objects;
  * @see Tokenizer
  */
 public class WhitespaceTokenizer implements Tokenizer {
+    /** Creates a new whitespace tokenizer. */
+    public WhitespaceTokenizer() {}
+
     /**
      * {@inheritDoc}
      *

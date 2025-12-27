@@ -41,7 +41,7 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * PositionFeatureExtractor<String> extractor = PositionFeatureExtractor.<String>builder().firstFeature("FIRST")
+ * PositionFeatureExtractor&lt;String&gt; extractor = PositionFeatureExtractor.&lt;String&gt;builder().firstFeature("FIRST")
  *         .lastFeature("LAST").positionFromStartFeatureMapper(pos -> "POS_" + pos).build();
  * </code>
  * </pre>

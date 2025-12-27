@@ -18,13 +18,7 @@ package org.coordinatekit.crf.mallet.train;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
-import cc.mallet.types.Alphabet;
-import cc.mallet.types.FeatureVector;
-import cc.mallet.types.FeatureVectorSequence;
-import cc.mallet.types.Instance;
-import cc.mallet.types.InstanceList;
-import cc.mallet.types.LabelAlphabet;
-import cc.mallet.types.LabelSequence;
+import cc.mallet.types.*;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
@@ -76,9 +70,24 @@ import java.util.stream.Stream;
 public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer {
     private static final Logger logger = LoggerFactory.getLogger(MalletCrfTrainer.class);
 
+    /**
+     * The feature extractor for converting tokens to feature sets during training.
+     */
     protected final FeatureExtractor<F> featureExtractor;
+
+    /**
+     * The tag provider defining available tags and their encoding/decoding.
+     */
     protected final TagProvider<T> tagProvider;
+
+    /**
+     * The sequencer for reading training data from files into training sequences.
+     */
     protected final TrainingDataSequencer<T> trainingDataSequencer;
+
+    /**
+     * The configuration parameters controlling the training process.
+     */
     protected final MalletCrfTrainerConfiguration configuration;
 
     /**
