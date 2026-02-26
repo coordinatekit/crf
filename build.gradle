@@ -1,5 +1,6 @@
 plugins {
     id "com.diffplug.spotless" version "6.25.0"
+    id "jacoco"
     id "java-library"
     id "net.ltgt.errorprone" version "4.1.0"
 }
@@ -7,6 +8,10 @@ plugins {
 allprojects {
     group = "org.coordinatekit.crf"
     version = "0.1-SNAPSHOT"
+
+    repositories {
+        mavenCentral()
+    }
 }
 
 subprojects {
@@ -24,10 +29,6 @@ subprojects {
         testImplementation(platform("org.junit:junit-bom:6.0.1"))
         testImplementation("org.junit.jupiter:junit-jupiter")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    }
-
-    repositories {
-        mavenCentral()
     }
 
     spotless {
@@ -51,6 +52,41 @@ subprojects {
             xml.required = true
             html.required = true
         }
+
+        doLast {
+            def customCss = rootProject.file('.infra/jacoco-report.css')
+            if (customCss.exists()) {
+                copy {
+                    from customCss
+                    into reports.html.outputLocation.dir('jacoco-resources')
+                    rename { 'report.css' }
+                }
+            }
+        }
+    }
+}
+
+tasks.register('aggregateJacocoReport', JacocoReport) {
+    description = "Generate aggregated JaCoCo coverage report for all modules"
+    group = "verification"
+
+    dependsOn subprojects*.test
+
+    executionData.from(subprojects.collect {
+        it.tasks.jacocoTestReport.executionData
+    })
+
+    sourceDirectories.from(subprojects.collect {
+        it.sourceSets.main.allSource.srcDirs
+    })
+
+    classDirectories.from(subprojects.collect {
+        it.sourceSets.main.output
+    })
+
+    reports {
+        xml.required = true
+        html.required = true
     }
 }
 
