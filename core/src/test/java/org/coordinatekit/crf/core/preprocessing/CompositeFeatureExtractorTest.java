@@ -35,9 +35,7 @@ class CompositeFeatureExtractorTest {
         FeatureExtractor<String> lowerExtractor = (seq, pos) -> Set
                 .of("LOWER=" + seq.get(pos).token().toLowerCase(Locale.ROOT));
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(
-                List.of(lengthExtractor, lowerExtractor)
-        );
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(lengthExtractor, lowerExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("Hello"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -50,7 +48,7 @@ class CompositeFeatureExtractorTest {
         FeatureExtractor<String> extractor1 = (seq, pos) -> Set.of("FEATURE_A", "FEATURE_B");
         FeatureExtractor<String> extractor2 = (seq, pos) -> Set.of("FEATURE_B", "FEATURE_C");
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(List.of(extractor1, extractor2));
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(extractor1, extractor2);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("token"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -60,7 +58,7 @@ class CompositeFeatureExtractorTest {
 
     @Test
     void emptyExtractorList() {
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(List.of());
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of();
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("hello"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -69,13 +67,47 @@ class CompositeFeatureExtractorTest {
     }
 
     @Test
+    void of__combinesMultipleExtractors() {
+        FeatureExtractor<String> lengthExtractor = (seq, pos) -> Set.of("LENGTH=" + seq.get(pos).token().length());
+        FeatureExtractor<String> lowerExtractor = (seq, pos) -> Set
+                .of("LOWER=" + seq.get(pos).token().toLowerCase(Locale.ROOT));
+
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(lengthExtractor, lowerExtractor);
+
+        Sequence<PositionedToken> sequence = new InputSequence(List.of("Hello"));
+        Set<String> features = composite.extractAt(sequence, 0);
+
+        assertEquals(Set.of("LENGTH=5", "LOWER=hello"), features);
+    }
+
+    @Test
+    void of__noExtractors() {
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of();
+
+        Sequence<PositionedToken> sequence = new InputSequence(List.of("hello"));
+        Set<String> features = composite.extractAt(sequence, 0);
+
+        assertEquals(Set.of(), features);
+    }
+
+    @Test
+    void of__singleExtractor() {
+        FeatureExtractor<String> extractor = (seq, pos) -> Set.of("TOKEN=" + seq.get(pos).token());
+
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(extractor);
+
+        Sequence<PositionedToken> sequence = new InputSequence(List.of("test"));
+        Set<String> features = composite.extractAt(sequence, 0);
+
+        assertEquals(Set.of("TOKEN=test"), features);
+    }
+
+    @Test
     void extractorReturningEmptySet() {
         FeatureExtractor<String> emptyExtractor = (seq, pos) -> Set.of();
         FeatureExtractor<String> lengthExtractor = (seq, pos) -> Set.of("LENGTH=" + seq.get(pos).token().length());
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(
-                List.of(emptyExtractor, lengthExtractor)
-        );
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(emptyExtractor, lengthExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("hello"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -87,7 +119,7 @@ class CompositeFeatureExtractorTest {
     void extractsAtCorrectPosition() {
         FeatureExtractor<String> tokenExtractor = (seq, pos) -> Set.of("TOKEN=" + seq.get(pos).token());
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(List.of(tokenExtractor));
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(tokenExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("first", "second", "third"));
 
@@ -102,7 +134,7 @@ class CompositeFeatureExtractorTest {
         FeatureExtractor<String> second = (seq, pos) -> Set.of("SECOND");
         FeatureExtractor<String> third = (seq, pos) -> Set.of("THIRD");
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(List.of(first, second, third));
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(first, second, third);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("token"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -114,7 +146,7 @@ class CompositeFeatureExtractorTest {
     void singleExtractor() {
         FeatureExtractor<String> extractor = (seq, pos) -> Set.of("TOKEN=" + seq.get(pos).token());
 
-        CompositeFeatureExtractor<String> composite = new CompositeFeatureExtractor<>(List.of(extractor));
+        CompositeFeatureExtractor<String> composite = CompositeFeatureExtractor.of(extractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("test"));
         Set<String> features = composite.extractAt(sequence, 0);
@@ -127,9 +159,7 @@ class CompositeFeatureExtractorTest {
         FeatureExtractor<Integer> lengthExtractor = (seq, pos) -> Set.of(seq.get(pos).token().length());
         FeatureExtractor<Integer> hashExtractor = (seq, pos) -> Set.of(seq.get(pos).token().hashCode());
 
-        CompositeFeatureExtractor<Integer> composite = new CompositeFeatureExtractor<>(
-                List.of(lengthExtractor, hashExtractor)
-        );
+        CompositeFeatureExtractor<Integer> composite = CompositeFeatureExtractor.of(lengthExtractor, hashExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("hi"));
         Set<Integer> features = composite.extractAt(sequence, 0);

@@ -86,11 +86,11 @@
  *         .build();
  *
  * // Combine into a single extractor
- * FeatureExtractor&lt;String&gt; combined = new CompositeFeatureExtractor&lt;&gt;(List.of(
+ * FeatureExtractor&lt;String&gt; combined = CompositeFeatureExtractor.of(
  *         prefixExtractor,
  *         suffixExtractor,
  *         capsExtractor,
- *         positionExtractor));
+ *         positionExtractor);
  *
  * // Wrap with window context for neighboring token features
  * FeatureExtractor&lt;String&gt; windowExtractor = WindowFeatureExtractor

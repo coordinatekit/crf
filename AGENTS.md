@@ -50,6 +50,8 @@ them. Do not add `@SuppressWarnings` annotations — fix the root cause. Existin
 ### Test Organization
 
 - Test methods should be sorted alphabetically by method name within each test class
+- When testing a specific method or context, use double underscore to separate context from behavior:
+  `{context}__{behavior}` (e.g., `of__combinesMultipleExtractors`, `builder__exception`)
 
 ### Parameterized Tests
 
@@ -134,7 +136,6 @@ void builder__exception(BuilderExceptionParameters parameters) {
 ```
 
 **Conventions:**
-- Method name uses double underscore to separate context from behavior: `{context}__{behavior}` (e.g., `builder__exception`)
 - Record includes `Executable action` for the code that should throw
 - Record includes `Class<? extends Exception> expectedClass` and `String expectedMessage`
 

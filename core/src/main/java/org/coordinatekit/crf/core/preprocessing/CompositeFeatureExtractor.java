@@ -33,8 +33,8 @@ import java.util.*;
  *
  * <pre>
  * <code>
- * CompositeFeatureExtractor&lt;String&gt; extractor = new CompositeFeatureExtractor&lt;&gt;(
- *         List.of(lengthExtractor, caseExtractor, prefixExtractor)
+ * CompositeFeatureExtractor&lt;String&gt; extractor = CompositeFeatureExtractor.of(
+ *         lengthExtractor, caseExtractor, prefixExtractor
  * );
  * </code>
  * </pre>
@@ -50,8 +50,20 @@ public class CompositeFeatureExtractor<F> implements FeatureExtractor<F> {
      *
      * @param extractors the collection of feature extractors to combine
      */
-    public CompositeFeatureExtractor(Collection<? extends FeatureExtractor<F>> extractors) {
+    private CompositeFeatureExtractor(Collection<? extends FeatureExtractor<F>> extractors) {
         this.extractors = List.copyOf(extractors);
+    }
+
+    /**
+     * Creates a new composite feature extractor from the specified extractors.
+     *
+     * @param extractors the feature extractors to combine
+     * @param <F> the type of feature produced by the extractors
+     * @return a new composite feature extractor
+     */
+    @SafeVarargs
+    public static <F> CompositeFeatureExtractor<F> of(FeatureExtractor<F>... extractors) {
+        return new CompositeFeatureExtractor<>(List.of(extractors));
     }
 
     @Override
