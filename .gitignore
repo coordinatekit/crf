@@ -1,12 +1,21 @@
-.gradle
+*.log
+*.md
+!/AGENTS.md
+!/CLAUDE.md
+!/CONTRIBUTING.md
+!/README.md
+.*
+!/.gitattributes
+!/.github
+!/.gitignore
+!/.infra
+!/.pre-commit-config.yaml
 build/
-!gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-.kotlin
+/output
 
 ### IntelliJ IDEA ###
-.idea/
 *.iws
 *.iml
 *.ipr
@@ -15,13 +24,6 @@ out/
 !**/src/test/**/out/
 
 ### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
@@ -31,10 +33,3 @@ bin/
 /nbbuild/
 /dist/
 /nbdist/
-/.nb-gradle/
-
-### VS Code ###
-.vscode/
-
-### Mac OS ###
-.DS_Store
