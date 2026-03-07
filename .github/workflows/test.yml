@@ -30,12 +30,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test aggregateJacocoReport
 
       - name: Add coverage to PR
         uses: madrapps/jacoco-report@v1.7.1
         with:
-          paths: "**/build/reports/jacoco/test/jacocoTestReport.xml"
+          paths: "build/reports/jacoco/aggregateJacocoReport/aggregateJacocoReport.xml"
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 0
           min-coverage-changed-files: 0
