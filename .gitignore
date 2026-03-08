@@ -10,6 +10,7 @@
 !/.gitignore
 !/.infra
 !/.pre-commit-config.yaml
+!/.devcontainer
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/

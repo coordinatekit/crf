@@ -1,0 +1,42 @@
+{
+  "name": "CRF",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "mounts": [
+    "source=crf-claude-config,target=/home/developer/.claude,type=volume",
+    "source=crf-command-history-${localWorkspaceFolderBasename},target=/command-history,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "richardwillis.vscode-spotless-gradle",
+        "eamodio.gitlens",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "java.jdt.ls.java.home": "/opt/java/openjdk",
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    },
+    "jetbrains": {
+      "plugins": ["com.anthropic.code.plugin"]
+    }
+  },
+  "remoteUser": "developer",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": {
+    "fix-volume-ownership": "sudo chown developer:developer ~/.claude /command-history",
+    "dev-tools": "git config --global --add safe.directory /workspace && pre-commit install && ./gradlew --version",
+    "claude-wrapper": "mv ~/.local/bin/claude ~/.local/bin/claude-real && cat > ~/.local/bin/claude << 'WRAPPER'\n#!/bin/sh\n~/.local/bin/claude-real \"$@\"\nstatus=$?\ncp ~/.claude.json ~/.claude/claude.json 2>/dev/null\nexit $status\nWRAPPER\nchmod +x ~/.local/bin/claude"
+  },
+  "postStartCommand": {
+    "claude-auth-restore": "[ -f ~/.claude/claude.json ] && cp ~/.claude/claude.json ~/.claude.json || true"
+  }
+}
