@@ -18,15 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   zsh \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Layer 2: Python ecosystem (may change if Python tooling changes)
+# Layer 2: Agent tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
   pipx \
   python3 \
   python3-pip \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Layer 3: Agent tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
   socat \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -83,10 +79,6 @@ RUN mkdir -p /etc/claude-code && cat > /etc/claude-code/managed-settings.json <<
 }
 EOF
 
-# Set up workspace directory
-RUN mkdir -p /workspace \
-  && chown -R $USERNAME:$USERNAME /workspace
-
 # Set up persistent shell history directory (mounted as a volume)
 RUN mkdir -p /command-history \
   && chown $USERNAME:$USERNAME /command-history
@@ -107,5 +99,4 @@ ENV SHELL=/bin/zsh
 ENV EDITOR=nano
 ENV VISUAL=nano
 ENV HISTFILE=/command-history/.zsh_history
-
-WORKDIR /workspace
+ENV COLORTERM=truecolor

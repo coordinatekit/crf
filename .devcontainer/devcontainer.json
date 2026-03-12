@@ -18,22 +18,17 @@
         "richardwillis.vscode-spotless-gradle",
         "eamodio.gitlens",
         "anthropic.claude-code"
-      ],
-      "settings": {
-        "java.jdt.ls.java.home": "/opt/java/openjdk",
-        "terminal.integrated.defaultProfile.linux": "zsh"
-      }
+      ]
     },
     "jetbrains": {
       "plugins": ["com.anthropic.code.plugin"]
     }
   },
+  "userEnvProbe": "loginInteractiveShell",
   "remoteUser": "developer",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
-  "workspaceFolder": "/workspace",
   "postCreateCommand": {
     "fix-volume-ownership": "sudo chown developer:developer ~/.claude /command-history",
-    "dev-tools": "git config --global --add safe.directory /workspace && pre-commit install && ./gradlew --version",
+    "dev-tools": "git config --global --add safe.directory ${containerWorkspaceFolder} && pre-commit install && ./gradlew --version",
     "claude-wrapper": "mv ~/.local/bin/claude ~/.local/bin/claude-real && cat > ~/.local/bin/claude << 'WRAPPER'\n#!/bin/sh\n~/.local/bin/claude-real \"$@\"\nstatus=$?\ncp ~/.claude.json ~/.claude/claude.json 2>/dev/null\nexit $status\nWRAPPER\nchmod +x ~/.local/bin/claude"
   },
   "postStartCommand": {
