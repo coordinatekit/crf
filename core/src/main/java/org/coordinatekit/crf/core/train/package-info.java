@@ -25,7 +25,6 @@
  * </ul>
  *
  * @see org.coordinatekit.crf.core.train.CrfTrainer
- * @see org.coordinatekit.crf.mallet.train.MalletCrfTrainer
  */
 @NullMarked
 package org.coordinatekit.crf.core.train;

@@ -30,7 +30,6 @@
  * </ul>
  *
  * @see org.coordinatekit.crf.core.tag.CrfTagger
- * @see org.coordinatekit.crf.mallet.tag.MalletCrfTagger
  */
 @NullMarked
 package org.coordinatekit.crf.core.tag;
