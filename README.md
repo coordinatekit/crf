@@ -75,8 +75,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.coordinatekit.crf:core:0.1-SNAPSHOT'
-    implementation 'org.coordinatekit.crf:mallet:0.1-SNAPSHOT'
+    implementation 'org.coordinatekit.crf:core:0.1.0'
+    implementation 'org.coordinatekit.crf:mallet:0.1.0'
 }
 ```
 
@@ -86,13 +86,13 @@ dependencies {
 <dependency>
     <groupId>org.coordinatekit.crf</groupId>
     <artifactId>core</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
 </dependency>
 
 <dependency>
     <groupId>org.coordinatekit.crf</groupId>
     <artifactId>mallet</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
