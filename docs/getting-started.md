@@ -181,13 +181,13 @@ Add the core and MALLET modules to your `pom.xml`:
 <dependency>
     <groupId>org.coordinatekit.crf</groupId>
     <artifactId>core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1-SNAPSHOT</version>
 </dependency>
 
 <dependency>
     <groupId>org.coordinatekit.crf</groupId>
     <artifactId>mallet</artifactId>
-    <version>0.1.0</version>
+    <version>0.1-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -199,8 +199,8 @@ Add the dependencies to your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation "org.coordinatekit.crf:core:0.1.0"
-    implementation "org.coordinatekit.crf:mallet:0.1.0"
+    implementation "org.coordinatekit.crf:core:0.1-SNAPSHOT"
+    implementation "org.coordinatekit.crf:mallet:0.1-SNAPSHOT"
 }
 ```
 
@@ -208,8 +208,8 @@ Or in `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("org.coordinatekit.crf:core:0.1.0")
-    implementation("org.coordinatekit.crf:mallet:0.1.0")
+    implementation("org.coordinatekit.crf:core:0.1-SNAPSHOT")
+    implementation("org.coordinatekit.crf:mallet:0.1-SNAPSHOT")
 }
 ```
 
