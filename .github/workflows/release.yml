@@ -19,7 +19,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Configure GPG agent
+        run: |
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
 
       - name: Build
         run: ./gradlew build
@@ -28,6 +33,5 @@ jobs:
         run: ./gradlew publishMavenJavaPublicationToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           ORG_GRADLE_PROJECT_signing.gnupg.keyName: ${{ secrets.GPG_KEY_ID }}
           ORG_GRADLE_PROJECT_signing.gnupg.passphrase: ${{ secrets.GPG_PASSPHRASE }}
