@@ -20,10 +20,10 @@ jobs:
           distribution: 'temurin'
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      - name: Configure GPG agent
+      - name: Configure GPG for non-interactive signing
         run: |
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye
 
       - name: Build
