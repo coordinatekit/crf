@@ -19,8 +19,8 @@ allprojects {
 def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && it.name != "publishToMavenLocal" } }
 
 signing {
-    def signingKey = findProperty("signing.key")
-    def signingPassword = findProperty("signing.password")
+    def signingKey = findProperty("signingKey")
+    def signingPassword = findProperty("signingPassword")
     if (signingKey) {
         useInMemoryPgpKeys(signingKey, signingPassword)
     } else {
