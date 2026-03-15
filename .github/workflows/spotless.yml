@@ -47,6 +47,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No formatting changes needed"
           else
-            git commit -m "Apply Spotless formatting"
+            git commit -m "style: apply Spotless formatting"
             git push
           fi

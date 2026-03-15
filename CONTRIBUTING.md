@@ -37,47 +37,67 @@ We use a fork and pull request workflow:
 1. **Fork the repository** - Create your own fork of the project on GitHub
 
 2. **Clone your fork**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/crf.git
    cd crf
    ```
 
 3. **Create a feature branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
+
    Use descriptive branch names:
-    - `feature/` for new features
-    - `fix/` for bug fixes
-    - `docs/` for documentation changes
-    - `refactor/` for code refactoring
+   - `feature/` for new features
+   - `fix/` for bug fixes
+   - `docs/` for documentation changes
+   - `refactor/` for code refactoring
 
 4. **Make your changes** - Write your code following our coding standards
 
 5. **Write tests** - Add tests for any new functionality
 
 6. **Run the test suite**
+
    ```bash
    ./gradlew test
    ```
 
 7. **Check code formatting**
+
    ```bash
    ./gradlew spotlessCheck
    ```
+
    If formatting issues are found, fix them with:
+
    ```bash
    ./gradlew spotlessApply
    ```
 
-8. **Commit your changes**
-   ```bash
-   git add .
-   git commit -m "Brief description of changes"
+8. **Commit your changes** using [Conventional Commits](https://www.conventionalcommits.org/) format:
+
    ```
-   Write clear, concise commit messages that explain what and why.
+   <type>[optional scope]: <description>
+   ```
+
+   **Allowed types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+   **Allowed scopes**: `core`, `mallet`
+
+   Examples:
+
+   ```bash
+   git commit -m "feat(core): add token normalization"
+   git commit -m "fix(mallet): handle empty training sequences"
+   git commit -m "docs: update installation instructions"
+   ```
+
+   Run `pre-commit install` once to enable local commit message validation.
 
 9. **Push to your fork**
+
    ```bash
    git push origin feature/your-feature-name
    ```
