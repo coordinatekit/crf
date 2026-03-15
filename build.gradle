@@ -3,7 +3,7 @@ plugins {
     id "jacoco"
     id "java-library"
     id "net.ltgt.errorprone" version "4.1.0"
-    id "net.thebugmc.gradle.sonatype-central-portal-publisher" version "1.2.4"
+    id "net.thebugmc.gradle.sonatype-central-portal-publisher" version "1.2.4" apply false
     id "se.bjurr.gitchangelog.git-changelog-gradle-plugin" version "2.2.0"
     id "signing"
 }
@@ -23,7 +23,7 @@ gitChangelog {
     file = project.file("CHANGELOG.md")
 }
 
-def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && it.name != "publishToMavenLocal" } }
+def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && !it.name.endsWith("ToMavenLocal") } }
 
 signing {
     def signingKey = findProperty("signingKey")
@@ -44,8 +44,8 @@ subprojects {
     apply plugin: "com.diffplug.spotless"
     apply plugin: "jacoco"
     apply plugin: "java-library"
-    apply plugin: "maven-publish"
     apply plugin: "net.ltgt.errorprone"
+    apply plugin: "net.thebugmc.gradle.sonatype-central-portal-publisher"
     apply plugin: "signing"
 
     java {
@@ -53,48 +53,36 @@ subprojects {
         withSourcesJar()
     }
 
-    publishing {
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/andymarek/crf")
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
+    centralPortal {
+        username = findProperty("centralPortalUsername")
+        password = findProperty("centralPortalPassword")
+        publishingType = "AUTOMATIC"
+        name = project.name
+
+        pom {
+            name = "CoordinateKit CRF ${project.name}"
+            description = "Conditional Random Fields library - ${project.name} module"
+            url = "https://crf.coordinatekit.org"
+
+            licenses {
+                license {
+                    name = "The Apache License, Version 2.0"
+                    url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
                 }
             }
-        }
 
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
-
-                pom {
-                    name = "CoordinateKit CRF ${project.name}"
-                    description = "Conditional Random Fields library - ${project.name} module"
-                    url = "https://crf.coordinatekit.org"
-
-                    licenses {
-                        license {
-                            name = "The Apache License, Version 2.0"
-                            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id = "andymarek"
-                            name = "Andy Marek"
-                            email = "andy@andymarek.com"
-                        }
-                    }
-
-                    scm {
-                        connection = "scm:git:git://github.com/coordinatekit/crf.git"
-                        developerConnection = "scm:git:ssh://github.com/coordinatekit/crf.git"
-                        url = "https://github.com/coordinatekit/crf"
-                    }
+            developers {
+                developer {
+                    id = "andymarek"
+                    name = "Andy Marek"
+                    email = "andy@andymarek.com"
                 }
+            }
+
+            scm {
+                connection = "scm:git:git://github.com/coordinatekit/crf.git"
+                developerConnection = "scm:git:ssh://github.com/coordinatekit/crf.git"
+                url = "https://github.com/coordinatekit/crf"
             }
         }
     }
@@ -107,7 +95,7 @@ subprojects {
         } else {
             useGpgCmd()
         }
-        sign publishing.publications.mavenJava
+        sign publishing.publications.centralPortal
         required = isPublishing
     }
 
