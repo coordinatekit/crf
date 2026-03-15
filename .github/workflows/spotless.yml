@@ -19,8 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -31,10 +30,16 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run Spotless
+      - name: Apply Spotless
+        if: github.event.pull_request.head.repo.full_name == github.repository
         run: ./gradlew spotlessApply
 
+      - name: Check Spotless
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: ./gradlew spotlessCheck
+
       - name: Commit changes
+        if: github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
