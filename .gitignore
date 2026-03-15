@@ -3,6 +3,7 @@
 !/AGENTS.md
 !/CLAUDE.md
 !/CONTRIBUTING.md
+!/CHANGELOG.md
 !/README.md
 .*
 !/.gitattributes
@@ -10,6 +11,7 @@
 !/.gitignore
 !/.infra
 !/.pre-commit-config.yaml
+!/.prettierignore
 !/.devcontainer
 build/
 !**/src/main/**/build/

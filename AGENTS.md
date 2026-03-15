@@ -45,6 +45,28 @@ objects, domain model entities, and test parameters.
 After editing files, check for code analysis issues (unused imports, type mismatches, missing annotations, etc.) and fix
 them. Do not add `@SuppressWarnings` annotations — fix the root cause. Existing suppressions may be intentional.
 
+## Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>[optional scope]: <description>
+```
+
+- **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- **Scopes** (optional): `core`, `mallet`
+- Description must start with a lowercase letter
+- Use imperative mood ("add feature" not "added feature")
+
+Examples:
+
+```
+feat(core): add token normalization
+fix(mallet): handle empty training sequences
+docs: update installation instructions
+refactor(core): simplify feature extraction pipeline
+```
+
 ## Testing Conventions
 
 ### Test Organization
@@ -87,16 +109,19 @@ void extractAt(ExtractAtParameters parameters) {
 ```
 
 **Conventions:**
+
 - Record name: `{TestMethodName}Parameters` (e.g., `ExtractAtParameters`)
 - First field is always `String name` with a descriptive snake_case identifier
 - Static method name matches the test method name (enables `@MethodSource` without arguments)
 - Use `// ARRANGE //`, `// ACT //`, `// ASSERT //` comments in the test method
 
 **When to use parameterized tests:**
+
 - Multiple test cases with the same assertion logic but different inputs/outputs
 - Testing boundary conditions, edge cases, or configuration variations
 
 **When to use regular `@Test`:**
+
 - Tests requiring different setup or assertion logic
 - Tests with different generic types than the main parameterized tests
 
@@ -136,6 +161,7 @@ void builder__exception(BuilderExceptionParameters parameters) {
 ```
 
 **Conventions:**
+
 - Record includes `Executable action` for the code that should throw
 - Record includes `Class<? extends Exception> expectedClass` and `String expectedMessage`
 
@@ -159,6 +185,7 @@ This is a Conditional Random Fields (CRF) library for sequence labeling tasks, b
 ### Training Data Format
 
 Training data uses XML with a CRF-specific namespace (`https://coordinatekit.org/crf/schema`):
+
 - `<crf:Sequence>` elements wrap training examples
 - Child elements represent tagged tokens (element name = tag, text content = token)
 - `XmlTrainingData` handles reading/writing and can generate XSD schemas from `TagProvider`
