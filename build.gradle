@@ -19,7 +19,13 @@ allprojects {
 def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && it.name != "publishToMavenLocal" } }
 
 signing {
-    useGpgCmd()
+    def signingKey = findProperty("signing.key")
+    def signingPassword = findProperty("signing.password")
+    if (signingKey) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        useGpgCmd()
+    }
     required = isPublishing
 }
 
@@ -87,7 +93,13 @@ subprojects {
     }
 
     signing {
-        useGpgCmd()
+        def signingKey = findProperty("signing.key")
+        def signingPassword = findProperty("signing.password")
+        if (signingKey) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        } else {
+            useGpgCmd()
+        }
         sign publishing.publications.mavenJava
         required = isPublishing
     }
