@@ -1,4 +1,5 @@
 rootProject.name = "crf"
 
+include "annotator"
 include "core"
 include "mallet"

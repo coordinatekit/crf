@@ -1,0 +1,7 @@
+dependencies {
+    api project(":core")
+
+    implementation "org.jline:jline:3.27.1"
+
+    testImplementation "org.jline:jline-terminal-jansi:3.27.1"
+}
