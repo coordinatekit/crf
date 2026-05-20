@@ -36,6 +36,9 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -171,6 +174,24 @@ class XmlTrainingDataTest {
     @TempDir
     Path temporaryDirectory;
 
+    @Test
+    @SuppressWarnings("deprecation")
+    void constructor__deprecatedTargetNamespaceOverload__delegatesToBuilder() {
+        // ARRANGE //
+        StringTagProvider provider = new StringTagProvider(Set.of("Noun"), "Noun");
+        String namespace = "https://example.org/tags";
+        ByteArrayOutputStream deprecatedOutput = new ByteArrayOutputStream();
+        ByteArrayOutputStream builderOutput = new ByteArrayOutputStream();
+
+        // ACT //
+        new XmlTrainingData<>(provider, namespace).generateSchema(deprecatedOutput);
+        new XmlTrainingData<>(provider, XmlTrainingDataConfiguration.builder().targetNamespace(namespace).build())
+                .generateSchema(builderOutput);
+
+        // ASSERT //
+        assertArrayEquals(builderOutput.toByteArray(), deprecatedOutput.toByteArray());
+    }
+
     record GenerateSchemaParameters(StringTagProvider tagProvider, String targetNamespace, String expected) {}
 
     static Stream<GenerateSchemaParameters> generateSchema() {
@@ -202,7 +223,10 @@ class XmlTrainingDataTest {
     @ParameterizedTest
     void generateSchema(GenerateSchemaParameters parameters) {
         // ARRANGE //
-        XmlTrainingData<String> data = new XmlTrainingData<>(parameters.tagProvider(), parameters.targetNamespace());
+        XmlTrainingData<String> data = new XmlTrainingData<>(
+                parameters.tagProvider(),
+                XmlTrainingDataConfiguration.builder().targetNamespace(parameters.targetNamespace()).build()
+        );
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
         // ACT //
@@ -211,18 +235,6 @@ class XmlTrainingDataTest {
         // ASSERT //
         String schema = output.toString(StandardCharsets.UTF_8);
         assertEquals(parameters.expected(), schema);
-    }
-
-    @Test
-    void generateSchema__containsTargetNamespace() {
-        StringTagProvider tagProvider = new StringTagProvider(Set.of("Noun"), "Noun");
-        XmlTrainingData<String> data = new XmlTrainingData<>(tagProvider, "https://example.org/my-tags");
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        data.generateSchema(output);
-
-        String schema = output.toString(StandardCharsets.UTF_8);
-        assertTrue(schema.contains("targetNamespace=\"https://example.org/my-tags\""));
     }
 
     record GenerateSchemaExceptionParameters(
@@ -272,7 +284,10 @@ class XmlTrainingDataTest {
     @MethodSource
     @ParameterizedTest
     void generateSchema_exception(GenerateSchemaExceptionParameters parameters) {
-        XmlTrainingData<String> data = new XmlTrainingData<>(parameters.tagProvider(), parameters.targetNamespace());
+        XmlTrainingData<String> data = new XmlTrainingData<>(
+                parameters.tagProvider(),
+                XmlTrainingDataConfiguration.builder().targetNamespace(parameters.targetNamespace()).build()
+        );
 
         RuntimeException exception = assertThrows(
                 parameters.expectedException(),
@@ -338,23 +353,5 @@ class XmlTrainingDataTest {
             assertEquals(1, actual.size());
             assertBrownFox(actual.getFirst());
         }
-    }
-
-    static void assertBrownFox(TrainingSequence<String> sequence) {
-        assertEquals(2, sequence.size());
-        assertEquals("Adjective", sequence.get(0).tag());
-        assertEquals("Brown", sequence.get(0).token());
-        assertEquals("Noun", sequence.get(1).tag());
-        assertEquals("Fox", sequence.get(1).token());
-    }
-
-    static void assertLazySleepingDog(TrainingSequence<String> sequence) {
-        assertEquals(3, sequence.size());
-        assertEquals("Adjective", sequence.get(0).tag());
-        assertEquals("Lazy", sequence.get(0).token());
-        assertEquals("Adjective", sequence.get(1).tag());
-        assertEquals("Sleeping", sequence.get(1).token());
-        assertEquals("Noun", sequence.get(2).tag());
-        assertEquals("Dog", sequence.get(2).token());
     }
 }
