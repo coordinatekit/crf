@@ -37,8 +37,18 @@ parameter count), methods. Applies to instance/static fields, instance/static me
 
 ### Records vs Classes
 
-Configuration objects must be **classes** with builder pattern, not records. Records are appropriate for DTOs, result
-objects, domain model entities, and test parameters.
+Records must not be part of the public API surface. Public value types (cross-module or cross-package) are exposed as
+interfaces, with a private record handling the implementation. When a record is not a good fit (e.g., builder-driven
+construction, mutable state), use a full-fledged class instead. Records remain appropriate for internal DTOs,
+package-private value types, private implementations of public interfaces, and test parameters.
+
+Configuration objects must be **classes** with builder pattern, not records.
+
+### Models Factory
+
+Public value types follow a three-part pattern: a public interface, a private record implementing it, and a static
+factory method for construction. Factories are scoped to where the value type is used — e.g., `AnnotatorModels` lives in
+the annotator's `ui` package and exposes the types used there. Always use static imports for factory methods.
 
 ### Code Analysis
 
