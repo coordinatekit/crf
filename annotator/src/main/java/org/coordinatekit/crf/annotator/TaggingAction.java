@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator.ui;
+package org.coordinatekit.crf.annotator;
 
 /**
  * The action selected by the user when presented with a sequence to tag.

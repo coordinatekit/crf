@@ -15,9 +15,6 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import org.coordinatekit.crf.annotator.ui.AnnotatorSequence;
-import org.coordinatekit.crf.annotator.ui.TaggingInterface;
-import org.coordinatekit.crf.annotator.ui.TaggingResult;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
@@ -47,7 +44,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import static org.coordinatekit.crf.annotator.ui.AnnotatorModels.annotatorSequence;
+import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
 
 /**
  * Orchestrates an interactive annotation session over an input file of one-sequence-per-line text.
@@ -122,11 +119,9 @@ public final class Annotator<F, T extends Comparable<T>> {
      * already present in {@code outputFile}. Each remaining line is tokenized (by the configured
      * {@link CrfTagger} when set, otherwise by the configured {@link Tokenizer}), built into an
      * {@link AnnotatorSequence}, and presented via the configured {@link TaggingInterface}. On
-     * {@link org.coordinatekit.crf.annotator.ui.TaggingAction#ACCEPT ACCEPT} the tokens and the
-     * user-chosen tags are written and flushed to the output file. On
-     * {@link org.coordinatekit.crf.annotator.ui.TaggingAction#SKIP SKIP} the line is left unwritten and
-     * will be re-presented on the next run. On
-     * {@link org.coordinatekit.crf.annotator.ui.TaggingAction#EXIT EXIT} the writer is closed and this
+     * {@link TaggingAction#ACCEPT ACCEPT} the tokens and the user-chosen tags are written and flushed
+     * to the output file. On {@link TaggingAction#SKIP SKIP} the line is left unwritten and will be
+     * re-presented on the next run. On {@link TaggingAction#EXIT EXIT} the writer is closed and this
      * method returns.
      *
      * <p>
@@ -223,7 +218,7 @@ public final class Annotator<F, T extends Comparable<T>> {
      * @param state the mutable per-call state tracking counters, seen hashes, and the writer
      * @param line the raw input line (blank lines are ignored)
      * @return {@code true} to continue processing further lines, {@code false} when the user has
-     *         requested {@link org.coordinatekit.crf.annotator.ui.TaggingAction#EXIT EXIT}
+     *         requested {@link TaggingAction#EXIT EXIT}
      * @throws IOException if writing the accepted sequence to the output fails
      */
     private boolean processLine(AnnotationState<T> state, String line) throws IOException {

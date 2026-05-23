@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator.ui;
+package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
@@ -38,7 +38,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
-import static org.coordinatekit.crf.annotator.ui.AnnotatorModels.annotatorSequence;
+import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

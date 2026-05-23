@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator.ui;
+package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.jline.reader.EndOfFileException;
@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.coordinatekit.crf.annotator.ui.AnnotatorModels.taggingResult;
+import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 
 /**
  * A {@link TaggingInterface} implementation that drives a JLine-backed terminal.

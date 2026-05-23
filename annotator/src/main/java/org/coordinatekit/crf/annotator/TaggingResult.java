@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator.ui;
+package org.coordinatekit.crf.annotator;
 
 import java.util.List;
 
