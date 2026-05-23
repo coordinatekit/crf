@@ -15,10 +15,6 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import org.coordinatekit.crf.annotator.ui.AnnotatorSequence;
-import org.coordinatekit.crf.annotator.ui.AnnotatorToken;
-import org.coordinatekit.crf.annotator.ui.TaggingInterface;
-import org.coordinatekit.crf.annotator.ui.TaggingResult;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
@@ -54,10 +50,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import static org.coordinatekit.crf.annotator.ui.AnnotatorModels.taggingResult;
-import static org.coordinatekit.crf.annotator.ui.TaggingAction.ACCEPT;
-import static org.coordinatekit.crf.annotator.ui.TaggingAction.EXIT;
-import static org.coordinatekit.crf.annotator.ui.TaggingAction.SKIP;
+import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
+import static org.coordinatekit.crf.annotator.TaggingAction.ACCEPT;
+import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
+import static org.coordinatekit.crf.annotator.TaggingAction.SKIP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;

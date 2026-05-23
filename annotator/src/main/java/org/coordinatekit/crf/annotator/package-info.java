@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 /**
- * Orchestrator entry point for an interactive annotation session.
+ * Interactive annotation session: orchestrator, per-sequence tagging interface, and JLine terminal
+ * implementation.
  *
  * <p>
  * The {@link org.coordinatekit.crf.annotator.Annotator} ties together the I/O surface from
- * {@code core} (tokenization, the XML training-data appender) with the user-interface surface from
- * {@link org.coordinatekit.crf.annotator.ui} and walks an input file line-by-line, persisting each
- * accepted sequence to the output XML file.
+ * {@code core} (tokenization, the XML training-data appender) with the
+ * {@link org.coordinatekit.crf.annotator.TaggingInterface} presentation contract, walking an input
+ * file line-by-line and persisting each accepted sequence to the output XML file. The default
+ * presentation implementation is {@link org.coordinatekit.crf.annotator.JLineTaggingInterface},
+ * which renders to a JLine terminal.
  */
 @NullMarked
 package org.coordinatekit.crf.annotator;
