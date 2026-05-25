@@ -1,0 +1,41 @@
+[versions]
+# api — update conservatively (security/bugs only)
+jspecify = "1.0.0"
+picocli = "4.7.7"
+
+# implementation — keep current
+jline = "3.27.1"
+mallet = "2.0.8"
+slf4j = "2.0.17"
+
+# test — always latest
+junit = "6.0.1"
+logback = "1.5.22"
+
+# build — keep current
+errorprone = "2.36.0"
+
+# plugins
+errorprone-plugin = "4.1.0"
+git-changelog = "2.2.0"
+sonatype-central-portal-publisher = "1.2.4"
+spotless = "6.25.0"
+
+[libraries]
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+jline = { module = "org.jline:jline", version.ref = "jline" }
+jline-terminal-jansi = { module = "org.jline:jline-terminal-jansi", version.ref = "jline" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+mallet = { module = "cc.mallet:mallet", version.ref = "mallet" }
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+
+[plugins]
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
+git-changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "git-changelog" }
+sonatype-central-portal-publisher = { id = "net.thebugmc.gradle.sonatype-central-portal-publisher", version.ref = "sonatype-central-portal-publisher" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
