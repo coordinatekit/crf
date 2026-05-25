@@ -18,6 +18,7 @@ package org.coordinatekit.crf.core.io;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingConsumer;
@@ -43,13 +44,7 @@ import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertConta
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.lazySleepingDog;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class XmlTrainingDataWriterTest {
     private static final XmlTrainingData<String> DATA = new XmlTrainingData<>(new StringTagProvider("0"));
@@ -84,6 +79,7 @@ class XmlTrainingDataWriterTest {
             String expectedMessage
     ) {}
 
+    @SuppressWarnings("DataFlowIssue")
     static Stream<AfterCloseExceptionParameters> afterClose__exception() {
         return Stream.of(
                 new AfterCloseExceptionParameters("flush", TrainingSequenceWriter::flush, "Cannot flush after close."),
@@ -156,7 +152,12 @@ class XmlTrainingDataWriterTest {
         String originalContent = Files.readString(file);
 
         // ACT //
-        IOException exception = assertThrows(IOException.class, () -> DATA.appendingWriter(file));
+        IOException exception = assertThrows(IOException.class, () -> {
+            try (var writer = DATA.appendingWriter(file)) {
+                assertNotNull(writer);
+                fail();
+            }
+        });
 
         // ASSERT //
         String message = exception.getMessage();
@@ -183,6 +184,7 @@ class XmlTrainingDataWriterTest {
 
     record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
 
+    @SuppressWarnings("DataFlowIssue")
     static Stream<AppendHappyPathParameters> appendingWriter__happyPath() {
         return Stream.of(new AppendHappyPathParameters("cleanCloseTag", file -> {
             try (var writer = DATA.appendingWriter(file)) {
@@ -237,7 +239,7 @@ class XmlTrainingDataWriterTest {
 
         // ACT //
         try (var writer = DATA.appendingWriter(file)) {
-            // Write nothing; the document should still be a valid empty training set.
+            assertNotNull(writer);
         }
 
         // ASSERT //
@@ -366,8 +368,7 @@ class XmlTrainingDataWriterTest {
         try (var writer = DATA.writer(output)) {
             writer.write(brownFox());
             writer.flush();
-            byte[] snapshot = output.toByteArray();
-            String emitted = new String(snapshot, StandardCharsets.UTF_8);
+            String emitted = output.toString(StandardCharsets.UTF_8);
 
             // ASSERT //
             assertTrue(
@@ -414,6 +415,46 @@ class XmlTrainingDataWriterTest {
         }
     }
 
+    record SpacingParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
+
+    static Stream<SpacingParameters> writer__separatesConsecutiveTokensWithSpace() {
+        return Stream.of(
+                new SpacingParameters(
+                        "two_tokens",
+                        brownFox(),
+                        List.of("<crf:Sequence><Adjective>Brown", "</Adjective> <Noun>")
+                ),
+                new SpacingParameters(
+                        "three_tokens_with_repeated_tag",
+                        lazySleepingDog(),
+                        List.of("<crf:Sequence><Adjective>Lazy", "</Adjective> <Adjective>", "</Adjective> <Noun>")
+                ),
+                new SpacingParameters(
+                        "single_token_has_no_internal_space",
+                        new TrainingSequence<>(List.of("Fox"), List.of("Noun")),
+                        List.of("<crf:Sequence><Noun>Fox</Noun></crf:Sequence>")
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void writer__separatesConsecutiveTokensWithSpace(SpacingParameters parameters) throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(parameters.sequence());
+        }
+
+        // ASSERT //
+        String emitted = output.toString(StandardCharsets.UTF_8);
+        parameters.expectedFragments().forEach(
+                fragment -> assertTrue(emitted.contains(fragment), "Expected '" + fragment + "' in: " + emitted)
+        );
+    }
+
     private static XmlTrainingData<String> withRoot(String rootElementName) {
         return new XmlTrainingData<>(
                 new StringTagProvider("0"),
@@ -421,13 +462,8 @@ class XmlTrainingDataWriterTest {
         );
     }
 
-    private static final class NullEncodingTagProvider implements TagProvider<String> {
-        private final String nullTag;
-
-        NullEncodingTagProvider(String nullTag) {
-            this.nullTag = nullTag;
-        }
-
+    @NullMarked
+    private record NullEncodingTagProvider(String nullTag) implements TagProvider<String> {
         @Override
         public String decode(@Nullable String tag) {
             return tag == null ? "0" : tag;

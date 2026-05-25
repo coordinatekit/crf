@@ -713,6 +713,9 @@ public class XmlTrainingData<T extends Comparable<T>>
                                 "Tag '" + token.tag() + "' encodes to null and cannot be serialized."
                         );
                     }
+                    if (position > 0) {
+                        xmlWriter.writeCharacters(" ");
+                    }
                     xmlWriter.writeStartElement(tagName);
                     xmlWriter.writeCharacters(token.token());
                     xmlWriter.writeEndElement();
