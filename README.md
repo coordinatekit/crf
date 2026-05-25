@@ -49,11 +49,13 @@ their APIs are designed for flexibility, which often means writing significant b
 - **XML Training Data** - Built-in support for XML-formatted annotated training data
 - **Multi-threaded Training** - Parallel training support via MALLET
 - **Configurable** - Fine-grained control over training parameters, regularization, and model output
+- **Interactive Annotator** - Terminal-based UI for tagging sequences and writing the XML training data — see [`annotator/README.md`](annotator/README.md)
 
 ## Project Structure
 
 ```
 crf/
+├── annotator/  # Terminal-based interactive annotator for building training data
 ├── core/       # Core abstractions, interfaces, and preprocessing pipeline
 └── mallet/     # MALLET-based CRF trainer implementation
 ```
@@ -200,4 +202,3 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 This library builds upon [MALLET](https://mimno.github.io/Mallet/) (MAchine Learning for LanguagE Toolkit) from UMass
 Amherst.
-

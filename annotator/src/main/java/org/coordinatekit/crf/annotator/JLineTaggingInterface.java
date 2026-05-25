@@ -387,7 +387,7 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
      * <p>
      * {@link #tagProvider(TagProvider)} and {@link #terminal(Terminal)} are required. The other setters
      * carry sensible defaults: {@link #maxTokenDisplayWidth(int) maxTokenDisplayWidth} defaults to
-     * {@code 30}.
+     * {@code 30}, and {@link #threshold(double) threshold} defaults to {@code 0.80}.
      *
      * @param <F> the feature type carried on the annotator sequence
      * @param <T> the tag type
@@ -396,7 +396,7 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         private int maxTokenDisplayWidth = 30;
         private @Nullable TagProvider<T> tagProvider;
         private @Nullable Terminal terminal;
-        private final double threshold = 0.80;
+        private double threshold = 0.80;
 
         private Builder() {}
 
@@ -462,5 +462,22 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
             return this;
         }
 
+        /**
+         * Sets the confidence threshold below which token rows are highlighted (bold + yellow) on the
+         * sequence screen. A row is highlighted when its initial confidence is non-null and strictly less
+         * than this value.
+         *
+         * @param threshold the threshold, in the closed interval {@code [0.0, 1.0]}
+         * @return this builder
+         * @throws IllegalArgumentException if {@code threshold} is outside {@code [0.0, 1.0]} or is
+         *         {@code NaN}
+         */
+        public Builder<F, T> threshold(double threshold) {
+            if (Double.isNaN(threshold) || threshold < 0.0 || threshold > 1.0) {
+                throw new IllegalArgumentException("threshold must be in [0.0, 1.0], got: " + threshold);
+            }
+            this.threshold = threshold;
+            return this;
+        }
     }
 }
