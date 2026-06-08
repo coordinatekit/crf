@@ -16,9 +16,11 @@
 package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.PositionedToken;
+import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.SegmentKind;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
@@ -27,6 +29,7 @@ import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
+import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.NullMarked;
@@ -76,9 +79,9 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
  * <p>
  * The "Sequence N of M" counters reported through {@link AnnotatorSequence} use a stable
  * denominator: {@code M} is the total number of non-blank input lines, including lines already
- * present in the output (so "of M" does not drift between sessions). {@code N} is a presentation
- * counter that increments only on sequences actually shown to the user — auto-skipped lines do not
- * advance it.
+ * present in the output (so "of M" does not drift between sessions). {@code N} is the position of
+ * the shown sequence within that input — the number of lines auto-skipped so far plus the number
+ * presented so far — so resuming after 50 skipped lines shows the next sequence as "51 of M".
  *
  * <p>
  * Instances are constructed via the nested {@link Builder}.
@@ -89,11 +92,13 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
  */
 @NullMarked
 public final class Annotator<F, T extends Comparable<T>> {
+    private final @Nullable FeatureExtractor<F> featureExtractor;
     private final @Nullable CrfTagger<F, T> tagger;
     private final TagProvider<T> tagProvider;
     private final TaggingInterface<F, T> taggingInterface;
     private final Terminal terminal;
     private final @Nullable Tokenizer tokenizer;
+    private final @Nullable FeatureExtractor<F> verboseFeatureExtractor;
 
     /**
      * Constructs an annotator from a populated builder.
@@ -103,11 +108,13 @@ public final class Annotator<F, T extends Comparable<T>> {
      * @throws NullPointerException if any required builder field is null
      */
     private Annotator(Builder<F, T> builder) {
+        this.featureExtractor = builder.featureExtractor;
         this.tagger = builder.tagger;
         this.tagProvider = Objects.requireNonNull(builder.tagProvider, "tagProvider must be set");
         this.taggingInterface = Objects.requireNonNull(builder.taggingInterface, "taggingInterface must be set");
         this.terminal = Objects.requireNonNull(builder.terminal, "terminal must be set");
         this.tokenizer = builder.tokenizer;
+        this.verboseFeatureExtractor = builder.verboseFeatureExtractor;
     }
 
     /**
@@ -197,6 +204,27 @@ public final class Annotator<F, T extends Comparable<T>> {
     }
 
     /**
+     * Runs a display feature extractor over every position of a positioned-token sequence.
+     *
+     * @param extractor the extractor to run, or {@code null} when not configured
+     * @param positionedTokens the positioned tokens to extract features from
+     * @return one feature set per token, or {@code null} when {@code extractor} is {@code null}
+     */
+    private @Nullable List<Set<F>> extractDisplayFeatures(
+            @Nullable FeatureExtractor<F> extractor,
+            Sequence<? extends PositionedToken> positionedTokens
+    ) {
+        if (extractor == null) {
+            return null;
+        }
+        List<Set<F>> features = new ArrayList<>(positionedTokens.size());
+        for (int position = 0; position < positionedTokens.size(); position++) {
+            features.add(extractor.extractAt(positionedTokens, position));
+        }
+        return features;
+    }
+
+    /**
      * Computes a 64-bit content fingerprint of a token list for content-match resume. Tokens are
      * encoded as UTF-8 with a NUL byte separator and fed through SHA-256; the leading 8 bytes of the
      * digest are returned as a {@code long}.
@@ -237,7 +265,7 @@ public final class Annotator<F, T extends Comparable<T>> {
 
         TaggedTokenization<F, T> tagged = tagger != null ? tagger.tag(line) : null;
         Tokenization tokenized = tagged != null ? tagged.tokenization()
-                : Objects.requireNonNull(tokenizer).tokenize(line);
+                : Objects.requireNonNull(tokenizer, "tokenizer must be set when tagger is null").tokenize(line);
         List<String> tokens = tokenized.sequence().stream().map(PositionedToken::token).toList();
 
         long tokenHash = hashTokens(tokens);
@@ -251,10 +279,29 @@ public final class Annotator<F, T extends Comparable<T>> {
             emitResumeMessage(state.skipped, state.totalSequences);
         }
 
-        int currentPresentation = ++state.presentationNumber;
+        Sequence<? extends PositionedToken> presentedTokens = tagged != null ? tagged.taggedSequence()
+                : tokenized.sequence();
+        List<Set<F>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
+        List<Set<F>> verboseFeatures = resolveVerboseFeatures(tagged, presentedTokens);
+
+        ++state.presentationNumber;
+        int currentPresentation = state.skipped + state.presentationNumber;
         AnnotatorSequence<F, T> displaySequence = tagged != null
-                ? annotatorSequence(currentPresentation, state.totalSequences, tagged.taggedSequence())
-                : annotatorSequence(currentPresentation, state.totalSequences, tokens, tagProvider);
+                ? annotatorSequence(
+                        currentPresentation,
+                        state.totalSequences,
+                        tagged.taggedSequence(),
+                        features,
+                        verboseFeatures
+                )
+                : annotatorSequence(
+                        currentPresentation,
+                        state.totalSequences,
+                        tokens,
+                        tagProvider,
+                        features,
+                        verboseFeatures
+                );
 
         TaggingResult<T> result = taggingInterface.present(displaySequence);
 
@@ -291,6 +338,28 @@ public final class Annotator<F, T extends Comparable<T>> {
             });
         }
         return seenHashes;
+    }
+
+    /**
+     * Resolves the per-token verbose display features for a line, by source priority: the configured
+     * {@code verboseFeatureExtractor} when set, then the tagger's embedded
+     * {@link TaggedPositionedToken#features() features} when the line was tagged, then none.
+     *
+     * @param tagged the tagger's output for the line, or {@code null} on the no-tagger path
+     * @param positionedTokens the positioned tokens of the line
+     * @return one verbose feature set per token, or {@code null} when no verbose source applies
+     */
+    private @Nullable List<Set<F>> resolveVerboseFeatures(
+            @Nullable TaggedTokenization<F, T> tagged,
+            Sequence<? extends PositionedToken> positionedTokens
+    ) {
+        if (verboseFeatureExtractor != null) {
+            return extractDisplayFeatures(verboseFeatureExtractor, positionedTokens);
+        }
+        if (tagged != null) {
+            return tagged.taggedSequence().stream().map(TaggedPositionedToken::features).toList();
+        }
+        return null;
     }
 
     /**
@@ -355,11 +424,13 @@ public final class Annotator<F, T extends Comparable<T>> {
      * @param <T> the tag type
      */
     public static final class Builder<F, T extends Comparable<T>> {
+        private @Nullable FeatureExtractor<F> featureExtractor;
         private @Nullable CrfTagger<F, T> tagger;
         private @Nullable TagProvider<T> tagProvider;
         private @Nullable TaggingInterface<F, T> taggingInterface;
         private @Nullable Terminal terminal;
         private @Nullable Tokenizer tokenizer;
+        private @Nullable FeatureExtractor<F> verboseFeatureExtractor;
 
         private Builder() {}
 
@@ -387,6 +458,21 @@ public final class Annotator<F, T extends Comparable<T>> {
             }
 
             return new Annotator<>(this);
+        }
+
+        /**
+         * Sets the feature extractor used to compute the key display features shown by the feature view of
+         * the tagging interface. May be {@code null}; when {@code null}, the key-feature view is not
+         * offered (the all-features view may still be, when a verbose source applies). The extracted
+         * features are presentational only — they have no effect on tagging or training output.
+         *
+         * @param featureExtractor the display feature extractor, or {@code null} to disable the feature
+         *        display
+         * @return this builder
+         */
+        public Builder<F, T> featureExtractor(@Nullable FeatureExtractor<F> featureExtractor) {
+            this.featureExtractor = featureExtractor;
+            return this;
         }
 
         /**
@@ -447,6 +533,23 @@ public final class Annotator<F, T extends Comparable<T>> {
          */
         public Builder<F, T> tokenizer(Tokenizer tokenizer) {
             this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the feature extractor used to compute the verbose display features shown only by the
+         * all-features view of the tagging interface. May be {@code null}; when {@code null} and a
+         * {@link #tagger(CrfTagger) tagger} is configured, the all-features view falls back to the tagger's
+         * embedded {@link TaggedPositionedToken#features() features} which are the features the model
+         * actually saw. Setting this extractor overrides that fallback. The extracted features are
+         * presentational only and have no effect on tagging or training output.
+         *
+         * @param verboseFeatureExtractor the verbose display feature extractor, or {@code null} to use the
+         *        tagger fallback (or no verbose display)
+         * @return this builder
+         */
+        public Builder<F, T> verboseFeatureExtractor(@Nullable FeatureExtractor<F> verboseFeatureExtractor) {
+            this.verboseFeatureExtractor = verboseFeatureExtractor;
             return this;
         }
     }

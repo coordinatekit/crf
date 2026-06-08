@@ -22,6 +22,8 @@ import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -29,7 +31,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -38,6 +42,13 @@ final class AnnotatorTestSupport {
     static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
 
     private AnnotatorTestSupport() {}
+
+    /** Returns the ANSI escape prefix emitted for a bold-yellow style, for asserting styled rows. */
+    static String boldYellowEscape() {
+        AttributedStyle style = AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW);
+        String ansi = new AttributedString("X", style).toAnsi();
+        return ansi.substring(0, ansi.indexOf('X'));
+    }
 
     static DumbTerminal dumbTerminal(String scriptedInput) throws IOException {
         return new DumbTerminal(
@@ -68,6 +79,28 @@ final class AnnotatorTestSupport {
         try (Stream<TrainingSequence<String>> stream = xml.read(outputFile)) {
             return stream.toList();
         }
+    }
+
+    static <T> Map<T, Double> scoreMap(T firstTag, double firstScore, T secondTag, double secondScore) {
+        Map<T, Double> scores = new LinkedHashMap<>();
+        scores.put(firstTag, firstScore);
+        scores.put(secondTag, secondScore);
+        return scores;
+    }
+
+    static <T> Map<T, Double> scoreMap(
+            T firstTag,
+            double firstScore,
+            T secondTag,
+            double secondScore,
+            T thirdTag,
+            double thirdScore
+    ) {
+        Map<T, Double> scores = new LinkedHashMap<>();
+        scores.put(firstTag, firstScore);
+        scores.put(secondTag, secondScore);
+        scores.put(thirdTag, thirdScore);
+        return scores;
     }
 
     static List<String> tagsOf(TrainingSequence<String> sequence) {
