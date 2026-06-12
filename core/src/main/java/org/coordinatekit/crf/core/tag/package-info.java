@@ -24,6 +24,8 @@
  * model
  * <li>{@link org.coordinatekit.crf.core.tag.TaggedSequence} - A sequence with predicted tags for
  * each token
+ * <li>{@link org.coordinatekit.crf.core.tag.TaggedTokenization} - The tagged sequence paired with
+ * the authoritative tokenization it came from
  * <li>{@link org.coordinatekit.crf.core.tag.TaggedPositionedToken} - A token with its predicted tag
  * and confidence scores
  * <li>{@link org.coordinatekit.crf.core.tag.TagScore} - Associates a tag with its confidence score

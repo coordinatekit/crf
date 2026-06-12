@@ -15,7 +15,6 @@
  */
 package org.coordinatekit.crf.core.tag;
 
-import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.jspecify.annotations.NullMarked;
 
@@ -31,16 +30,23 @@ import org.jspecify.annotations.NullMarked;
  * @param <T> the type of tags (labels) assigned to tokens
  * @see TaggedPositionedToken
  * @see TaggedSequence
+ * @see TaggedTokenization
  */
 @NullMarked
 public interface CrfTagger<F, T extends Comparable<T>> {
     /**
      * Tags the tokens in the input string using the CRF model.
      *
+     * <p>
+     * The result carries both the tagged tokens and the authoritative
+     * {@link TaggedTokenization#tokenization() tokenization} the tagger computed — the full segment
+     * decomposition of tokens and the excluded runs dropped around them — so callers can reconstruct
+     * the original surface without re-tokenizing.
+     *
      * @param input the raw text to tag
-     * @return a sequence of tagged tokens with position and score information
+     * @return the tagged tokens paired with the tokenization they came from
      * @throws InvalidInputException if the input string is empty or blank
      * @throws NullPointerException if the input string is null
      */
-    Sequence<TaggedPositionedToken<F, T>> tag(String input);
+    TaggedTokenization<F, T> tag(String input);
 }

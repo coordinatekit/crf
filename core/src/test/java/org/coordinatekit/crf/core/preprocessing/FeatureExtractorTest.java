@@ -110,10 +110,8 @@ class FeatureExtractorTest {
     @ParameterizedTest
     @MethodSource("extractTrainingProvider")
     void extractTraining(ExtractTrainingParameters parameters) {
-        Sequence<TrainingPositionedToken<String>> input = new TrainingSequence<>(
-                parameters.tokens(),
-                parameters.tags()
-        );
+        Sequence<TrainingPositionedToken<String>> input = TrainingSequence
+                .ofTokens(parameters.tokens(), parameters.tags());
         Sequence<FeatureTrainingPositionedToken<String, String>> result = SIMPLE_FEATURE_EXTRACTOR
                 .extractTraining(input);
 

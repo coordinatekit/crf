@@ -15,6 +15,9 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -68,19 +71,19 @@ class TrainingSequenceTest {
                 new ExceptionParameters(
                         IllegalArgumentException.class,
                         "The number of tags must be equal to the number of tokens. (tokens: 1, tags: 2)",
-                        () -> new TrainingSequence<>(List.of("Hello"), List.of("GREETING", "SALUTATION"))
+                        () -> TrainingSequence.ofTokens(List.of("Hello"), List.of("GREETING", "SALUTATION"))
                 ),
                 new ExceptionParameters(
                         IllegalArgumentException.class,
                         "There must be one or more tokens provided to a training sequence.",
-                        () -> new TrainingSequence<>(List.of(), List.of())
+                        () -> TrainingSequence.ofTokens(List.of(), List.of())
                 )
         );
     }
 
     @Test
     void get() {
-        var sequence = new TrainingSequence<>(List.of("Hello"), List.of("GREETING"));
+        var sequence = TrainingSequence.ofTokens(List.of("Hello"), List.of("GREETING"));
 
         assertEquals(0, sequence.get(0).position());
         assertEquals("GREETING", sequence.get(0).tag());
@@ -88,8 +91,53 @@ class TrainingSequenceTest {
     }
 
     @Test
+    void ofSegments__exceptionWhenNoTokenSegment() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> TrainingSequence.ofSegments(List.of(excluded(" ")))
+        );
+
+        assertEquals("There must be one or more tokens provided to a training sequence.", exception.getMessage());
+    }
+
+    @Test
+    void ofSegments__projectsTokensSkippingExcludedRuns() {
+        var sequence = TrainingSequence.ofSegments(
+                List.of(
+                        excluded("  "),
+                        token("GREETING", "Hello"),
+                        excluded(" "),
+                        token("NOUN", "world"),
+                        excluded("!")
+                )
+        );
+
+        // The token-only projection ignores excluded runs: positions stay contiguous from zero.
+        assertEquals(2, sequence.size());
+        assertEquals(0, sequence.get(0).position());
+        assertEquals("Hello", sequence.get(0).token());
+        assertEquals("GREETING", sequence.get(0).tag());
+        assertEquals(1, sequence.get(1).position());
+        assertEquals("world", sequence.get(1).token());
+        assertEquals("NOUN", sequence.get(1).tag());
+        assertEquals("  Hello world!", sequence.surface());
+        assertEquals(5, sequence.segments().size());
+    }
+
+    @Test
+    void ofTokens__hasNoExcludedRuns() {
+        var sequence = TrainingSequence.ofTokens(List.of("Hello", "world"), List.of("GREETING", "NOUN"));
+
+        assertEquals("Helloworld", sequence.surface());
+        assertIterableEquals(
+                List.of(SegmentKind.TOKEN, SegmentKind.TOKEN),
+                sequence.segments().stream().map(TrainingSegment::kind).toList()
+        );
+    }
+
+    @Test
     void get__throwsOnInvalidIndex() {
-        var sequence = new TrainingSequence<>(List.of("Hello"), List.of("NOUN"));
+        var sequence = TrainingSequence.ofTokens(List.of("Hello"), List.of("NOUN"));
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
@@ -98,7 +146,7 @@ class TrainingSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void iterator(SequenceParameters parameters) {
-        var sequence = new TrainingSequence<>(parameters.tokens(), parameters.tags());
+        var sequence = TrainingSequence.ofTokens(parameters.tokens(), parameters.tags());
 
         var actualPositions = new ArrayList<Integer>();
         var actualTags = new ArrayList<String>();
@@ -118,7 +166,7 @@ class TrainingSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void size(SequenceParameters parameters) {
-        var sequence = new TrainingSequence<>(parameters.tokens(), parameters.tags());
+        var sequence = TrainingSequence.ofTokens(parameters.tokens(), parameters.tags());
 
         assertEquals(parameters.tokens().size(), sequence.size());
     }
@@ -126,7 +174,7 @@ class TrainingSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void stream(SequenceParameters parameters) {
-        var sequence = new TrainingSequence<>(parameters.tokens(), parameters.tags());
+        var sequence = TrainingSequence.ofTokens(parameters.tokens(), parameters.tags());
 
         assertIterableEquals(
                 parameters.expectedPositions(),

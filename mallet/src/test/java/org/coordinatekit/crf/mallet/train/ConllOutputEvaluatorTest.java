@@ -295,7 +295,7 @@ class ConllOutputEvaluatorTest {
                 new FeatureVectorSequence(featureVectors),
                 new LabelSequence(targetAlphabet, labelIndices),
                 null,
-                new TrainingSequence<>(Arrays.asList(tokens), Arrays.asList(labels))
+                TrainingSequence.ofTokens(Arrays.asList(tokens), Arrays.asList(labels))
         );
     }
 

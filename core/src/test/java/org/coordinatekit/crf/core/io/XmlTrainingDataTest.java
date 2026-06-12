@@ -16,6 +16,8 @@
 package org.coordinatekit.crf.core.io;
 
 import org.coordinatekit.crf.core.StringTagProvider;
+import org.coordinatekit.crf.core.preprocessing.SegmentKind;
+import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -146,6 +148,22 @@ class XmlTrainingDataTest {
             <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
+                    <crf:Excluded> </crf:Excluded>
+                    <Noun>Fox</Noun>
+                    <crf:Excluded>!</crf:Excluded>
+                </crf:Sequence>
+            </crf:Collection>
+            """;
+
+    // A hand-authored document may contain an empty <crf:Excluded></crf:Excluded>, which the XSD does
+    // not require. A zero-length excluded run carries no characters and is dropped on read.
+    @SuppressWarnings("CheckTagEmptyBody")
+    // language=XML
+    private static final String SINGLE_RECORD_SCHEMA_XML__EMPTY_EXCLUDED = """
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+                <crf:Sequence>
+                    <Adjective>Brown</Adjective>
+                    <crf:Excluded></crf:Excluded>
                     <crf:Excluded> </crf:Excluded>
                     <Noun>Fox</Noun>
                     <crf:Excluded>!</crf:Excluded>
@@ -296,6 +314,73 @@ class XmlTrainingDataTest {
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
+    @Test
+    void read__bareTagsNamespaceExcludedDropped() {
+        // The second sequence contains a bare <Excluded> </Excluded> in the tags (default) namespace,
+        // which is not crf-namespaced and is therefore treated as a trimmed, dropped-if-empty tag element.
+        try (var sequences = DATA
+                .read(new ByteArrayInputStream(READ__MULTIPLE_RECORDS_SCHEMA_XML.getBytes(StandardCharsets.UTF_8)))) {
+            TrainingSequence<String> second = sequences.toList().get(1);
+
+            assertLazySleepingDog(second);
+            assertEquals("Lazy SleepingDog!", second.surface());
+        }
+    }
+
+    record ReadSegmentsParameters(
+            String name,
+            String xml,
+            List<SegmentKind> expectedKinds,
+            List<String> expectedTexts,
+            String expectedSurface
+    ) {}
+
+    static Stream<ReadSegmentsParameters> read__capturesSegments() {
+        List<SegmentKind> brownFoxKinds = List
+                .of(SegmentKind.TOKEN, SegmentKind.EXCLUDED, SegmentKind.TOKEN, SegmentKind.EXCLUDED);
+        List<String> brownFoxTexts = List.of("Brown", " ", "Fox", "!");
+        return Stream.of(
+                new ReadSegmentsParameters(
+                        "captures_excluded_runs_as_segments",
+                        READ__SINGLE_RECORD_SCHEMA_XML,
+                        brownFoxKinds,
+                        brownFoxTexts,
+                        "Brown Fox!"
+                ),
+                // An empty <crf:Excluded></crf:Excluded> carries no characters; the zero-length run is
+                // dropped, so it produces no EXCLUDED segment and does not affect the surface.
+                new ReadSegmentsParameters(
+                        "empty_excluded_run_dropped",
+                        SINGLE_RECORD_SCHEMA_XML__EMPTY_EXCLUDED,
+                        brownFoxKinds,
+                        brownFoxTexts,
+                        "Brown Fox!"
+                ),
+                // A crf:Excluded element containing a child element is skipped entirely; its run is not
+                // captured, so it does not appear in the reconstructed surface.
+                new ReadSegmentsParameters(
+                        "deep_excluded_ignored_but_tokens_captured",
+                        SINGLE_RECORD_SCHEMA_XML__DEEP_EXCLUDED,
+                        brownFoxKinds,
+                        brownFoxTexts,
+                        "Brown Fox!"
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void read__capturesSegments(ReadSegmentsParameters parameters) {
+        try (var sequences = DATA.read(new ByteArrayInputStream(parameters.xml().getBytes(StandardCharsets.UTF_8)))) {
+            TrainingSequence<String> sequence = sequences.toList().getFirst();
+
+            assertBrownFox(sequence);
+            assertEquals(parameters.expectedSurface(), sequence.surface());
+            assertEquals(parameters.expectedKinds(), sequence.segments().stream().map(TrainingSegment::kind).toList());
+            assertEquals(parameters.expectedTexts(), sequence.segments().stream().map(TrainingSegment::text).toList());
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {READ__MULTIPLE_RECORDS_XML, READ__MULTIPLE_RECORDS_SCHEMA_XML})
     void read_fromPath(String xml) throws IOException {
@@ -344,8 +429,7 @@ class XmlTrainingDataTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {READ__SINGLE_RECORD_XML, READ__SINGLE_RECORD_SCHEMA_XML,
-                    SINGLE_RECORD_SCHEMA_XML__DEEP_EXCLUDED})
+    @ValueSource(strings = {READ__SINGLE_RECORD_XML, READ__SINGLE_RECORD_SCHEMA_XML})
     void read_singleRecord(String xml) {
         try (var sequences = DATA.read(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))) {
             List<TrainingSequence<String>> actual = sequences.toList();

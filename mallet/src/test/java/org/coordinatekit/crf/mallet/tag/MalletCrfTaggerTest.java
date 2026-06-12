@@ -19,6 +19,7 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
+import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.coordinatekit.crf.mallet.model.PartsOfSpeechModel;
 import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,8 +87,14 @@ class MalletCrfTaggerTest {
 
     @Test
     void tag() {
-        Sequence<TaggedPositionedToken<String, String>> actual = tagger.tag("They quickly opened the door");
+        TaggedTokenization<String, String> tagged = tagger.tag("They quickly opened the door");
+        Sequence<TaggedPositionedToken<String, String>> actual = tagged.taggedSequence();
 
+        assertEquals(
+                "They quickly opened the door",
+                tagged.tokenization().surface(),
+                "the tokenization round-trips the input surface"
+        );
         assertEquals(5, actual.size());
 
         assertEquals(0, actual.get(0).position());
@@ -148,7 +155,7 @@ class MalletCrfTaggerTest {
 
     @Test
     void tag_singleToken() {
-        Sequence<TaggedPositionedToken<String, String>> actual = tagger.tag("Hello");
+        Sequence<TaggedPositionedToken<String, String>> actual = tagger.tag("Hello").taggedSequence();
 
         assertEquals(1, actual.size());
         assertEquals(0, actual.get(0).position());
