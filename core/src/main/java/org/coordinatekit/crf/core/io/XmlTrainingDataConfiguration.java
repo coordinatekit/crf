@@ -135,15 +135,26 @@ public final class XmlTrainingDataConfiguration {
         /**
          * Sets the local name to use for the root element of training data documents.
          *
-         * @param rootElementName the root element local name, must not be null or blank
+         * @param rootElementName the root element local name, must not be null, blank, or a reserved
+         *        structural element name
          * @return this builder
          * @throws NullPointerException if rootElementName is null
-         * @throws IllegalArgumentException if rootElementName is blank
+         * @throws IllegalArgumentException if rootElementName is blank or collides with a reserved
+         *         structural element name ({@link XmlTrainingData#SEQUENCE_ELEMENT_NAME} or
+         *         {@link XmlTrainingData#EXCLUDED_ELEMENT_NAME})
          */
         public Builder rootElementName(String rootElementName) {
             Objects.requireNonNull(rootElementName, "rootElementName may not be null");
             if (rootElementName.isBlank()) {
                 throw new IllegalArgumentException("rootElementName may not be blank");
+            }
+            if (XmlTrainingData.SEQUENCE_ELEMENT_NAME.equals(rootElementName)
+                    || XmlTrainingData.EXCLUDED_ELEMENT_NAME.equals(rootElementName)) {
+                throw new IllegalArgumentException(
+                        "rootElementName may not be a reserved structural element name ("
+                                + XmlTrainingData.SEQUENCE_ELEMENT_NAME + ", " + XmlTrainingData.EXCLUDED_ELEMENT_NAME
+                                + ")"
+                );
             }
 
             this.rootElementName = rootElementName;

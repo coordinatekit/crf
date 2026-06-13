@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class TrainingSequenceFixtures {
@@ -55,6 +57,11 @@ final class TrainingSequenceFixtures {
 
     static TrainingSequence<String> brownFox() {
         return TrainingSequence.ofTokens(List.of("Brown", "Fox"), List.of("Adjective", "Noun"));
+    }
+
+    static TrainingSequence<String> brownFoxWithExcluded() {
+        return TrainingSequence
+                .ofSegments(List.of(token("Adjective", "Brown"), excluded(" "), token("Noun", "Fox"), excluded("!")));
     }
 
     static TrainingSequence<String> lazySleepingDog() {

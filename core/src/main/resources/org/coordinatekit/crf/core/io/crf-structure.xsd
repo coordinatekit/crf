@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2025-present Andy Marek
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!--
+  The fixed structural grammar for CRF training data documents. This grammar is library-owned and
+  identical for every TagProvider; the per-TagProvider tag vocabulary is generated separately (see
+  XmlTrainingData.generateSchema) and compiled together with this schema during validation.
+
+  Tags are referenced via a strict wildcard (xs:any namespace="##other"), so a global element
+  declaration must exist for each tag element — supplied by the generated tag schema. A tag element
+  with no matching declaration fails validation, which is how a mistyped or unknown tag name is
+  caught.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:crf="https://coordinatekit.org/crf/schema"
+           targetNamespace="https://coordinatekit.org/crf/schema"
+           elementFormDefault="qualified">
+
+    <xs:element name="Excluded" type="xs:string">
+        <xs:annotation>
+            <xs:documentation>A verbatim run of characters dropped by a tokenizer; whitespace is
+                preserved.</xs:documentation>
+        </xs:annotation>
+    </xs:element>
+
+    <!-- ##other and the crf-namespaced Excluded do not overlap, so Unique Particle Attribution
+         holds. -->
+    <xs:element name="Sequence">
+        <xs:annotation>
+            <xs:documentation>A single training example: a run of tag elements (any namespace other
+                than crf) interleaved with crf:Excluded runs.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:any namespace="##other"/>
+                <xs:element ref="crf:Excluded"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- The element name is substituted in memory during validation when a custom root element name
+         is configured. -->
+    <xs:element name="Collection">
+        <xs:annotation>
+            <xs:documentation>The document root: a collection of sequences.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="crf:Sequence" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

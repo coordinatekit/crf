@@ -26,6 +26,8 @@
  * the CRF namespace
  * <li>{@link org.coordinatekit.crf.core.io.TrainingSchemaGenerator} - Generates XSD schemas from
  * tag providers
+ * <li>{@link org.coordinatekit.crf.core.io.TrainingDataValidator} - Validates documents against the
+ * structural grammar and the tag vocabulary
  * </ul>
  *
  * <h2>Training Data Format</h2>
@@ -38,6 +40,30 @@
  * <li>{@code <crf:Sequence>} elements wrap training examples
  * <li>Child elements represent tagged tokens (element name = tag, text content = token)
  * </ul>
+ *
+ * <h2>Schemas and Namespaces</h2>
+ *
+ * <p>
+ * Two separable concerns drive two schemas in two namespaces. A single XSD document has exactly one
+ * target namespace, so they cannot share one file:
+ *
+ * <ul>
+ * <li><b>Structural grammar</b> — fixed, library-owned, and identical for every tag provider. It
+ * defines the {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape in
+ * the CRF schema namespace ({@code https://coordinatekit.org/crf/schema}) and lives in the static
+ * {@code crf-structure.xsd} resource. Tags are referenced through a strict wildcard, so each tag
+ * element needs a matching global declaration.
+ * <li><b>Tag vocabulary</b> — dynamic and per-tag-provider. {@code generateSchema} emits one
+ * element declaration per tag in the user's configured target namespace.
+ * </ul>
+ *
+ * <p>
+ * When a target namespace is configured, the writer declares it as the document's default
+ * namespace. Tag elements stay syntactically bare ({@code <Adjective>Brown</Adjective>}) but
+ * resolve into the user namespace, so the library's own output validates against the schemas it
+ * produces.
+ * {@link org.coordinatekit.crf.core.io.TrainingDataValidator#validate(java.nio.file.Path)} compiles
+ * the structural and tag schemas together and checks a document against both.
  *
  * @see org.coordinatekit.crf.core.io.XmlTrainingData
  * @see org.coordinatekit.crf.core.io.TrainingDataSequencer
