@@ -1,3 +1,5 @@
+import net.thebugmc.gradle.sonatypepublisher.PublishingType
+
 plugins {
     alias libs.plugins.spotless
     id "jacoco"
@@ -53,10 +55,16 @@ subprojects {
         withSourcesJar()
     }
 
+    tasks.withType(JavaCompile).configureEach {
+        // Deprecated APIs are kept for one release as plain forwarding shims; we don't want them
+        // rewritten into callers, so silence Error Prone's suggestion to annotate them with @InlineMe.
+        options.errorprone.disable("InlineMeSuggester")
+    }
+
     centralPortal {
         username = findProperty("centralPortalUsername")
         password = findProperty("centralPortalPassword")
-        publishingType = "AUTOMATIC"
+        publishingType = PublishingType.AUTOMATIC
         name = project.name
 
         pom {
