@@ -16,15 +16,18 @@
 package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.PositionedToken;
-import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.Segment;
+import org.coordinatekit.crf.core.preprocessing.SegmentKind;
+import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
+import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
-import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
+import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -36,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -45,23 +49,29 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
 /**
  * Orchestrates an interactive annotation session over an input file of one-sequence-per-line text.
  *
  * <p>
  * Each non-blank input line is tokenized and presented through the configured
- * {@link TaggingInterface}. When the user accepts a sequence, the resulting tokens and tags are
- * appended to the output XML file as a {@code <crf:Sequence>} element and flushed immediately, so a
- * crash leaves a valid (or recoverable) document with every confirmed sequence intact. Re-running
- * against the same output file skips any input line whose tokenization matches one already present
- * in the output, compared by a 64-bit content fingerprint of the token list (content-match resume).
+ * {@link TaggingInterface}. When the user accepts a sequence, the resulting tokens, tags, and the
+ * excluded character runs the tokenizer dropped around them are appended to the output XML file as
+ * a {@code <crf:Sequence>} element and flushed immediately, so a crash leaves a valid (or
+ * recoverable) document with every confirmed sequence intact. The captured excluded runs make the
+ * written sequence losslessly reconstructable: {@link TrainingSequence#surface()} reproduces the
+ * original line exactly. Re-running against the same output file skips any input line whose
+ * tokenization matches one already present in the output, compared by a 64-bit content fingerprint
+ * of the token list (content-match resume).
  *
  * <p>
- * When a {@link CrfTagger} is configured, the tagger's output is the authoritative token list: each
- * input line is tokenized exactly once (by the tagger's own feature pipeline), and what's on screen
- * is what gets written and resume-matched. The configured {@link Tokenizer} is only consulted on
- * the no-tagger path; if both are supplied the tokenizer is ignored.
+ * When a {@link CrfTagger} is configured it is the authoritative source of tokens and excluded
+ * runs. Each line is tagged once, the tagger's tokenization is used as written, and its suggested
+ * tags are always shown. When no tagger is configured the {@link Tokenizer} splits each line
+ * instead and the user tags every token starting from {@link TagProvider#startingTag()}. At least
+ * one of the two must be present.
  *
  * <p>
  * The "Sequence N of M" counters reported through {@link AnnotatorSequence} use a stable
@@ -116,13 +126,12 @@ public final class Annotator<F, T extends Comparable<T>> {
      *
      * <p>
      * Walks {@code inputFile} line-by-line, skipping blank lines and any line whose token list is
-     * already present in {@code outputFile}. Each remaining line is tokenized (by the configured
-     * {@link CrfTagger} when set, otherwise by the configured {@link Tokenizer}), built into an
-     * {@link AnnotatorSequence}, and presented via the configured {@link TaggingInterface}. On
-     * {@link TaggingAction#ACCEPT ACCEPT} the tokens and the user-chosen tags are written and flushed
-     * to the output file. On {@link TaggingAction#SKIP SKIP} the line is left unwritten and will be
-     * re-presented on the next run. On {@link TaggingAction#EXIT EXIT} the writer is closed and this
-     * method returns.
+     * already present in {@code outputFile}. Each remaining line is tokenized by the configured
+     * {@link Tokenizer}, built into an {@link AnnotatorSequence}, and presented via the configured
+     * {@link TaggingInterface}. On {@link TaggingAction#ACCEPT ACCEPT} the tokens, the user-chosen
+     * tags, and the tokenizer's excluded runs are written and flushed to the output file. On
+     * {@link TaggingAction#SKIP SKIP} the line is left unwritten and will be re-presented on the next
+     * run. On {@link TaggingAction#EXIT EXIT} the writer is closed and this method returns.
      *
      * <p>
      * A one-line "Resumed: skipped K of N input lines already present in output." message is written to
@@ -226,14 +235,10 @@ public final class Annotator<F, T extends Comparable<T>> {
             return true;
         }
 
-        List<String> tokens;
-        Sequence<TaggedPositionedToken<F, T>> tagged = tagger != null ? tagger.tag(line) : null;
-        if (tagger != null) {
-            tokens = tagged.stream().map(TaggedPositionedToken::token).toList();
-        } else {
-            tokens = Objects.requireNonNull(tokenizer, "tokenizer must be set when tagger is null").tokenize(line)
-                    .stream().map(PositionedToken::token).toList();
-        }
+        TaggedTokenization<F, T> tagged = tagger != null ? tagger.tag(line) : null;
+        Tokenization tokenized = tagged != null ? tagged.tokenization()
+                : Objects.requireNonNull(tokenizer).tokenize(line);
+        List<String> tokens = tokenized.sequence().stream().map(PositionedToken::token).toList();
 
         long tokenHash = hashTokens(tokens);
         if (state.seenHashes.contains(tokenHash)) {
@@ -248,14 +253,14 @@ public final class Annotator<F, T extends Comparable<T>> {
 
         int currentPresentation = ++state.presentationNumber;
         AnnotatorSequence<F, T> displaySequence = tagged != null
-                ? annotatorSequence(currentPresentation, state.totalSequences, tagged)
+                ? annotatorSequence(currentPresentation, state.totalSequences, tagged.taggedSequence())
                 : annotatorSequence(currentPresentation, state.totalSequences, tokens, tagProvider);
 
         TaggingResult<T> result = taggingInterface.present(displaySequence);
 
         return switch (result.action()) {
             case ACCEPT -> {
-                state.writer.write(new TrainingSequence<>(tokens, result.finalTags()));
+                state.writer.write(TrainingSequence.ofSegments(toSegments(tokenized, result.finalTags())));
                 state.writer.flush();
                 state.seenHashes.add(tokenHash);
                 yield true;
@@ -288,6 +293,40 @@ public final class Annotator<F, T extends Comparable<T>> {
         return seenHashes;
     }
 
+    /**
+     * Assembles the ordered training segments for an accepted sequence by mapping each tokenizer
+     * segment in document order: excluded runs pass through untagged, and each token segment is paired
+     * with the user-chosen tag at the matching token index. The mapping is surface-preserving, so
+     * {@link TrainingSequence#surface()} reproduces the original line exactly.
+     *
+     * @param tokenized the authoritative tokenization, carrying tokens and excluded runs as segments
+     * @param finalTags the per-token tags chosen by the user, one per token in order
+     * @return the segments in document order, ready for {@link TrainingSequence#ofSegments(List)}
+     */
+    private List<TrainingSegment<T>> toSegments(Tokenization tokenized, List<T> finalTags) {
+        long tokenSegmentCount = tokenized.segments().stream().filter(segment -> segment.kind() == SegmentKind.TOKEN)
+                .count();
+        if (finalTags.size() != tokenSegmentCount) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "Expected one tag per token segment: got %d tags for %d token segments.",
+                            finalTags.size(),
+                            tokenSegmentCount
+                    )
+            );
+        }
+        List<TrainingSegment<T>> segments = new ArrayList<>();
+        int tokenIndex = 0;
+        for (Segment segment : tokenized.segments()) {
+            if (segment.kind() == SegmentKind.TOKEN) {
+                segments.add(token(finalTags.get(tokenIndex++), segment.text()));
+            } else {
+                segments.add(excluded(segment.text()));
+            }
+        }
+        return segments;
+    }
+
     private static final class AnnotationState<T extends Comparable<T>> {
         int presentationNumber;
         final Set<Long> seenHashes;
@@ -308,9 +347,9 @@ public final class Annotator<F, T extends Comparable<T>> {
      *
      * <p>
      * {@link #tagProvider(TagProvider)}, {@link #taggingInterface(TaggingInterface)}, and
-     * {@link #terminal(Terminal)} are required. {@link #tagger(CrfTagger) tagger} is optional; when it
-     * is left unset the {@link #tokenizer(Tokenizer)} field is required. If both {@code tagger} and
-     * {@code tokenizer} are supplied the tokenizer is ignored — see the class-level Javadoc.
+     * {@link #terminal(Terminal)} are required. At least one of {@link #tokenizer(Tokenizer) tokenizer}
+     * or {@link #tagger(CrfTagger) tagger} must be set: a tagger supplies both the tokenization and tag
+     * suggestions, while a tokenizer alone drives the manual-only path — see the class-level Javadoc.
      *
      * @param <F> the feature type carried by the tagger and the per-token entries
      * @param <T> the tag type
@@ -330,9 +369,9 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @return a new {@link Annotator}
          * @throws IllegalStateException if {@link #tagProvider(TagProvider) tagProvider},
          *         {@link #taggingInterface(TaggingInterface) taggingInterface}, or
-         *         {@link #terminal(Terminal) terminal} have not been set; if the supplied
-         *         {@link TagProvider#tags()} set is empty; or if {@link #tagger(CrfTagger) tagger} is unset
-         *         and {@link #tokenizer(Tokenizer) tokenizer} is also unset
+         *         {@link #terminal(Terminal) terminal} have not been set; if neither a
+         *         {@link #tokenizer(Tokenizer) tokenizer} nor a {@link #tagger(CrfTagger) tagger} has been
+         *         set; or if the supplied {@link TagProvider#tags()} set is empty
          */
         public Annotator<F, T> build() {
             if (tagProvider == null) {
@@ -343,18 +382,20 @@ public final class Annotator<F, T extends Comparable<T>> {
                 throw new IllegalStateException("terminal must be set");
             } else if (tagProvider.tags().isEmpty()) {
                 throw new IllegalStateException("tagProvider.tags() must not be empty");
-            } else if (tagger == null && tokenizer == null) {
-                throw new IllegalStateException("tokenizer must be set when tagger is null");
+            } else if (tokenizer == null && tagger == null) {
+                throw new IllegalStateException("at least one of tokenizer or tagger must be set");
             }
 
             return new Annotator<>(this);
         }
 
         /**
-         * Sets the CRF tagger used to suggest tags and tokenize each input line. May be {@code null}; when
-         * {@code null}, {@link #tokenizer(Tokenizer)} is consulted instead.
+         * Sets the CRF tagger used to suggest tags for each input line. May be {@code null}. When present
+         * the tagger is the authoritative source of tokens and excluded runs — its tokenization is used
+         * directly and its suggestions are always shown — and the {@link #tokenizer(Tokenizer)} becomes
+         * optional. When absent the tokenizer supplies the tokenization instead.
          *
-         * @param tagger the tagger, or {@code null} to run without a tagger
+         * @param tagger the tagger, or {@code null} to run without tag suggestions
          * @return this builder
          */
         public Builder<F, T> tagger(@Nullable CrfTagger<F, T> tagger) {
@@ -397,8 +438,9 @@ public final class Annotator<F, T extends Comparable<T>> {
         }
 
         /**
-         * Sets the tokenizer used to split input lines when no {@link #tagger(CrfTagger) tagger} is
-         * configured. Required only when {@code tagger} is unset; otherwise the value is ignored.
+         * Sets the tokenizer used to split every input line into tokens and excluded runs. Required only
+         * when no {@link #tagger(CrfTagger) tagger} is configured; when a tagger is present it supplies the
+         * tokenization and this tokenizer is unused.
          *
          * @param tokenizer the tokenizer
          * @return this builder

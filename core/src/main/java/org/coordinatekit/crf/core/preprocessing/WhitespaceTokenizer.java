@@ -15,9 +15,11 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
-import org.coordinatekit.crf.core.InputSequence;
+import static org.coordinatekit.crf.core.preprocessing.Segments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.Segments.token;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -25,8 +27,10 @@ import java.util.Objects;
  *
  * <p>
  * This implementation splits the input string on one or more consecutive whitespace characters
- * (spaces, tabs, newlines, etc.). Note that leading whitespace will result in an empty string as
- * the first token.
+ * (spaces, tabs, newlines, etc.). The whitespace it splits on is not discarded: each run of
+ * whitespace is captured as an {@link SegmentKind#EXCLUDED excluded} segment on the resulting
+ * {@link Tokenization}, including any leading or trailing whitespace, so
+ * {@link Tokenization#surface()} reproduces the original input exactly.
  *
  * @see Tokenizer
  */
@@ -38,13 +42,16 @@ public class WhitespaceTokenizer implements Tokenizer {
      * {@inheritDoc}
      *
      * <p>
-     * Splits the input on whitespace using the regex pattern {@code \s+}.
+     * Scans the input into alternating runs of whitespace (captured as {@link SegmentKind#EXCLUDED
+     * excluded} segments) and non-whitespace (captured as {@link SegmentKind#TOKEN token} segments),
+     * preserving leading and trailing whitespace so the input can be reconstructed exactly. Empty
+     * whitespace runs are not emitted as segments.
      *
      * @throws InvalidInputException if the input string is empty or blank
      * @throws NullPointerException if the input string is null
      */
     @Override
-    public InputSequence tokenize(String input) {
+    public Tokenization tokenize(String input) {
         Objects.requireNonNull(input, "The input string may not be null.");
 
         if (input.isEmpty()) {
@@ -53,6 +60,34 @@ public class WhitespaceTokenizer implements Tokenizer {
             throw new InvalidInputException(input, "The input string is blank");
         }
 
-        return new InputSequence(Arrays.asList(input.stripLeading().split("\\s+")));
+        List<Segment> segments = new ArrayList<>();
+        int length = input.length();
+        int index = 0;
+
+        int leadingStart = index;
+        while (index < length && Character.isWhitespace(input.charAt(index))) {
+            index++;
+        }
+        if (index > leadingStart) {
+            segments.add(excluded(input.substring(leadingStart, index)));
+        }
+
+        while (index < length) {
+            int tokenStart = index;
+            while (index < length && !Character.isWhitespace(input.charAt(index))) {
+                index++;
+            }
+            segments.add(token(input.substring(tokenStart, index)));
+
+            int whitespaceStart = index;
+            while (index < length && Character.isWhitespace(input.charAt(index))) {
+                index++;
+            }
+            if (index > whitespaceStart) {
+                segments.add(excluded(input.substring(whitespaceStart, index)));
+            }
+        }
+
+        return new Tokenization(segments);
     }
 }

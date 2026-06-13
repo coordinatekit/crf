@@ -15,8 +15,10 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Segments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.Segments.token;
+
 import org.coordinatekit.crf.core.PositionedToken;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -49,7 +51,57 @@ class WhitespaceTokenizerTest {
 
         var result = tokenizer.tokenize(parameters.input());
 
-        assertIterableEquals(parameters.expectedTokens(), result.stream().map(PositionedToken::token).toList());
+        assertIterableEquals(
+                parameters.expectedTokens(),
+                result.sequence().stream().map(PositionedToken::token).toList()
+        );
+        assertEquals(parameters.expectedTokens().size(), result.sequence().size());
+        for (int index = 0; index < result.sequence().size(); index++) {
+            assertEquals(index, result.sequence().get(index).position());
+        }
+    }
+
+    record SurfaceParameters(String name, String input, List<Segment> expectedSegments) {}
+
+    static Stream<SurfaceParameters> tokenize__capturesExcludedRuns() {
+        return Stream.of(
+                new SurfaceParameters(
+                        "no_surrounding_whitespace",
+                        "Hello world",
+                        List.of(token("Hello"), excluded(" "), token("world"))
+                ),
+                new SurfaceParameters(
+                        "collapsed_runs_preserved",
+                        "Hello  world",
+                        List.of(token("Hello"), excluded("  "), token("world"))
+                ),
+                new SurfaceParameters(
+                        "leading_and_trailing",
+                        "  Hello  world  ",
+                        List.of(excluded("  "), token("Hello"), excluded("  "), token("world"), excluded("  "))
+                ),
+                new SurfaceParameters(
+                        "tabs_and_newlines",
+                        "Hello\tworld\n",
+                        List.of(token("Hello"), excluded("\t"), token("world"), excluded("\n"))
+                ),
+                new SurfaceParameters("single_token_trailing", "Hello ", List.of(token("Hello"), excluded(" "))),
+                new SurfaceParameters("single_token_leading", " Hello", List.of(excluded(" "), token("Hello")))
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void tokenize__capturesExcludedRuns(SurfaceParameters parameters) {
+        // ARRANGE //
+        var tokenizer = new WhitespaceTokenizer();
+
+        // ACT //
+        var result = tokenizer.tokenize(parameters.input());
+
+        // ASSERT //
+        assertEquals(parameters.expectedSegments(), result.segments());
+        assertEquals(parameters.input(), result.surface());
     }
 
     record TokenizeExceptionParameters(
@@ -84,25 +136,5 @@ class WhitespaceTokenizerTest {
                 () -> tokenizer.tokenize(parameters.input())
         );
         assertEquals(parameters.expectedMessage(), exception.getMessage());
-    }
-
-    @Test
-    void tokenize__positionsAreCorrect() {
-        var tokenizer = new WhitespaceTokenizer();
-
-        var result = tokenizer.tokenize("one two three");
-
-        assertEquals(0, result.get(0).position());
-        assertEquals(1, result.get(1).position());
-        assertEquals(2, result.get(2).position());
-    }
-
-    @Test
-    void tokenize__sizeIsCorrect() {
-        var tokenizer = new WhitespaceTokenizer();
-
-        var result = tokenizer.tokenize("one two three");
-
-        assertEquals(3, result.size());
     }
 }

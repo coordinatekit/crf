@@ -15,26 +15,26 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
-import org.coordinatekit.crf.core.InputSequence;
-
 /**
  * Converts raw text input into a sequence of tokens.
  *
  * <p>
  * Implementations of this interface define how input strings are split into individual tokens for
- * processing by the CRF model.
+ * processing by the CRF model. A tokenizer is the authoritative source for tokenization: it reports
+ * both the tokens it produced and the excluded character runs it dropped, so the original surface
+ * string can be reconstructed exactly via {@link Tokenization#surface()}.
  *
  * @see WhitespaceTokenizer
- * @see InputSequence
+ * @see Tokenization
  */
 public interface Tokenizer {
     /**
-     * Tokenizes the input string into a sequence of tokens.
+     * Tokenizes the input string into tokens and the excluded character runs dropped around them.
      *
      * @param input the raw text to tokenize
-     * @return a sequence containing the tokens
+     * @return the tokenization, carrying the tokens and excluded runs as ordered segments
      * @throws InvalidInputException if the input string is empty or blank
      * @throws NullPointerException if the input string is null
      */
-    InputSequence tokenize(String input);
+    Tokenization tokenize(String input);
 }

@@ -17,6 +17,7 @@ package org.coordinatekit.crf.core.io;
 
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -44,6 +45,8 @@ import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertConta
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.lazySleepingDog;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.*;
 
 class XmlTrainingDataWriterTest {
@@ -334,13 +337,42 @@ class XmlTrainingDataWriterTest {
     }
 
     @Test
+    void writer__excludedRunsRoundTripLosslessly() throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        TrainingSequence<String> sequence = TrainingSequence.ofSegments(
+                List.of(
+                        excluded("  "),
+                        token("Adjective", "Brown"),
+                        excluded("  "),
+                        token("Noun", "Fox"),
+                        excluded(" .")
+                )
+        );
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(sequence);
+        }
+
+        // ASSERT //
+        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
+            TrainingSequence<String> read = sequences.toList().getFirst();
+            assertEquals(sequence.surface(), read.surface());
+            assertEquals("  Brown  Fox .", read.surface());
+            assertEquals(
+                    sequence.segments().stream().map(TrainingSegment::text).toList(),
+                    read.segments().stream().map(TrainingSegment::text).toList()
+            );
+        }
+    }
+
+    @Test
     void writer__escapesSpecialCharacters() throws IOException {
         // ARRANGE //
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        TrainingSequence<String> sequence = new TrainingSequence<>(
-                List.of("a<b", "c&d", "e>f"),
-                List.of("Symbol", "Symbol", "Symbol")
-        );
+        TrainingSequence<String> sequence = TrainingSequence
+                .ofTokens(List.of("a<b", "c&d", "e>f"), List.of("Symbol", "Symbol", "Symbol"));
 
         // ACT //
         try (var writer = DATA.writer(output)) {
@@ -415,31 +447,65 @@ class XmlTrainingDataWriterTest {
         }
     }
 
-    record SpacingParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
+    record EmitParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
 
-    static Stream<SpacingParameters> writer__separatesConsecutiveTokensWithSpace() {
+    static Stream<EmitParameters> writer__emitsAdjacentTagElementsForTokenOnlySequence() {
         return Stream.of(
-                new SpacingParameters(
+                new EmitParameters(
                         "two_tokens",
                         brownFox(),
-                        List.of("<crf:Sequence><Adjective>Brown", "</Adjective> <Noun>")
+                        List.of("<crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>")
                 ),
-                new SpacingParameters(
+                new EmitParameters(
                         "three_tokens_with_repeated_tag",
                         lazySleepingDog(),
-                        List.of("<crf:Sequence><Adjective>Lazy", "</Adjective> <Adjective>", "</Adjective> <Noun>")
+                        List.of(
+                                "<crf:Sequence><Adjective>Lazy</Adjective>"
+                                        + "<Adjective>Sleeping</Adjective><Noun>Dog</Noun></crf:Sequence>"
+                        )
                 ),
-                new SpacingParameters(
-                        "single_token_has_no_internal_space",
-                        new TrainingSequence<>(List.of("Fox"), List.of("Noun")),
+                new EmitParameters(
+                        "single_token",
+                        TrainingSequence.ofTokens(List.of("Fox"), List.of("Noun")),
                         List.of("<crf:Sequence><Noun>Fox</Noun></crf:Sequence>")
                 )
         );
     }
 
+    static Stream<EmitParameters> writer__emitsExcludedRunsBetweenTokens() {
+        return Stream.of(
+                new EmitParameters(
+                        "spaces_and_punctuation_between_tokens",
+                        TrainingSequence.ofSegments(
+                                List.of(token("Adjective", "Brown"), excluded(" "), token("Noun", "Fox"), excluded("!"))
+                        ),
+                        List.of(
+                                "<crf:Sequence><Adjective>Brown</Adjective>"
+                                        + "<crf:Excluded> </crf:Excluded><Noun>Fox</Noun>"
+                                        + "<crf:Excluded>!</crf:Excluded></crf:Sequence>"
+                        )
+                ),
+                new EmitParameters(
+                        "leading_and_trailing_excluded_runs",
+                        TrainingSequence.ofSegments(List.of(excluded("  "), token("Noun", "Fox"), excluded("\n"))),
+                        List.of(
+                                "<crf:Sequence><crf:Excluded>  </crf:Excluded>"
+                                        + "<Noun>Fox</Noun><crf:Excluded>\n</crf:Excluded></crf:Sequence>"
+                        )
+                )
+        );
+    }
+
+    static Stream<EmitParameters> writer__emitsExpectedFragments() {
+        return Stream.concat(
+                writer__emitsAdjacentTagElementsForTokenOnlySequence(),
+                writer__emitsExcludedRunsBetweenTokens()
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
-    void writer__separatesConsecutiveTokensWithSpace(SpacingParameters parameters) throws IOException {
+    void writer__emitsExpectedFragments(EmitParameters parameters) throws IOException {
         // ARRANGE //
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 

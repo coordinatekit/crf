@@ -23,10 +23,12 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.FeaturePositionedToken;
+import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
-import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
+import org.coordinatekit.crf.core.tag.TaggedTokenization;
+import org.coordinatekit.crf.core.tag.TaggedTokenizations;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
@@ -113,8 +115,9 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
     }
 
     @Override
-    public Sequence<TaggedPositionedToken<F, T>> tag(String input) {
-        Sequence<FeaturePositionedToken<F>> featureSequence = featureExtractor.extract(tokenizer.tokenize(input));
+    public TaggedTokenization<F, T> tag(String input) {
+        Tokenization tokenization = tokenizer.tokenize(input);
+        Sequence<FeaturePositionedToken<F>> featureSequence = featureExtractor.extract(tokenization.sequence());
         FeatureVectorSequence malletSequence = createMalletSequences(model, featureSequence);
 
         var lattice = model.getSumLatticeFactory().newSumLattice(model, malletSequence);
@@ -132,6 +135,6 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
             tagScoresByToken.add(tagScores);
         }
 
-        return new TaggedSequence<>(tokens, features, tagScoresByToken);
+        return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScoresByToken), tokenization);
     }
 }

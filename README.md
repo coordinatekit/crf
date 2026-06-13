@@ -160,10 +160,9 @@ CrfTagger<String, String> tagger = trainer.train(trainingData);
 ### 4. Tag New Sequences
 
 ```java
-InputSequence input = new InputSequence(List.of("John", "works", "at", "Acme", "Corp"));
-TaggedSequence<String, String> result = tagger.tag(input);
+TaggedTokenization<String, String> result = tagger.tag("John works at Acme Corp");
 
-for (TaggedPositionedToken<String, String> token : result.tokens()) {
+for (TaggedPositionedToken<String, String> token : result.taggedSequence()) {
     System.out.println(token.token() + " -> " + token.tag());
 }
 ```

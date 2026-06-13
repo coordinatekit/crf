@@ -15,11 +15,18 @@
  */
 package org.coordinatekit.crf.core.io;
 
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
+
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.UncheckedCrfException;
+import org.coordinatekit.crf.core.preprocessing.SegmentKind;
+import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.stream.*;
 import java.io.IOException;
@@ -48,10 +55,11 @@ import java.util.stream.StreamSupport;
  * </ul>
  *
  * <p>
- * When reading XML, elements in the CRF schema namespace
- * ({@code https://coordinatekit.org/crf/schema}) are excluded from the training data. This allows
- * structural elements like {@code <crf:Sequence>} and {@code <crf:Excluded>} to be ignored while
- * processing only the tag elements.
+ * When reading XML, {@code <crf:Excluded>} runs in the CRF schema namespace
+ * ({@code https://coordinatekit.org/crf/schema}) are captured verbatim as excluded segments, so a
+ * sequence's original surface text can be reconstructed. Other CRF-namespace structural elements,
+ * such as {@code <crf:Sequence>} and {@code <crf:Collection>}, are skipped, leaving only the tag
+ * elements to process.
  *
  * <p>
  * When writing XML, the root element is configured by
@@ -82,6 +90,15 @@ public class XmlTrainingData<T extends Comparable<T>>
     public static final String CRF_SCHEMA_NAMESPACE_URI = "https://coordinatekit.org/crf/schema";
 
     /**
+     * The local name of the element that wraps a run of excluded characters dropped by a tokenizer.
+     *
+     * <p>
+     * Each {@code <crf:Excluded>} element in the CRF namespace preserves the characters between,
+     * before, or after tokens so a sequence's original surface text can be reconstructed.
+     */
+    public static final String EXCLUDED_ELEMENT_NAME = "Excluded";
+
+    /**
      * The local name of the element that contains a training sequence.
      *
      * <p>
@@ -91,6 +108,8 @@ public class XmlTrainingData<T extends Comparable<T>>
     public static final String SEQUENCE_ELEMENT_NAME = "Sequence";
 
     private static final String XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema";
+
+    private static final Logger logger = LoggerFactory.getLogger(XmlTrainingData.class);
 
     private final byte[] closeTagBytes;
     private final byte[] closeTagNeedle;
@@ -507,7 +526,8 @@ public class XmlTrainingData<T extends Comparable<T>>
      *
      * <p>
      * This iterator reads {@code <Sequence>} elements from the XML and converts each one into a
-     * {@link TrainingSequence}. Elements in the CRF schema namespace are skipped during parsing.
+     * {@link TrainingSequence}. {@code <crf:Excluded>} elements are captured as excluded segments;
+     * other elements in the CRF schema namespace are skipped during parsing.
      *
      * @param <T> the type of tag used in training sequences
      */
@@ -552,32 +572,40 @@ public class XmlTrainingData<T extends Comparable<T>>
         }
 
         /**
-         * Parses a single sequence element and its child tag elements.
+         * Parses a single sequence element and its child elements.
          *
          * <p>
          * The reader should be positioned just after the opening {@code <Sequence>} tag. This method reads
-         * all child elements, extracting tokens and tags from non-CRF-namespace elements, until the closing
-         * {@code </Sequence>} tag is reached.
+         * all child elements until the closing {@code </Sequence>} tag is reached, assembling segments in
+         * document order. {@code <crf:Excluded>} elements in the CRF schema namespace are captured verbatim
+         * as {@link SegmentKind#EXCLUDED} segments (preserving whitespace, never trimmed), but an empty
+         * (zero-length) excluded run is dropped; other CRF-namespace elements are skipped; non-CRF elements
+         * become trimmed token segments, dropped when empty.
          *
          * @return the parsed training sequence
          * @throws XMLStreamException if an error occurs while reading
          */
         private TrainingSequence<T> parseSequence() throws XMLStreamException {
-            List<T> tags = new ArrayList<>();
-            List<String> tokens = new ArrayList<>();
+            List<TrainingSegment<T>> segments = new ArrayList<>();
             int depth = 1;
 
             while (reader.hasNext() && depth > 0) {
                 int event = reader.next();
                 if (event == XMLStreamConstants.START_ELEMENT) {
                     if (CRF_SCHEMA_NAMESPACE_URI.equals(reader.getNamespaceURI())) {
-                        skipElement();
+                        if (EXCLUDED_ELEMENT_NAME.equals(reader.getLocalName())) {
+                            String excludedText = readExcludedText();
+                            if (excludedText != null && !excludedText.isEmpty()) {
+                                segments.add(excluded(excludedText));
+                            }
+                        } else {
+                            skipElement();
+                        }
                     } else {
                         String localName = reader.getLocalName();
                         String token = reader.getElementText().trim();
                         if (!token.isEmpty()) {
-                            tags.add(tagProvider.decode(localName));
-                            tokens.add(token);
+                            segments.add(token(tagProvider.decode(localName), token));
                         }
                     }
                 } else if (event == XMLStreamConstants.END_ELEMENT) {
@@ -585,7 +613,54 @@ public class XmlTrainingData<T extends Comparable<T>>
                 }
             }
 
-            return new TrainingSequence<>(tokens, tags);
+            return TrainingSequence.ofSegments(segments);
+        }
+
+        /**
+         * Reads the verbatim text content of a {@code <crf:Excluded>} element.
+         *
+         * <p>
+         * The reader should be positioned on the {@code <crf:Excluded>} start element. This method
+         * accumulates {@code CHARACTERS} and {@code CDATA} content until the matching end element, never
+         * trimming. If a nested start element is encountered (which the schema forbids but a hand-authored
+         * document may contain), the element is skipped and ignored: this method consumes through the
+         * matching end element and returns {@code null} so the run is not captured.
+         *
+         * @return the verbatim excluded text, or {@code null} if the element contained a child element
+         * @throws XMLStreamException if an error occurs while reading
+         */
+        private @Nullable String readExcludedText() throws XMLStreamException {
+            StringBuilder text = new StringBuilder();
+            boolean hasChildElement = false;
+            int depth = 1;
+
+            while (reader.hasNext() && depth > 0) {
+                int event = reader.next();
+                switch (event) {
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> {
+                        if (!hasChildElement) {
+                            text.append(reader.getText());
+                        }
+                    }
+                    case XMLStreamConstants.START_ELEMENT -> {
+                        hasChildElement = true;
+                        depth++;
+                    }
+                    case XMLStreamConstants.END_ELEMENT -> depth--;
+                    default -> {
+                        // Ignore comments, processing instructions, and other event types.
+                    }
+                }
+            }
+
+            if (hasChildElement) {
+                logger.debug(
+                        "Skipped a <crf:Excluded> run because it contained a child element, which the schema "
+                                + "forbids."
+                );
+                return null;
+            }
+            return text.toString();
         }
 
         /**
@@ -705,20 +780,23 @@ public class XmlTrainingData<T extends Comparable<T>>
             try {
                 xmlWriter.writeCharacters("    ");
                 xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, SEQUENCE_ELEMENT_NAME);
-                for (int position = 0; position < sequence.size(); position++) {
-                    var token = sequence.get(position);
-                    String tagName = tagProvider.encode(token.tag());
-                    if (tagName == null) {
-                        throw new IllegalArgumentException(
-                                "Tag '" + token.tag() + "' encodes to null and cannot be serialized."
-                        );
+                for (TrainingSegment<T> segment : sequence.segments()) {
+                    if (segment.kind() == SegmentKind.EXCLUDED) {
+                        xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, EXCLUDED_ELEMENT_NAME);
+                        xmlWriter.writeCharacters(segment.text());
+                        xmlWriter.writeEndElement();
+                    } else {
+                        T tag = Objects.requireNonNull(segment.tag());
+                        String tagName = tagProvider.encode(tag);
+                        if (tagName == null) {
+                            throw new IllegalArgumentException(
+                                    "Tag '" + tag + "' encodes to null and cannot be serialized."
+                            );
+                        }
+                        xmlWriter.writeStartElement(tagName);
+                        xmlWriter.writeCharacters(segment.text());
+                        xmlWriter.writeEndElement();
                     }
-                    if (position > 0) {
-                        xmlWriter.writeCharacters(" ");
-                    }
-                    xmlWriter.writeStartElement(tagName);
-                    xmlWriter.writeCharacters(token.token());
-                    xmlWriter.writeEndElement();
                 }
                 xmlWriter.writeEndElement();
                 xmlWriter.writeCharacters("\n");

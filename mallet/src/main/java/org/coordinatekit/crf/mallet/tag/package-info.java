@@ -32,10 +32,11 @@
  *         tokenizer);
  *
  * // Tag an input string
- * Sequence&lt;TaggedPositionedToken&lt;String, MyTag&gt;&gt; result = tagger.tag("input text to tag");
+ * TaggedTokenization&lt;String, MyTag&gt; tagged = tagger.tag("input text to tag");
+ * String surface = tagged.tokenization().surface(); // reconstructs the original input exactly
  *
  * // Process the results
- * for (TaggedPositionedToken&lt;String, MyTag&gt; token : result) {
+ * for (TaggedPositionedToken&lt;String, MyTag&gt; token : tagged.taggedSequence()) {
  *     String text = token.token();           // The token text
  *     MyTag bestTag = token.tag();           // Most likely tag
  *     List&lt;MyTag&gt; topTags = token.tag(3);    // Top 3 tags by score
@@ -52,7 +53,9 @@
  * <h2>Result Types</h2>
  *
  * <p>
- * The tagger returns a {@link org.coordinatekit.crf.core.Sequence} of
+ * The tagger returns a {@link org.coordinatekit.crf.core.tag.TaggedTokenization}, pairing the
+ * authoritative {@link org.coordinatekit.crf.core.preprocessing.Tokenization} (tokens and excluded
+ * runs) with a {@link org.coordinatekit.crf.core.Sequence} of
  * {@link org.coordinatekit.crf.core.tag.TaggedPositionedToken} objects, each containing:
  *
  * <ul>
@@ -66,6 +69,7 @@
  *
  * @see org.coordinatekit.crf.mallet.tag.MalletCrfTagger
  * @see org.coordinatekit.crf.core.tag.CrfTagger
+ * @see org.coordinatekit.crf.core.tag.TaggedTokenization
  * @see org.coordinatekit.crf.core.tag.TaggedPositionedToken
  * @see org.coordinatekit.crf.core.tag.TagScore
  */

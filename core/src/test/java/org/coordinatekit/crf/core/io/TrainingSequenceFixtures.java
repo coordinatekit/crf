@@ -54,10 +54,10 @@ final class TrainingSequenceFixtures {
     }
 
     static TrainingSequence<String> brownFox() {
-        return new TrainingSequence<>(List.of("Brown", "Fox"), List.of("Adjective", "Noun"));
+        return TrainingSequence.ofTokens(List.of("Brown", "Fox"), List.of("Adjective", "Noun"));
     }
 
     static TrainingSequence<String> lazySleepingDog() {
-        return new TrainingSequence<>(List.of("Lazy", "Sleeping", "Dog"), List.of("Adjective", "Adjective", "Noun"));
+        return TrainingSequence.ofTokens(List.of("Lazy", "Sleeping", "Dog"), List.of("Adjective", "Adjective", "Noun"));
     }
 }
