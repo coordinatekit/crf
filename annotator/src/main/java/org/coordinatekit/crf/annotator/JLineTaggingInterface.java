@@ -21,19 +21,19 @@ import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
-import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
-import org.jline.utils.WCWidth;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
@@ -58,6 +58,8 @@ import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
  */
 public final class JLineTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
     private static final String CONFIDENCE_COLUMN = "Confidence";
+    private static final String FEATURES_COLUMN = "Features";
+    private static final String FEATURE_SEPARATOR = ", ";
     private static final String NUMBER_COLUMN = "##";
     private static final String NULL_VALUE_PLACEHOLDER = "—";
     private static final String TAG_COLUMN = "Tag";
@@ -69,6 +71,14 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
     private final Terminal terminal;
     private final double threshold;
 
+    private FeatureView featureView = FeatureView.NONE;
+
+    /**
+     * Creates an interface from {@code builder}, building a JLine {@link LineReader} over the supplied
+     * terminal with history disabled.
+     *
+     * @param builder the builder holding the tag provider, terminal, and display settings
+     */
     private JLineTaggingInterface(Builder<F, T> builder) {
         this.maxTokenDisplayWidth = builder.maxTokenDisplayWidth;
         this.tagProvider = Objects.requireNonNull(builder.tagProvider, "tagProvider must be set");
@@ -89,6 +99,16 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         return new Builder<>();
     }
 
+    /**
+     * Renders the sequence screen for {@code sequence} and processes input until the annotator accepts,
+     * skips, or exits, or the input stream closes. Typing a token number opens the edit screen for that
+     * token; {@code U} undoes the most recent tag change; {@code F} and {@code FA} toggle the feature
+     * sections when the sequence carries features.
+     *
+     * @param sequence the sequence to present
+     * @return the chosen action together with, for {@link TaggingAction#ACCEPT}, the tag assigned to
+     *         each token
+     */
     @Override
     public TaggingResult<T> present(AnnotatorSequence<F, T> sequence) {
         Objects.requireNonNull(sequence, "sequence must not be null");
@@ -123,6 +143,16 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
                         currentTags.set(edit.position(), edit.previousTag());
                     }
                     break;
+                case "F":
+                    if (sequence.featuresAvailable()) {
+                        featureView = effectiveView(sequence) == FeatureView.KEY ? FeatureView.NONE : FeatureView.KEY;
+                    }
+                    break;
+                case "FA":
+                    if (sequence.verboseFeaturesAvailable()) {
+                        featureView = effectiveView(sequence) == FeatureView.ALL ? FeatureView.NONE : FeatureView.ALL;
+                    }
+                    break;
                 default:
                     Integer index = parseTokenIndex(trimmed, sequence.tokens().size());
                     if (index == null) {
@@ -140,6 +170,13 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         }
     }
 
+    /**
+     * Builds the edit-screen rows from {@code scores}, one row per tag carrying its alternative-tag
+     * score, which may be null when no score is available.
+     *
+     * @param scores the candidate tags mapped to their scores
+     * @return the edit rows, one per entry in {@code scores}
+     */
     private List<TagRow<T>> buildEditRows(Map<T, @Nullable Double> scores) {
         List<TagRow<T>> rows = new ArrayList<>(scores.size());
         for (Map.Entry<T, @Nullable Double> entry : scores.entrySet()) {
@@ -148,31 +185,107 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         return rows;
     }
 
-    private int displayWidth(CharSequence text) {
-        int total = 0;
-        int index = 0;
-        int length = text.length();
-        while (index < length) {
-            int codePoint = Character.codePointAt(text, index);
-            int width = WCWidth.wcwidth(codePoint);
-            if (width > 0) {
-                total += width;
+    /**
+     * Returns the features shown for {@code annotatorToken} under {@code featureView}. The
+     * {@link FeatureView#KEY} view returns only the token's key features; any other view returns the
+     * union of its key and verbose features.
+     *
+     * @param annotatorToken the token whose features are shown
+     * @param featureView the active feature view
+     * @return the features to display
+     */
+    private Set<F> displayedFeatures(AnnotatorToken<F, T> annotatorToken, FeatureView featureView) {
+        if (featureView == FeatureView.KEY) {
+            return annotatorToken.features();
+        }
+        Set<F> union = new HashSet<>(annotatorToken.features());
+        union.addAll(annotatorToken.verboseFeatures());
+        return union;
+    }
+
+    /**
+     * Clamps the sticky {@link #featureView} to what the given sequence can actually render. The view
+     * persists across sequences, but feature availability is fixed per batch, so this guards against a
+     * stored view that a sequence cannot satisfy.
+     *
+     * @param sequence the sequence about to be rendered
+     * @return the feature view the sequence can render, falling back toward {@link FeatureView#NONE}
+     */
+    private FeatureView effectiveView(AnnotatorSequence<F, T> sequence) {
+        return switch (featureView) {
+            case KEY -> sequence.featuresAvailable() ? FeatureView.KEY : FeatureView.NONE;
+            case ALL -> {
+                if (sequence.verboseFeaturesAvailable()) {
+                    yield FeatureView.ALL;
+                }
+                yield sequence.featuresAvailable() ? FeatureView.KEY : FeatureView.NONE;
             }
-            index += Character.charCount(codePoint);
-        }
-        return total;
+            case NONE -> FeatureView.NONE;
+        };
     }
 
-    private String padToWidth(String text, int cells) {
-        int width = displayWidth(text);
-        if (width >= cells) {
-            return text;
+    /**
+     * Builds the footer prompt for the sequence screen. The accept, edit, skip, undo, and exit actions
+     * are always offered. {@code F} steps the feature view down one rung (all to key, key to hidden)
+     * and {@code FA} jumps straight to showing all features, so on the all-features screen {@code FA}
+     * is dropped wherever {@code F} can step down to the key view. A verbose-only sequence has no key
+     * rung, so its all-features screen instead offers {@code FA} to hide the features. The hints are
+     * worded according to {@code effectiveView} and which feature sets the sequence carries.
+     *
+     * @param sequence the sequence being presented
+     * @param effectiveView the feature view in effect for the sequence
+     * @return the footer prompt line
+     */
+    private String footerPrompt(AnnotatorSequence<F, T> sequence, FeatureView effectiveView) {
+        StringBuilder prompt = new StringBuilder("Enter A to accept, the number to edit the token,");
+        switch (effectiveView) {
+            case NONE -> {
+                if (sequence.featuresAvailable()) {
+                    prompt.append(" F to show key features,");
+                } else if (sequence.verboseFeaturesAvailable()) {
+                    prompt.append(" FA to show all features,");
+                }
+            }
+            case KEY -> {
+                prompt.append(" F to hide features,");
+                if (sequence.verboseFeaturesAvailable()) {
+                    prompt.append(" FA to show all features,");
+                }
+            }
+            case ALL -> {
+                if (sequence.featuresAvailable()) {
+                    prompt.append(" F to show key features only,");
+                } else {
+                    prompt.append(" FA to hide features,");
+                }
+            }
         }
-        StringBuilder builder = new StringBuilder(text);
-        builder.repeat(' ', cells - width);
-        return builder.toString();
+        prompt.append(" S to skip, U to undo, or X to exit.");
+        return prompt.toString();
     }
 
+    /**
+     * Formats {@code features} as a sorted, comma-separated string, or returns the
+     * {@value #NULL_VALUE_PLACEHOLDER} placeholder when the set is empty.
+     *
+     * @param features the features to format
+     * @return the formatted feature list
+     */
+    private String formatFeatures(Set<F> features) {
+        if (features.isEmpty()) {
+            return NULL_VALUE_PLACEHOLDER;
+        }
+        return features.stream().map(String::valueOf).sorted().collect(Collectors.joining(FEATURE_SEPARATOR));
+    }
+
+    /**
+     * Parses {@code input} as a one-based token index and returns it when it falls within
+     * {@code [1, tokenCount]}. Returns null when the input is not an integer or is out of range.
+     *
+     * @param input the trimmed user input
+     * @param tokenCount the number of tokens in the sequence
+     * @return the parsed index, or null when the input is not a valid token index
+     */
     private @Nullable Integer parseTokenIndex(String input, int tokenCount) {
         try {
             int value = Integer.parseInt(input);
@@ -185,6 +298,12 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         return null;
     }
 
+    /**
+     * Reads a line from the terminal, returning null when the input stream signals end-of-file or the
+     * user interrupts it, for example with Ctrl-D or Ctrl-C.
+     *
+     * @return the line read, or null when input ends
+     */
     private @Nullable String readLine() {
         try {
             return lineReader.readLine();
@@ -193,6 +312,15 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         }
     }
 
+    /**
+     * Renders the per-token edit screen for the token at {@code position}: the sequence header, the
+     * token under edit, a table of candidate tags with their confidences, and a prompt to select a tag
+     * or cancel.
+     *
+     * @param sequence the sequence being annotated
+     * @param position the zero-based index of the token under edit
+     * @param rows the candidate tag rows to offer
+     */
     private void renderEditScreen(AnnotatorSequence<F, T> sequence, int position, List<TagRow<T>> rows) {
         AttributedStringBuilder builder = new AttributedStringBuilder();
         builder.append(sequenceHeaderLine(sequence));
@@ -205,110 +333,88 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         builder.append(sequence.tokens().get(position).token());
         builder.append(System.lineSeparator());
 
-        int numberWidth = Math.max(displayWidth(NUMBER_COLUMN), displayWidth(String.valueOf(rows.size())));
-        int tagWidth = displayWidth(TAG_COLUMN);
-        for (TagRow<T> row : rows) {
-            tagWidth = Math.max(tagWidth, displayWidth(tagToString(row.tag())));
-        }
-        int confidenceWidth = displayWidth(CONFIDENCE_COLUMN);
-
-        appendRow(
-                builder,
-                AttributedStyle.DEFAULT,
-                padToWidth(NUMBER_COLUMN, numberWidth),
-                padToWidth(TAG_COLUMN, tagWidth),
-                padToWidth(CONFIDENCE_COLUMN, confidenceWidth)
-        );
-        builder.append(System.lineSeparator());
-        appendRow(
-                builder,
-                AttributedStyle.DEFAULT,
-                padToWidth("-".repeat(numberWidth), numberWidth),
-                padToWidth("-".repeat(tagWidth), tagWidth),
-                padToWidth("-".repeat(confidenceWidth), confidenceWidth)
-        );
-        builder.append(System.lineSeparator());
-
+        TerminalTable.Builder table = TerminalTable.builder().column(NUMBER_COLUMN).column(TAG_COLUMN)
+                .column(CONFIDENCE_COLUMN);
         for (int index = 0; index < rows.size(); index++) {
             TagRow<T> row = rows.get(index);
-            String numberCell = padToWidth(String.valueOf(index + 1), numberWidth);
-            String tagCell = padToWidth(tagToString(row.tag()), tagWidth);
-            String confidenceCell = padToWidth(formatConfidence(row.score()), confidenceWidth);
-            appendRow(builder, AttributedStyle.DEFAULT, numberCell, tagCell, confidenceCell);
-            builder.append(System.lineSeparator());
+            table.row(
+                    AttributedStyle.DEFAULT,
+                    String.valueOf(index + 1),
+                    tagToString(row.tag()),
+                    formatConfidence(row.score())
+            );
         }
+        table.build().appendTo(builder);
 
         builder.append("Enter the number to select the correct tag or C to cancel.");
         terminal.writer().println(builder.toAttributedString().toAnsi());
         terminal.writer().flush();
     }
 
+    /**
+     * Renders the sequence screen: the sequence header, a table of tokens with their current tags and
+     * confidences (rows below the confidence threshold highlighted), an optional feature table when a
+     * feature view is active, and the footer prompt.
+     *
+     * @param sequence the sequence to render
+     * @param currentTags the tag currently assigned to each token, in token order
+     */
     private void renderSequenceScreen(AnnotatorSequence<F, T> sequence, List<T> currentTags) {
         List<AnnotatorToken<F, T>> annotatorTokens = sequence.tokens();
+        FeatureView effectiveView = effectiveView(sequence);
 
-        int numberWidth = Math.max(displayWidth(NUMBER_COLUMN), displayWidth(String.valueOf(annotatorTokens.size())));
-        int tokenWidth = displayWidth(TOKEN_COLUMN);
-        for (AnnotatorToken<F, T> annotatorToken : annotatorTokens) {
-            // noinspection MathClampMigration
-            tokenWidth = Math.max(tokenWidth, Math.min(maxTokenDisplayWidth, displayWidth(annotatorToken.token())));
-        }
-        int tagWidth = displayWidth(TAG_COLUMN);
-        for (T tag : currentTags) {
-            tagWidth = Math.max(tagWidth, displayWidth(tagToString(tag)));
-        }
-        int confidenceWidth = displayWidth(CONFIDENCE_COLUMN);
-
-        AttributedStringBuilder builder = new AttributedStringBuilder();
-        builder.append(sequenceHeaderLine(sequence));
-        builder.append(System.lineSeparator());
-
-        appendRow(
-                builder,
-                AttributedStyle.DEFAULT,
-                padToWidth(NUMBER_COLUMN, numberWidth),
-                padToWidth(TOKEN_COLUMN, tokenWidth),
-                padToWidth(TAG_COLUMN, tagWidth),
-                padToWidth(CONFIDENCE_COLUMN, confidenceWidth)
-        );
-        builder.append(System.lineSeparator());
-        appendRow(
-                builder,
-                AttributedStyle.DEFAULT,
-                padToWidth("-".repeat(numberWidth), numberWidth),
-                padToWidth("-".repeat(tokenWidth), tokenWidth),
-                padToWidth("-".repeat(tagWidth), tagWidth),
-                padToWidth("-".repeat(confidenceWidth), confidenceWidth)
-        );
-        builder.append(System.lineSeparator());
-
+        TerminalTable.Builder tableBuilder = TerminalTable.builder().column(NUMBER_COLUMN)
+                .column(TOKEN_COLUMN, maxTokenDisplayWidth).column(TAG_COLUMN).column(CONFIDENCE_COLUMN);
         for (int index = 0; index < annotatorTokens.size(); index++) {
             AnnotatorToken<F, T> annotatorToken = annotatorTokens.get(index);
             Double confidence = annotatorToken.initialConfidence();
             boolean lowConfidence = confidence != null && confidence < threshold;
             AttributedStyle style = lowConfidence ? AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW)
                     : AttributedStyle.DEFAULT;
-            String numberCell = padToWidth(String.valueOf(index + 1), numberWidth);
-            String tokenCell = padToWidth(truncateToWidth(annotatorToken.token(), tokenWidth), tokenWidth);
-            String tagCell = padToWidth(tagToString(currentTags.get(index)), tagWidth);
-            String confidenceCell = padToWidth(formatConfidence(confidence), confidenceWidth);
-            appendRow(builder, style, numberCell, tokenCell, tagCell, confidenceCell);
+            tableBuilder.row(
+                    style,
+                    String.valueOf(index + 1),
+                    annotatorToken.token(),
+                    tagToString(currentTags.get(index)),
+                    formatConfidence(confidence)
+            );
+        }
+        TerminalTable table = tableBuilder.build();
+
+        AttributedStringBuilder builder = new AttributedStringBuilder();
+        builder.append(sequenceHeaderLine(sequence));
+        builder.append(System.lineSeparator());
+        table.appendTo(builder);
+
+        if (effectiveView != FeatureView.NONE) {
             builder.append(System.lineSeparator());
+            TerminalTable.Builder featuresTable = TerminalTable.builder().terminalWidth(terminal.getWidth())
+                    .column(NUMBER_COLUMN).column(TOKEN_COLUMN, maxTokenDisplayWidth)
+                    .wrappingColumn(FEATURES_COLUMN, FEATURE_SEPARATOR);
+            for (int index = 0; index < annotatorTokens.size(); index++) {
+                AnnotatorToken<F, T> annotatorToken = annotatorTokens.get(index);
+                featuresTable.row(
+                        AttributedStyle.DEFAULT,
+                        String.valueOf(index + 1),
+                        annotatorToken.token(),
+                        formatFeatures(displayedFeatures(annotatorToken, effectiveView))
+                );
+            }
+            featuresTable.build().appendTo(builder);
         }
 
-        builder.append("Enter A to accept, the number to edit the token, S to skip, U to undo, or X to exit.");
+        builder.append(footerPrompt(sequence, effectiveView));
         terminal.writer().println(builder.toAttributedString().toAnsi());
         terminal.writer().flush();
     }
 
-    private static void appendRow(AttributedStringBuilder builder, AttributedStyle style, String... cells) {
-        for (int index = 0; index < cells.length; index++) {
-            if (index > 0) {
-                builder.append("  ", AttributedStyle.DEFAULT);
-            }
-            builder.append(new AttributedString(cells[index], style));
-        }
-    }
-
+    /**
+     * Formats a confidence {@code value} to four decimal places, or returns the
+     * {@value #NULL_VALUE_PLACEHOLDER} placeholder when it is null.
+     *
+     * @param value the confidence value, or null when none is available
+     * @return the formatted confidence
+     */
     private static String formatConfidence(@Nullable Double value) {
         if (value == null) {
             return NULL_VALUE_PLACEHOLDER;
@@ -316,6 +422,14 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         return String.format(Locale.US, "%.4f", value);
     }
 
+    /**
+     * Runs the edit screen for the token at {@code position} until the annotator selects a tag or
+     * cancels. Returns the selected tag, or null when the annotator cancels or input ends.
+     *
+     * @param sequence the sequence being annotated
+     * @param position the zero-based index of the token under edit
+     * @return the selected tag, or null when the edit is cancelled
+     */
     private @Nullable T runEditScreen(AnnotatorSequence<F, T> sequence, int position) {
         List<TagRow<T>> rows = buildEditRows(sequence.tokens().get(position).alternativeTagScores());
         while (true) {
@@ -342,42 +456,37 @@ public final class JLineTaggingInterface<F, T extends Comparable<T>> implements 
         }
     }
 
+    /**
+     * Builds the header line shown above both screens: the sequence's position within the batch
+     * followed by its tokens joined with spaces.
+     *
+     * @param sequence the sequence to describe
+     * @return the header line
+     */
     private String sequenceHeaderLine(AnnotatorSequence<F, T> sequence) {
         return "Sequence " + String.format(Locale.US, "%,d", sequence.sequenceNumber()) + " of "
                 + String.format(Locale.US, "%,d", sequence.totalSequences()) + ": "
                 + sequence.tokens().stream().map(AnnotatorToken::token).collect(Collectors.joining(" "));
     }
 
+    /**
+     * Renders {@code tag} for display, using the tag provider's encoding when available and falling
+     * back to {@link String#valueOf(Object)} otherwise.
+     *
+     * @param tag the tag to render
+     * @return the display string for the tag
+     */
     private String tagToString(T tag) {
         String encoded = tagProvider.encode(tag);
         return encoded != null ? encoded : String.valueOf(tag);
     }
 
-    private String truncateToWidth(String text, int cells) {
-        if (displayWidth(text) <= cells) {
-            return text;
-        }
-        StringBuilder builder = new StringBuilder();
-        int accumulated = 0;
-        int index = 0;
-        int length = text.length();
-        int limit = cells - 1;
-        while (index < length) {
-            int codePoint = Character.codePointAt(text, index);
-            int width = WCWidth.wcwidth(codePoint);
-            int positiveWidth = Math.max(width, 0);
-            if (accumulated + positiveWidth > limit) {
-                break;
-            }
-            builder.appendCodePoint(codePoint);
-            accumulated += positiveWidth;
-            index += Character.charCount(codePoint);
-        }
-        builder.append('…');
-        return builder.toString();
-    }
-
     private record Edit<T> (int position, T previousTag) {}
+
+    /** The sequence-screen feature section state: hidden, key features only, or key + verbose union. */
+    private enum FeatureView {
+        ALL, KEY, NONE
+    }
 
     private record TagRow<T> (T tag, @Nullable Double score) {}
 

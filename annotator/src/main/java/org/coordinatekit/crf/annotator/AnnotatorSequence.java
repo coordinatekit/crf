@@ -41,6 +41,16 @@ import java.util.List;
  */
 public interface AnnotatorSequence<F, T extends Comparable<T>> {
     /**
+     * Returns whether key display features are available for this sequence — that is, whether a display
+     * feature extractor was configured. When {@code false}, every token's
+     * {@link AnnotatorToken#features() features} set is empty and the user-interface offers no
+     * key-feature view.
+     *
+     * @return {@code true} when key display features are available
+     */
+    boolean featuresAvailable();
+
+    /**
      * Returns the 1-based position of this sequence within the overall annotation batch.
      *
      * @return the sequence number
@@ -60,4 +70,14 @@ public interface AnnotatorSequence<F, T extends Comparable<T>> {
      * @return the total number of sequences
      */
     int totalSequences();
+
+    /**
+     * Returns whether verbose display features are available for this sequence. Independent of
+     * {@link #featuresAvailable() featuresAvailable}. When {@code false}, every token's
+     * {@link AnnotatorToken#verboseFeatures() verboseFeatures} set is empty and the user-interface
+     * offers no all-features view.
+     *
+     * @return {@code true} when verbose display features are available
+     */
+    boolean verboseFeaturesAvailable();
 }

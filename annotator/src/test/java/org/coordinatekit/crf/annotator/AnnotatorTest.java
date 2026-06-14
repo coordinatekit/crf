@@ -19,6 +19,7 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -51,9 +52,11 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
 import static org.coordinatekit.crf.annotator.TaggingAction.ACCEPT;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.coordinatekit.crf.annotator.TaggingAction.SKIP;
@@ -75,6 +78,15 @@ class AnnotatorTest {
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
+    ) {}
+
+    record FeatureWiringParameters(
+            String name,
+            UnaryOperator<Annotator.Builder<String, String>> configure,
+            boolean expectedFeaturesAvailable,
+            List<Set<String>> expectedFeatures,
+            boolean expectedVerboseFeaturesAvailable,
+            List<Set<String>> expectedVerboseFeatures
     ) {}
 
     record SessionParameters(
@@ -123,6 +135,96 @@ class AnnotatorTest {
                                 .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal()).build(),
                         IllegalStateException.class,
                         "at least one of tokenizer or tagger must be set"
+                )
+        );
+    }
+
+    static Stream<FeatureWiringParameters> featureWiring() {
+        List<String> lowercaseTokens = List.of("the", "quick", "brown");
+        List<Set<String>> embeddedFeatures = List.of(Set.of("embedded1"), Set.of("embedded2"), Set.of("embedded3"));
+        List<Set<String>> noFeatures = List.of(Set.of(), Set.of(), Set.of());
+        return Stream.of(
+                new FeatureWiringParameters(
+                        "no_feature_sources_baseline",
+                        builder -> builder.tokenizer(new WhitespaceTokenizer()),
+                        false,
+                        noFeatures,
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "tagger_alone_enables_verbose_fallback",
+                        builder -> builder.tagger(fixedTagger(lowercaseTokens, embeddedFeatures)),
+                        false,
+                        noFeatures,
+                        true,
+                        embeddedFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_runs_on_tagger_tokens",
+                        builder -> builder.featureExtractor(prefixExtractor("TOKEN_"))
+                                .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
+                        true,
+                        List.of(Set.of("TOKEN_THE"), Set.of("TOKEN_QUICK"), Set.of("TOKEN_BROWN")),
+                        true,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_runs_on_tokenizer_tokens",
+                        builder -> builder.featureExtractor(
+                                (sequence, position) -> Set.of("LENGTH_" + sequence.get(position).token().length())
+                        ).tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(Set.of("LENGTH_3"), Set.of("LENGTH_5"), Set.of("LENGTH_5")),
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_sees_whole_sequence_and_positions",
+                        builder -> builder.featureExtractor(positionAndNextTokenExtractor())
+                                .tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(Set.of("0:NEXT_quick"), Set.of("1:NEXT_brown"), Set.of("2:END")),
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_populates_verbose_features",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tokenizer(new WhitespaceTokenizer())
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        true,
+                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
+                        true,
+                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_overrides_tagger_fallback",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tagger(fixedTagger(lowercaseTokens, embeddedFeatures))
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        true,
+                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
+                        true,
+                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_without_key_extractor",
+                        builder -> builder.tokenizer(new WhitespaceTokenizer())
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        false,
+                        noFeatures,
+                        true,
+                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
+                ),
+                new FeatureWiringParameters(
+                        "verbose_unavailable_without_tagger_or_verbose_extractor",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
+                        false,
+                        noFeatures
                 )
         );
     }
@@ -261,6 +363,42 @@ class AnnotatorTest {
         assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.getFirst()));
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void featureWiring(FeatureWiringParameters parameters, @TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+
+        // ACT //
+        try (Terminal terminal = quietTerminal()) {
+            parameters.configure()
+                    .apply(
+                            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+                                    .terminal(terminal)
+                    ).build().annotate(inputFile, outputFile);
+        }
+
+        // ASSERT //
+        AnnotatorSequence<String, String> presented = tagging.presented.getFirst();
+        assertEquals(parameters.expectedFeaturesAvailable(), presented.featuresAvailable());
+        assertEquals(parameters.expectedFeatures(), presented.tokens().stream().map(AnnotatorToken::features).toList());
+        assertEquals(parameters.expectedVerboseFeaturesAvailable(), presented.verboseFeaturesAvailable());
+        assertEquals(
+                parameters.expectedVerboseFeatures(),
+                presented.tokens().stream().map(AnnotatorToken::verboseFeatures).toList()
+        );
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(1, written.size());
+        assertEquals(
+                List.of("DT", "NN", "NN"),
+                tagsOf(written.getFirst()),
+                "display features must not affect the written training data"
+        );
+    }
+
     @Test
     void resume__skipsLinesAlreadyInOutput(@TempDir Path tempDirectory) throws Exception {
         // ARRANGE //
@@ -278,9 +416,9 @@ class AnnotatorTest {
         AnnotatorSequence<String, String> firstPresented = tagging.presented.getFirst();
         assertEquals(List.of("the", "lazy", "dog"), tokensOf(firstPresented));
         assertEquals(
-                1,
+                3,
                 firstPresented.sequenceNumber(),
-                "presentation numbering starts at 1 regardless of how many lines were auto-skipped"
+                "sequence numbering reflects input position: two auto-skipped lines precede the first shown"
         );
         assertEquals(5, firstPresented.totalSequences(), "total sequence count includes auto-skipped lines");
 
@@ -463,6 +601,25 @@ class AnnotatorTest {
         return taggingResult(EXIT, List.of());
     }
 
+    private static FixedTagger fixedTagger(List<String> tokens, List<Set<String>> embeddedFeatures) {
+        List<Map<String, Double>> scores = new ArrayList<>();
+        for (int index = 0; index < tokens.size(); index++) {
+            scores.add(Map.of(index == 0 ? "DT" : "NN", 1.0));
+        }
+        return new FixedTagger(Map.of("the quick brown", new TaggedSequence<>(tokens, embeddedFeatures, scores)));
+    }
+
+    private static FeatureExtractor<String> positionAndNextTokenExtractor() {
+        return (sequence, position) -> {
+            String next = position + 1 < sequence.size() ? "NEXT_" + sequence.get(position + 1).token() : "END";
+            return Set.of(position + ":" + next);
+        };
+    }
+
+    private static FeatureExtractor<String> prefixExtractor(String prefix) {
+        return (sequence, position) -> Set.of(prefix + sequence.get(position).token());
+    }
+
     @SafeVarargs
     private static void prepopulateOutput(Path outputFile, TrainingSequence<String>... sequences) throws IOException {
         XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
@@ -485,16 +642,6 @@ class AnnotatorTest {
         tagging.results.add(accept("DT", "NN", "NN"));
         tagging.results.add(accept("DT", "NN", "NN"));
         return tagging;
-    }
-
-    private static Terminal quietTerminal() throws IOException {
-        return new DumbTerminal(
-                "test",
-                "ansi",
-                new ByteArrayInputStream(new byte[0]),
-                new ByteArrayOutputStream(),
-                StandardCharsets.UTF_8
-        );
     }
 
     private static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {

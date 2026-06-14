@@ -44,9 +44,11 @@ public interface AnnotatorToken<F, T extends Comparable<T>> {
     Map<T, @Nullable Double> alternativeTagScores();
 
     /**
-     * Returns the feature set extracted for this token.
+     * Returns the key display features for this token, produced by the display feature extractor
+     * configured on the annotator. Empty when no display feature extractor is configured. These
+     * features are presentational only — they have no effect on tagging or training output.
      *
-     * @return the feature set
+     * @return the key display features, empty when unconfigured
      */
     Set<F> features();
 
@@ -71,4 +73,14 @@ public interface AnnotatorToken<F, T extends Comparable<T>> {
      * @return the token
      */
     String token();
+
+    /**
+     * Returns the verbose display features for this token — the noisier extras shown only in the
+     * all-features view, in addition to {@link #features() features}. Empty when no verbose feature
+     * source is configured. These features are presentational only — they have no effect on tagging or
+     * training output.
+     *
+     * @return the verbose display features, empty when unconfigured
+     */
+    Set<F> verboseFeatures();
 }
