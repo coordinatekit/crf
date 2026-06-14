@@ -26,6 +26,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.SchemaFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,6 +44,7 @@ import java.util.stream.Stream;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,7 +56,7 @@ class XmlTrainingDataTest {
     // language=XML
     private static final String GENERATE_SCHEMA__ADJECTIVE_NOUN_VERB = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="https://example.org/tags" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
                 <xs:complexType name="TagType" mixed="true">
                     <xs:simpleContent>
                         <xs:extension base="xs:string"/>
@@ -67,7 +71,7 @@ class XmlTrainingDataTest {
     // language=XML
     private static final String GENERATE_SCHEMA__NOUN = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="https://example.org/tags" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
                 <xs:complexType name="TagType" mixed="true">
                     <xs:simpleContent>
                         <xs:extension base="xs:string"/>
@@ -80,7 +84,7 @@ class XmlTrainingDataTest {
     // language=XML
     private static final String GENERATE_SCHEMA__NOUN_VERB = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="https://example.org/tags" targetNamespace="https://example.org/tags" elementFormDefault="qualified">
                 <xs:complexType name="TagType" mixed="true">
                     <xs:simpleContent>
                         <xs:extension base="xs:string"/>
@@ -94,7 +98,7 @@ class XmlTrainingDataTest {
     // language=XML
     private static final String GENERATE_SCHEMA__NOUN_VERB__DIFFERENT_NAMESPACE = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.org/my-tags" elementFormDefault="qualified">
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="https://example.org/my-tags" targetNamespace="https://example.org/my-tags" elementFormDefault="qualified">
                 <xs:complexType name="TagType" mixed="true">
                     <xs:simpleContent>
                         <xs:extension base="xs:string"/>
@@ -253,6 +257,10 @@ class XmlTrainingDataTest {
         // ASSERT //
         String schema = output.toString(StandardCharsets.UTF_8);
         assertEquals(parameters.expected(), schema);
+        assertDoesNotThrow(
+                () -> SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
+                        .newSchema(new StreamSource(new ByteArrayInputStream(output.toByteArray())))
+        );
     }
 
     record GenerateSchemaExceptionParameters(

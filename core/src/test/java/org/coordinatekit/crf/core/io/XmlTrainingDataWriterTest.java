@@ -136,6 +136,27 @@ class XmlTrainingDataWriterTest {
         assertContainsBrownFoxThenLazyDog(file, customData);
     }
 
+    @Test
+    void appendingWriter__declaresTargetNamespaceAsDefault() throws IOException {
+        // ARRANGE //
+        XmlTrainingData<String> data = new XmlTrainingData<>(
+                new StringTagProvider("0"),
+                XmlTrainingDataConfiguration.builder().targetNamespace("https://example.org/tags").build()
+        );
+        Path file = temporaryDirectory.resolve("training.xml");
+
+        // ACT //
+        try (var writer = data.appendingWriter(file)) {
+            writer.write(brownFox());
+        }
+
+        // ASSERT //
+        assertTrue(
+                Files.readString(file).contains("xmlns=\"https://example.org/tags\""),
+                "Configured appending writer should declare the target namespace as the default"
+        );
+    }
+
     record AppendingWriterExceptionParameters(String name, String existingContent, String expectedMessageSubstring) {}
 
     static Stream<AppendingWriterExceptionParameters> appendingWriter__exception() {
@@ -334,6 +355,28 @@ class XmlTrainingDataWriterTest {
             assertEquals(1, actual.size());
             assertBrownFox(actual.getFirst());
         }
+    }
+
+    @Test
+    void writer__declaresTargetNamespaceAsDefault() throws IOException {
+        // ARRANGE //
+        XmlTrainingData<String> data = new XmlTrainingData<>(
+                new StringTagProvider("0"),
+                XmlTrainingDataConfiguration.builder().targetNamespace("https://example.org/tags").build()
+        );
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        // ACT //
+        try (var writer = data.writer(output)) {
+            writer.write(brownFox());
+        }
+
+        // ASSERT //
+        String emitted = output.toString(StandardCharsets.UTF_8);
+        assertTrue(
+                emitted.contains("xmlns=\"https://example.org/tags\""),
+                "Configured writer should declare the target namespace as the default: " + emitted
+        );
     }
 
     @Test

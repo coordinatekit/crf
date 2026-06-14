@@ -27,8 +27,24 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.XMLReader;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.stream.*;
+import javax.xml.transform.Source;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -52,7 +68,19 @@ import java.util.stream.StreamSupport;
  * <li>Writing training sequences to output streams or files, with optional append to existing
  * files</li>
  * <li>Generating XSD schemas that define valid tag elements</li>
+ * <li>Validating documents against the fixed structural grammar and the generated tag
+ * vocabulary</li>
  * </ul>
+ *
+ * <p>
+ * Two namespaces are in play. The <em>structural grammar</em>
+ * ({@code https://coordinatekit.org/crf/schema}) is fixed and library-owned: it defines the
+ * {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape and lives in the
+ * static {@code crf-structure.xsd} resource. The <em>tag vocabulary</em> is dynamic and per-
+ * {@link TagProvider}: {@link #generateSchema(OutputStream)} emits one element declaration per tag
+ * in the configured {@link XmlTrainingDataConfiguration#targetNamespace() target namespace}. When a
+ * target namespace is configured, the writer declares it as the document's default namespace, so
+ * the bare tag elements it emits resolve into that namespace and match the generated tag schema.
  *
  * <p>
  * When reading XML, {@code <crf:Excluded>} runs in the CRF schema namespace
@@ -68,17 +96,20 @@ import java.util.stream.StreamSupport;
  * {@code <crf:Sequence>} element with its tag elements inline.
  *
  * <p>
- * {@code XmlTrainingData} instances are stateless and may be safely shared across threads to act as
- * factories. Individual reader streams and writer instances are not thread-safe.
+ * {@code XmlTrainingData} instances hold no mutable observable state (the compiled validation
+ * schema is lazily computed but immutable and derived from the configuration) and may be safely
+ * shared across threads to act as factories. Individual reader streams and writer instances are not
+ * thread-safe.
  *
  * @param <T> the type of tag used in training sequences
  * @see TrainingDataAppender
  * @see TrainingDataSequencer
+ * @see TrainingDataValidator
  * @see TrainingSchemaGenerator
  */
 @NullMarked
-public class XmlTrainingData<T extends Comparable<T>>
-        implements TrainingDataAppender<T>, TrainingDataSequencer<T>, TrainingDataStreamer<T>, TrainingSchemaGenerator {
+public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataAppender<T>, TrainingDataSequencer<T>,
+        TrainingDataStreamer<T>, TrainingDataValidator, TrainingSchemaGenerator {
 
     /**
      * The namespace URI for CRF structural elements.
@@ -107,6 +138,11 @@ public class XmlTrainingData<T extends Comparable<T>>
      */
     public static final String SEQUENCE_ELEMENT_NAME = "Sequence";
 
+    /**
+     * The classpath resource name of the fixed structural grammar, resolved relative to this class.
+     */
+    private static final String STRUCTURAL_SCHEMA_RESOURCE = "crf-structure.xsd";
+
     private static final String XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema";
 
     private static final Logger logger = LoggerFactory.getLogger(XmlTrainingData.class);
@@ -116,6 +152,7 @@ public class XmlTrainingData<T extends Comparable<T>>
     private final XmlTrainingDataConfiguration configuration;
     private final byte[] openDocumentBytes;
     private final TagProvider<T> tagProvider;
+    private volatile @Nullable Schema validationSchema;
 
     /**
      * Constructs an {@code XmlTrainingData} instance with default configuration.
@@ -141,8 +178,11 @@ public class XmlTrainingData<T extends Comparable<T>>
         this.tagProvider = tagProvider;
         this.configuration = configuration;
         String rootElementName = configuration.rootElementName();
+        String targetNamespace = configuration.targetNamespace();
+        String defaultNamespaceDeclaration = targetNamespace == null ? "" : " xmlns=\"" + targetNamespace + "\"";
         this.openDocumentBytes = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + "<crf:" + rootElementName
-                + " xmlns:crf=\"" + CRF_SCHEMA_NAMESPACE_URI + "\">\n").getBytes(StandardCharsets.UTF_8);
+                + " xmlns:crf=\"" + CRF_SCHEMA_NAMESPACE_URI + "\"" + defaultNamespaceDeclaration + ">\n")
+                        .getBytes(StandardCharsets.UTF_8);
         this.closeTagBytes = ("</crf:" + rootElementName + ">\n").getBytes(StandardCharsets.UTF_8);
         this.closeTagNeedle = ("</crf:" + rootElementName + ">").getBytes(StandardCharsets.UTF_8);
     }
@@ -319,9 +359,13 @@ public class XmlTrainingData<T extends Comparable<T>>
         writer.writeStartDocument("UTF-8", "1.0");
         writer.writeCharacters("\n");
 
+        String targetNamespace = Objects.requireNonNull(configuration.targetNamespace());
         writer.writeStartElement("xs", "schema", XML_SCHEMA_NAMESPACE_URI);
         writer.writeNamespace("xs", XML_SCHEMA_NAMESPACE_URI);
-        writer.writeAttribute("targetNamespace", Objects.requireNonNull(configuration.targetNamespace()));
+        // Declare the target namespace as the default so unprefixed references such as type="TagType"
+        // resolve into it; without this the generated schema cannot be compiled.
+        writer.writeDefaultNamespace(targetNamespace);
+        writer.writeAttribute("targetNamespace", targetNamespace);
         writer.writeAttribute("elementFormDefault", "qualified");
         writer.writeCharacters("\n");
 
@@ -399,6 +443,121 @@ public class XmlTrainingData<T extends Comparable<T>>
     }
 
     /**
+     * Wraps an untrusted input stream in a {@link SAXSource} backed by a parser that disables DTDs and
+     * external entities.
+     *
+     * <p>
+     * The validator parses through this reader, so {@code <!DOCTYPE>} declarations and external-entity
+     * references in the document are blocked before they can resolve. This is the same
+     * {@code disallow-doctype-decl} hardening {@code XPathFeatureExtractor.getXPathValues} applies; it
+     * defends against DTD-based XXE and entity-expansion ("billion laughs") attacks. Setting the
+     * feature on the {@link Validator} alone is not sufficient, because the JDK does not enforce it for
+     * a {@link StreamSource}.
+     *
+     * @param input the untrusted input stream to read the document from
+     * @return a SAX source backed by a hardened reader
+     * @throws UncheckedCrfException if the hardened parser cannot be configured
+     */
+    private static SAXSource hardenedSource(InputStream input) {
+        SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+        parserFactory.setNamespaceAware(true);
+        try {
+            parserFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            parserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            parserFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            parserFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            XMLReader reader = parserFactory.newSAXParser().getXMLReader();
+            return new SAXSource(reader, new InputSource(input));
+        } catch (ParserConfigurationException | SAXException e) {
+            throw new UncheckedCrfException(e);
+        }
+    }
+
+    /**
+     * Loads the fixed structural grammar from the classpath, substituting the root element name when a
+     * non-default root is configured.
+     *
+     * <p>
+     * The static {@code crf-structure.xsd} declares the document root as
+     * {@link XmlTrainingDataConfiguration#DEFAULT_ROOT_ELEMENT_NAME}. A custom root local name is
+     * applied by a single in-memory substitution of that element declaration's {@code name} attribute,
+     * so the resource stays the one source of truth for the grammar. The substitution requires the
+     * default root declaration to appear exactly once; if the resource is reformatted so it no longer
+     * matches, the substitution fails loudly rather than silently producing an invalid grammar.
+     *
+     * @param rootElementName the configured root element local name
+     * @return the structural schema bytes, with the root declaration renamed if necessary
+     * @throws UncheckedCrfException if the resource is missing, cannot be read, or does not contain
+     *         exactly one default root element declaration to substitute
+     */
+    private static byte[] loadStructuralSchema(String rootElementName) {
+        byte[] schemaBytes;
+        try (InputStream resource = XmlTrainingData.class.getResourceAsStream(STRUCTURAL_SCHEMA_RESOURCE)) {
+            if (resource == null) {
+                throw new UncheckedCrfException(
+                        "The structural schema resource '" + STRUCTURAL_SCHEMA_RESOURCE
+                                + "' was not found on the classpath."
+                );
+            }
+            schemaBytes = resource.readAllBytes();
+        } catch (IOException e) {
+            throw new UncheckedCrfException(e);
+        }
+
+        if (XmlTrainingDataConfiguration.DEFAULT_ROOT_ELEMENT_NAME.equals(rootElementName)) {
+            return schemaBytes;
+        }
+        String original = new String(schemaBytes, StandardCharsets.UTF_8);
+        String target = "<xs:element name=\"" + XmlTrainingDataConfiguration.DEFAULT_ROOT_ELEMENT_NAME + "\">";
+        int index = original.indexOf(target);
+        if (index < 0 || index != original.lastIndexOf(target)) {
+            throw new UncheckedCrfException(
+                    "Expected exactly one root element declaration (" + target + ") in the structural schema "
+                            + "resource '" + STRUCTURAL_SCHEMA_RESOURCE + "' but found "
+                            + (index < 0 ? "none" : "more than one") + "; the resource may have been reformatted."
+            );
+        }
+        String schema = original.substring(0, index) + "<xs:element name=\"" + rootElementName + "\">"
+                + original.substring(index + target.length());
+        return schema.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Compiles the structural grammar and the generated tag vocabulary into a single validating schema.
+     *
+     * <p>
+     * The tag schema is generated in memory by {@link #generateSchema(OutputStream)}, which enforces
+     * the target-namespace and non-empty-tag preconditions. Compiling both namespaces together resolves
+     * the structural grammar's strict tag wildcard against the tag schema's global element declarations
+     * without an {@code xs:import}.
+     *
+     * @return a schema that validates a document against both the structure and the tag vocabulary
+     * @throws IllegalStateException if no target namespace is configured or the tag set is empty
+     * @throws UncheckedCrfException if either schema cannot be compiled
+     */
+    private Schema newValidationSchema() {
+        ByteArrayOutputStream tagSchemaBuffer = new ByteArrayOutputStream();
+        generateSchema(tagSchemaBuffer);
+        byte[] structuralSchema = loadStructuralSchema(configuration.rootElementName());
+
+        SchemaFactory schemaFactory = SchemaFactory.newInstance(XML_SCHEMA_NAMESPACE_URI);
+        try {
+            schemaFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        } catch (SAXException e) {
+            throw new UncheckedCrfException(e);
+        }
+        Source[] sources = {new StreamSource(new ByteArrayInputStream(structuralSchema)),
+                        new StreamSource(new ByteArrayInputStream(tagSchemaBuffer.toByteArray()))};
+        try {
+            return schemaFactory.newSchema(sources);
+        } catch (SAXException e) {
+            throw new UncheckedCrfException(e);
+        }
+    }
+
+    /**
      * Wraps a freshly opened stream in a {@link StreamSequenceWriter}, optionally writing a prolog
      * first, and closes the stream if either step fails.
      *
@@ -443,6 +602,44 @@ public class XmlTrainingData<T extends Comparable<T>>
         } catch (XMLStreamException e) {
             throw new UncheckedCrfException(e);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * The document is parsed with DTDs and external entities disabled, so DTD-based XXE and entity
+     * expansion ("billion laughs") attacks in untrusted input cannot resolve.
+     *
+     * <p>
+     * Tag elements validate only when they sit in the configured
+     * {@link XmlTrainingDataConfiguration#targetNamespace() target namespace}. The writer declares that
+     * namespace as the document default, so a tag such as {@code <Noun>} resolves into it and matches
+     * the generated tag schema. A document written by an instance with no target namespace leaves its
+     * tag elements in no namespace, and the structural grammar's tag wildcard matches only namespaces
+     * other than the CRF schema namespace, so such a document does not validate.
+     */
+    @Override
+    public void validate(InputStream input) {
+        Schema schema = validationSchema();
+        CollectingErrorHandler errorHandler = new CollectingErrorHandler();
+        Validator validator = schema.newValidator();
+        try {
+            validator.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            validator.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            validator.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        } catch (SAXException e) {
+            throw new UncheckedCrfException(e);
+        }
+        validator.setErrorHandler(errorHandler);
+        try {
+            validator.validate(hardenedSource(input));
+        } catch (SAXException e) {
+            errorHandler.recordFatal(e);
+        } catch (IOException e) {
+            throw new UncheckedCrfException(e);
+        }
+        errorHandler.throwIfInvalid();
     }
 
     /**
@@ -500,6 +697,33 @@ public class XmlTrainingData<T extends Comparable<T>>
     }
 
     /**
+     * Returns the compiled validation schema, computing and caching it on first use.
+     *
+     * <p>
+     * The compiled {@link Schema} is immutable, thread-safe, and depends only on the {@code final}
+     * configuration and tag provider, so it is computed once via {@link #newValidationSchema()} and
+     * reused across calls. Double-checked locking on the {@code volatile} field guards concurrent first
+     * access.
+     *
+     * @return the schema that validates documents against the structure and the tag vocabulary
+     * @throws IllegalStateException if no target namespace is configured or the tag set is empty
+     * @throws UncheckedCrfException if either schema cannot be compiled
+     */
+    private Schema validationSchema() {
+        Schema schema = validationSchema;
+        if (schema == null) {
+            synchronized (this) {
+                schema = validationSchema;
+                if (schema == null) {
+                    schema = newValidationSchema();
+                    validationSchema = schema;
+                }
+            }
+        }
+        return schema;
+    }
+
+    /**
      * Opens a single-pass training sequence writer to the given output stream.
      *
      * <p>
@@ -519,6 +743,76 @@ public class XmlTrainingData<T extends Comparable<T>>
     public TrainingSequenceWriter<T> writer(OutputStream output) throws IOException {
         output.write(openDocumentBytes);
         return new StreamSequenceWriter<>(tagProvider, output, closeTagBytes);
+    }
+
+    /**
+     * Collects validation problems instead of aborting on the first one, so a single
+     * {@link #validate(InputStream)} call can report every error in a document.
+     *
+     * <p>
+     * Warnings are ignored because they do not render a document invalid. Recoverable errors are
+     * reported through {@link #error(SAXParseException)} as the validator continues; a fatal error is
+     * reported through {@link #fatalError(SAXParseException)} and then rethrown by the validator, which
+     * {@link #recordFatal(SAXException)} reconciles so it is not counted twice.
+     */
+    private static final class CollectingErrorHandler implements ErrorHandler {
+        private final List<String> errors = new ArrayList<>();
+
+        @Override
+        public void error(SAXParseException exception) {
+            errors.add(format(exception));
+        }
+
+        @Override
+        public void fatalError(SAXParseException exception) {
+            errors.add(format(exception));
+        }
+
+        /**
+         * Formats a parse exception with its location, when available.
+         *
+         * @param exception the parse exception to format
+         * @return a human-readable message, prefixed with line and column when the parser supplied them
+         */
+        private static String format(SAXParseException exception) {
+            int line = exception.getLineNumber();
+            if (line < 0) {
+                return exception.getMessage();
+            }
+            return "line " + line + ", column " + exception.getColumnNumber() + ": " + exception.getMessage();
+        }
+
+        /**
+         * Records a fatal exception thrown out of {@code validate}, unless one was already collected.
+         *
+         * <p>
+         * The validator calls {@link #fatalError(SAXParseException)} before rethrowing, so in the common
+         * case the problem is already recorded and this is a no-op. A non-parse {@link SAXException} that
+         * never reached the handler is recorded by its message.
+         *
+         * @param exception the exception thrown by the validator
+         */
+        void recordFatal(SAXException exception) {
+            if (errors.isEmpty()) {
+                errors.add(exception.getMessage());
+            }
+        }
+
+        /**
+         * Throws an {@link UncheckedCrfException} aggregating every collected problem, if any.
+         *
+         * @throws UncheckedCrfException if one or more validation problems were collected
+         */
+        void throwIfInvalid() {
+            if (!errors.isEmpty()) {
+                throw new UncheckedCrfException("The training data document is invalid:\n" + String.join("\n", errors));
+            }
+        }
+
+        @Override
+        public void warning(SAXParseException exception) {
+            // Warnings do not render a document invalid and are intentionally ignored.
+        }
     }
 
     /**
