@@ -383,9 +383,9 @@ class AnnotatorTest {
 
         // ASSERT //
         AnnotatorSequence<String, String> presented = tagging.presented.getFirst();
-        assertEquals(parameters.expectedFeaturesAvailable(), presented.featuresAvailable());
+        assertEquals(parameters.expectedFeaturesAvailable(), presented.featureAvailability().keyAvailable());
         assertEquals(parameters.expectedFeatures(), presented.tokens().stream().map(AnnotatorToken::features).toList());
-        assertEquals(parameters.expectedVerboseFeaturesAvailable(), presented.verboseFeaturesAvailable());
+        assertEquals(parameters.expectedVerboseFeaturesAvailable(), presented.featureAvailability().verboseAvailable());
         assertEquals(
                 parameters.expectedVerboseFeatures(),
                 presented.tokens().stream().map(AnnotatorToken::verboseFeatures).toList()

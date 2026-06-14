@@ -25,7 +25,7 @@ package org.coordinatekit.crf.annotator;
  *
  * @param <F> the feature type carried on the annotator sequence
  * @param <T> the tag type
- * @see JLineTaggingInterface
+ * @see org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface
  */
 public interface TaggingInterface<F, T extends Comparable<T>> {
     /**

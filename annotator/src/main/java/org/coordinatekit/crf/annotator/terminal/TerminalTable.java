@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator;
+package org.coordinatekit.crf.annotator.terminal;
 
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
@@ -338,7 +338,7 @@ final class TerminalTable {
     static final class Builder {
         private final List<ColumnSpecification> columns = new ArrayList<>();
         private final List<Row> rows = new ArrayList<>();
-        private String separator = "  ";
+        private final String separator = "  ";
         private int terminalWidth = 0;
 
         private Builder() {}
@@ -396,17 +396,6 @@ final class TerminalTable {
                             null
                     )
             );
-            return this;
-        }
-
-        /**
-         * Sets the gutter rendered between adjacent columns. Defaults to two spaces.
-         *
-         * @param separator the gutter, must not be null
-         * @return this builder
-         */
-        Builder columnSeparator(String separator) {
-            this.separator = Objects.requireNonNull(separator, "separator must not be null");
             return this;
         }
 

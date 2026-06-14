@@ -13,16 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator;
+package org.coordinatekit.crf.annotator.terminal;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.initialTagsOf;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.scoreMap;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.ALL_VIEW_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.KEY_FEATURES_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.KEY_ONLY_VIEW_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.KEY_VIEW_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.SEQUENCE_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.VERBOSE_FEATURES_PROMPT;
+import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.VERBOSE_ONLY_VIEW_PROMPT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.coordinatekit.crf.annotator.AnnotatorSequence;
+import org.coordinatekit.crf.annotator.AnnotatorTestSupport;
+import org.coordinatekit.crf.annotator.TaggingAction;
+import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jline.terminal.Terminal;
@@ -50,7 +62,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-class JLineTaggingInterfaceTest {
+class TerminalTaggingInterfaceTest {
     enum PartOfSpeech {
         Adjective, Adverb, Determiner, Noun, Preposition, Verb
     }
@@ -121,18 +133,11 @@ class JLineTaggingInterfaceTest {
 
     record ThresholdParameters(String name, double threshold) {}
 
-    private static final String ALL_VIEW_PROMPT = "Enter A to accept, the number to edit the token, F to show key features only, S to skip, U to undo, or X to exit.";
     private static final String BOLD_YELLOW = AnnotatorTestSupport.boldYellowEscape();
     private static final String EDIT_PROMPT = "Enter the number to select the correct tag or C to cancel.";
     private static final String FEATURES_HEADING = "Features";
     // Common prefix of every footer prompt; used to locate where a prompt begins in the output.
     private static final String FOOTER_PROMPT_PREFIX = "Enter A to accept";
-    private static final String KEY_FEATURES_PROMPT = "Enter A to accept, the number to edit the token, F to show key features, S to skip, U to undo, or X to exit.";
-    private static final String KEY_ONLY_VIEW_PROMPT = "Enter A to accept, the number to edit the token, F to hide features, S to skip, U to undo, or X to exit.";
-    private static final String KEY_VIEW_PROMPT = "Enter A to accept, the number to edit the token, F to hide features, FA to show all features, S to skip, U to undo, or X to exit.";
-    private static final String SEQUENCE_PROMPT = "Enter A to accept, the number to edit the token, S to skip, U to undo, or X to exit.";
-    private static final String VERBOSE_FEATURES_PROMPT = "Enter A to accept, the number to edit the token, FA to show all features, S to skip, U to undo, or X to exit.";
-    private static final String VERBOSE_ONLY_VIEW_PROMPT = "Enter A to accept, the number to edit the token, FA to hide features, S to skip, U to undo, or X to exit.";
     private static final List<Double> WITH_MODEL_CONFIDENCES = List
             .of(0.99, 0.55, 0.92, 0.97, 0.95, 0.88, 0.99, 0.62, 0.95, 0.91);
 
@@ -140,52 +145,52 @@ class JLineTaggingInterfaceTest {
         return Stream.of(
                 new ActionParameters(
                         "accept",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "A\n",
                         TaggingAction.ACCEPT,
-                        JLineTaggingInterfaceTest::initialTagsOf
+                        AnnotatorTestSupport::initialTagsOf
                 ),
                 new ActionParameters(
                         "skip",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "S\n",
                         TaggingAction.SKIP,
                         sequence -> List.of()
                 ),
                 new ActionParameters(
                         "exit",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "X\n",
                         TaggingAction.EXIT,
                         sequence -> List.of()
                 ),
                 new ActionParameters(
                         "eof",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "",
                         TaggingAction.EXIT,
                         sequence -> List.of()
                 ),
                 new ActionParameters(
                         "edit_cancel_then_accept",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "2\nC\nA\n",
                         TaggingAction.ACCEPT,
-                        JLineTaggingInterfaceTest::initialTagsOf
+                        AnnotatorTestSupport::initialTagsOf
                 ),
                 new ActionParameters(
                         "edit_then_accept",
-                        JLineTaggingInterfaceTest::withModelAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::withModelAnnotatorSequence,
                         "2\n2\nA\n",
                         TaggingAction.ACCEPT,
-                        JLineTaggingInterfaceTest::initialTagsWithSecondTokenSwapped
+                        TerminalTaggingInterfaceTest::initialTagsWithSecondTokenSwapped
                 ),
                 new ActionParameters(
                         "undo_reverts_last_edit",
-                        JLineTaggingInterfaceTest::withModelAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::withModelAnnotatorSequence,
                         "2\n2\nU\nA\n",
                         TaggingAction.ACCEPT,
-                        JLineTaggingInterfaceTest::initialTagsOf
+                        AnnotatorTestSupport::initialTagsOf
                 )
         );
     }
@@ -211,50 +216,50 @@ class JLineTaggingInterfaceTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "negativeThreshold",
-                        () -> JLineTaggingInterface.builder().threshold(-0.1),
+                        () -> TerminalTaggingInterface.builder().threshold(-0.1),
                         IllegalArgumentException.class,
                         "threshold must be in [0.0, 1.0], got: -0.1"
                 ),
                 new BuilderExceptionParameters(
                         "thresholdAboveOne",
-                        () -> JLineTaggingInterface.builder().threshold(1.1),
+                        () -> TerminalTaggingInterface.builder().threshold(1.1),
                         IllegalArgumentException.class,
                         "threshold must be in [0.0, 1.0], got: 1.1"
                 ),
                 new BuilderExceptionParameters(
                         "thresholdNaN",
-                        () -> JLineTaggingInterface.builder().threshold(Double.NaN),
+                        () -> TerminalTaggingInterface.builder().threshold(Double.NaN),
                         IllegalArgumentException.class,
                         "threshold must be in [0.0, 1.0], got: NaN"
                 ),
                 new BuilderExceptionParameters(
                         "maxTokenDisplayWidthZero",
-                        () -> JLineTaggingInterface.builder().maxTokenDisplayWidth(0),
+                        () -> TerminalTaggingInterface.builder().maxTokenDisplayWidth(0),
                         IllegalArgumentException.class,
                         "maxTokenDisplayWidth must be positive, got: 0"
                 ),
                 new BuilderExceptionParameters(
                         "maxTokenDisplayWidthNegative",
-                        () -> JLineTaggingInterface.builder().maxTokenDisplayWidth(-5),
+                        () -> TerminalTaggingInterface.builder().maxTokenDisplayWidth(-5),
                         IllegalArgumentException.class,
                         "maxTokenDisplayWidth must be positive, got: -5"
                 ),
                 new BuilderExceptionParameters(
                         "buildWithoutTagProvider",
-                        () -> JLineTaggingInterface.builder().build(),
+                        () -> TerminalTaggingInterface.builder().build(),
                         IllegalStateException.class,
                         "tagProvider must be set"
                 ),
                 new BuilderExceptionParameters(
                         "buildWithoutTerminal",
-                        () -> JLineTaggingInterface.<String, PartOfSpeech>builder()
+                        () -> TerminalTaggingInterface.<String, PartOfSpeech>builder()
                                 .tagProvider(new PartOfSpeechTagProvider()).build(),
                         IllegalStateException.class,
                         "terminal must be set"
                 ),
                 new BuilderExceptionParameters("buildWithEmptyTags", () -> {
                     try (Terminal terminal = quietTerminal()) {
-                        JLineTaggingInterface.<String, PartOfSpeech>builder().tagProvider(emptyTagProvider())
+                        TerminalTaggingInterface.<String, PartOfSpeech>builder().tagProvider(emptyTagProvider())
                                 .terminal(terminal).build();
                     }
                 }, IllegalStateException.class, "tagProvider.tags() must not be empty")
@@ -333,7 +338,7 @@ class JLineTaggingInterfaceTest {
         return Stream.of(
                 new FeaturesViewHeadingParameters(
                         "F_ignored_without_features",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "F\nA\n",
                         0
                 ),
@@ -431,7 +436,7 @@ class JLineTaggingInterfaceTest {
         return Stream.of(
                 new FooterPromptParameters(
                         "no_features_legacy_prompt",
-                        JLineTaggingInterfaceTest::simpleAnnotatorSequence,
+                        TerminalTaggingInterfaceTest::simpleAnnotatorSequence,
                         "A\n",
                         SEQUENCE_PROMPT
                 ),
@@ -670,10 +675,6 @@ class JLineTaggingInterfaceTest {
         return output.substring(headingIndex, end);
     }
 
-    private static List<PartOfSpeech> initialTagsOf(AnnotatorSequence<String, PartOfSpeech> sequence) {
-        return sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
-    }
-
     private static List<PartOfSpeech> initialTagsWithSecondTokenSwapped(
             AnnotatorSequence<String, PartOfSpeech> sequence
     ) {
@@ -695,15 +696,15 @@ class JLineTaggingInterfaceTest {
     private InteractionResult run(
             String input,
             AnnotatorSequence<String, PartOfSpeech> sequence,
-            Consumer<JLineTaggingInterface.Builder<String, PartOfSpeech>> customize
+            Consumer<TerminalTaggingInterface.Builder<String, PartOfSpeech>> customize
     ) throws Exception {
         ByteArrayInputStream in = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            JLineTaggingInterface.Builder<String, PartOfSpeech> builder = JLineTaggingInterface
+            TerminalTaggingInterface.Builder<String, PartOfSpeech> builder = TerminalTaggingInterface
                     .<String, PartOfSpeech>builder().tagProvider(new PartOfSpeechTagProvider()).terminal(terminal);
             customize.accept(builder);
-            JLineTaggingInterface<String, PartOfSpeech> ui = builder.build();
+            TerminalTaggingInterface<String, PartOfSpeech> ui = builder.build();
             TaggingResult<PartOfSpeech> result = ui.present(sequence);
             terminal.flush();
             return new InteractionResult(result, out.toString(StandardCharsets.UTF_8));
@@ -719,7 +720,7 @@ class JLineTaggingInterfaceTest {
         ByteArrayInputStream in = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            JLineTaggingInterface<String, PartOfSpeech> ui = JLineTaggingInterface.<String, PartOfSpeech>builder()
+            TerminalTaggingInterface<String, PartOfSpeech> ui = TerminalTaggingInterface.<String, PartOfSpeech>builder()
                     .tagProvider(new PartOfSpeechTagProvider()).terminal(terminal).maxTokenDisplayWidth(30).build();
             TaggingResult<PartOfSpeech> result = null;
             for (AnnotatorSequence<String, PartOfSpeech> sequence : sequences) {

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.coordinatekit.crf.annotator.AnnotatorTestSupport.TestOptions;
+import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.jline.terminal.Terminal;
@@ -249,7 +250,7 @@ class AnnotatorCliTest {
 
     private static AnnotatorCli.AnnotatorFactory annotatorFactory() {
         return (parsedOptions, sharedTerminal) -> {
-            JLineTaggingInterface<String, String> ui = JLineTaggingInterface.<String, String>builder()
+            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
                     .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(parsedOptions.threshold()).build();
             return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
                     .terminal(sharedTerminal).tokenizer(new WhitespaceTokenizer()).build();

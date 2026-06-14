@@ -19,6 +19,7 @@ import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.TAG_PROVIDER;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.readOutput;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.jline.terminal.Terminal;
@@ -107,7 +108,7 @@ class AnnotatorIntegrationTest {
         ByteArrayInputStream stdin = new ByteArrayInputStream(scriptedInput.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", stdin, stdout, StandardCharsets.UTF_8)) {
-            JLineTaggingInterface<String, String> ui = JLineTaggingInterface.<String, String>builder()
+            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
                     .tagProvider(TAG_PROVIDER).terminal(terminal).build();
             Annotator<String, String> annotator = Annotator.<String, String>builder().tagProvider(TAG_PROVIDER)
                     .taggingInterface(ui).terminal(terminal).tokenizer(new WhitespaceTokenizer()).build();
