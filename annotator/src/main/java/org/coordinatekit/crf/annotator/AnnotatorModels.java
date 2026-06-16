@@ -160,8 +160,7 @@ public final class AnnotatorModels {
                 sequenceNumber,
                 totalSequences,
                 tokens,
-                features != null,
-                verboseFeatures != null
+                FeatureAvailability.of(features != null, verboseFeatures != null)
         );
     }
 
@@ -237,8 +236,7 @@ public final class AnnotatorModels {
                 sequenceNumber,
                 totalSequences,
                 annotatorTokens,
-                features != null,
-                verboseFeatures != null
+                FeatureAvailability.of(features != null, verboseFeatures != null)
         );
     }
 
@@ -312,8 +310,7 @@ public final class AnnotatorModels {
             int sequenceNumber,
             int totalSequences,
             List<AnnotatorToken<F, T>> tokens,
-            boolean featuresAvailable,
-            boolean verboseFeaturesAvailable
+            FeatureAvailability featureAvailability
     ) implements AnnotatorSequence<F, T> {
         private DefaultAnnotatorSequence {
             tokens = List.copyOf(tokens);

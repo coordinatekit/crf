@@ -56,8 +56,8 @@ public final class MyAnnotator {
                             new WhitespaceTokenizer()
                     );
 
-            JLineTaggingInterface<MyFeature, MyTag> ui =
-                    JLineTaggingInterface.<MyFeature, MyTag>builder()
+            TerminalTaggingInterface<MyFeature, MyTag> ui =
+                    TerminalTaggingInterface.<MyFeature, MyTag>builder()
                             .tagProvider(new MyTagProvider())
                             .terminal(terminal)
                             .threshold(options.threshold())

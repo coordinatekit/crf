@@ -41,7 +41,6 @@ import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.scoreMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
@@ -455,8 +454,8 @@ class AnnotatorSequenceTest {
         AnnotatorSequence<String, TestTag> sequence = parameters.sequenceSupplier().get();
 
         // ASSERT //
-        assertEquals(parameters.expectedFeaturesAvailable(), sequence.featuresAvailable());
-        assertEquals(parameters.expectedVerboseFeaturesAvailable(), sequence.verboseFeaturesAvailable());
+        assertEquals(parameters.expectedFeaturesAvailable(), sequence.featureAvailability().keyAvailable());
+        assertEquals(parameters.expectedVerboseFeaturesAvailable(), sequence.featureAvailability().verboseAvailable());
         assertEquals(parameters.expectedFeatures(), sequence.tokens().stream().map(AnnotatorToken::features).toList());
         assertEquals(
                 parameters.expectedVerboseFeatures(),
@@ -484,8 +483,11 @@ class AnnotatorSequenceTest {
         assertEquals(2, sequence.sequenceNumber());
         assertEquals(5, sequence.totalSequences());
         assertEquals(2, sequence.tokens().size());
-        assertFalse(sequence.featuresAvailable(), "embedded tagger features must not enable the feature display");
-        assertFalse(sequence.verboseFeaturesAvailable());
+        assertEquals(
+                FeatureAvailability.NONE,
+                sequence.featureAvailability(),
+                "embedded tagger features must not enable the feature display"
+        );
         assertToken(
                 sequence.tokens().getFirst(),
                 "the",
@@ -515,8 +517,7 @@ class AnnotatorSequenceTest {
 
         // ASSERT //
         assertEquals(3, sequence.tokens().size());
-        assertFalse(sequence.featuresAvailable());
-        assertFalse(sequence.verboseFeaturesAvailable());
+        assertEquals(FeatureAvailability.NONE, sequence.featureAvailability());
         for (int index = 0; index < tokens.size(); index++) {
             AnnotatorToken<String, TestTag> annotatorToken = sequence.tokens().get(index);
             assertEquals(tokens.get(index), annotatorToken.token());

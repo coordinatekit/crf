@@ -38,19 +38,19 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /** Shared fixtures and helpers for the annotator unit and integration tests. */
-final class AnnotatorTestSupport {
-    static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
+public final class AnnotatorTestSupport {
+    public static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
 
     private AnnotatorTestSupport() {}
 
     /** Returns the ANSI escape prefix emitted for a bold-yellow style, for asserting styled rows. */
-    static String boldYellowEscape() {
+    public static String boldYellowEscape() {
         AttributedStyle style = AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW);
         String ansi = new AttributedString("X", style).toAnsi();
         return ansi.substring(0, ansi.indexOf('X'));
     }
 
-    static DumbTerminal dumbTerminal(String scriptedInput) throws IOException {
+    public static DumbTerminal dumbTerminal(String scriptedInput) throws IOException {
         return new DumbTerminal(
                 "test",
                 "ansi",
@@ -60,11 +60,16 @@ final class AnnotatorTestSupport {
         );
     }
 
-    static DumbTerminal quietTerminal() throws IOException {
+    /** Returns each token's initial tag, in token order. */
+    public static <F, T extends Comparable<T>> List<T> initialTagsOf(AnnotatorSequence<F, T> sequence) {
+        return sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
+    }
+
+    public static DumbTerminal quietTerminal() throws IOException {
         return dumbTerminal("");
     }
 
-    static DumbTerminal rejectedTerminal() throws IOException {
+    public static DumbTerminal rejectedTerminal() throws IOException {
         return new DumbTerminal(
                 "test",
                 Terminal.TYPE_DUMB,
@@ -74,21 +79,21 @@ final class AnnotatorTestSupport {
         );
     }
 
-    static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {
+    public static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {
         XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
         try (Stream<TrainingSequence<String>> stream = xml.read(outputFile)) {
             return stream.toList();
         }
     }
 
-    static <T> Map<T, Double> scoreMap(T firstTag, double firstScore, T secondTag, double secondScore) {
+    public static <T> Map<T, Double> scoreMap(T firstTag, double firstScore, T secondTag, double secondScore) {
         Map<T, Double> scores = new LinkedHashMap<>();
         scores.put(firstTag, firstScore);
         scores.put(secondTag, secondScore);
         return scores;
     }
 
-    static <T> Map<T, Double> scoreMap(
+    public static <T> Map<T, Double> scoreMap(
             T firstTag,
             double firstScore,
             T secondTag,
@@ -103,11 +108,27 @@ final class AnnotatorTestSupport {
         return scores;
     }
 
-    static List<String> tagsOf(TrainingSequence<String> sequence) {
+    /**
+     * Returns a two-token ("the", "fox") annotator sequence whose key and verbose feature presence
+     * matches {@code availability}, for exercising feature-view logic.
+     */
+    public static AnnotatorSequence<String, String> sequenceWith(FeatureAvailability availability) {
+        List<String> tokens = List.of("the", "fox");
+        List<Set<String>> key = List.of(Set.of("k0"), Set.of("k1"));
+        List<Set<String>> verbose = List.of(Set.of("v0"), Set.of("v1"));
+        return switch (availability) {
+            case NONE -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, null, null);
+            case KEY_ONLY -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, key, null);
+            case VERBOSE_ONLY -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, null, verbose);
+            case BOTH -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, key, verbose);
+        };
+    }
+
+    public static List<String> tagsOf(TrainingSequence<String> sequence) {
         return sequence.stream().map(TrainingPositionedToken::tag).toList();
     }
 
-    static List<String> tokensOf(TrainingSequence<String> sequence) {
+    public static List<String> tokensOf(TrainingSequence<String> sequence) {
         return sequence.stream().map(TrainingPositionedToken::token).toList();
     }
 

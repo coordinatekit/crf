@@ -51,8 +51,8 @@ import picocli.CommandLine.ParameterException;
  * {@code
  * public static void main(String[] arguments) {
  *     int exitCode = AnnotatorCli.run(arguments, (options, terminal) -> {
- *         JLineTaggingInterface<MyFeature, MyTag> ui =
- *                 JLineTaggingInterface.<MyFeature, MyTag>builder()
+ *         TerminalTaggingInterface<MyFeature, MyTag> ui =
+ *                 TerminalTaggingInterface.<MyFeature, MyTag>builder()
  *                         .tagProvider(new MyTagProvider())
  *                         .terminal(terminal)
  *                         .threshold(options.threshold())
