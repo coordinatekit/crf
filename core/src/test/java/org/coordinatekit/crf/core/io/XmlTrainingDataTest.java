@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.emptyTagProviderMessage;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -107,6 +108,21 @@ class XmlTrainingDataTest {
 
                 <xs:element name="Noun" type="TagType"/>
                 <xs:element name="Verb" type="TagType"/>
+            </xs:schema>
+            """;
+    // A schema generated with no target namespace: TagType and the tag elements are declared in no
+    // namespace, so the bare tag elements the writer emits by default validate against it.
+    // language=XML
+    private static final String GENERATE_SCHEMA__NO_NAMESPACE__NOUN = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+                <xs:complexType name="TagType" mixed="true">
+                    <xs:simpleContent>
+                        <xs:extension base="xs:string"/>
+                    </xs:simpleContent>
+                </xs:complexType>
+
+                <xs:element name="Noun" type="TagType"/>
             </xs:schema>
             """;
     // language=XML
@@ -214,7 +230,7 @@ class XmlTrainingDataTest {
         assertArrayEquals(builderOutput.toByteArray(), deprecatedOutput.toByteArray());
     }
 
-    record GenerateSchemaParameters(StringTagProvider tagProvider, String targetNamespace, String expected) {}
+    record GenerateSchemaParameters(StringTagProvider tagProvider, @Nullable String targetNamespace, String expected) {}
 
     static Stream<GenerateSchemaParameters> generateSchema() {
         return Stream.of(
@@ -222,6 +238,16 @@ class XmlTrainingDataTest {
                         new StringTagProvider(Set.of("Noun"), "Noun"),
                         "https://example.org/tags",
                         GENERATE_SCHEMA__NOUN
+                ),
+                new GenerateSchemaParameters(
+                        new StringTagProvider(Set.of("Noun"), "Noun"),
+                        null,
+                        GENERATE_SCHEMA__NO_NAMESPACE__NOUN
+                ),
+                new GenerateSchemaParameters(
+                        new StringTagProvider(Set.of("Noun"), "Noun"),
+                        "  \t ",
+                        GENERATE_SCHEMA__NO_NAMESPACE__NOUN
                 ),
                 new GenerateSchemaParameters(
                         new StringTagProvider(Set.of("Noun", "Verb"), "Noun"),
@@ -263,63 +289,22 @@ class XmlTrainingDataTest {
         );
     }
 
-    record GenerateSchemaExceptionParameters(
-            StringTagProvider tagProvider,
-            @Nullable String targetNamespace,
-            Class<? extends RuntimeException> expectedException,
-            String expectedMessage
-    ) {}
-
-    static Stream<GenerateSchemaExceptionParameters> generateSchema_exception() {
-        return Stream.of(
-                new GenerateSchemaExceptionParameters(
-                        new StringTagProvider(Set.of(), "O"),
-                        "https://fake.url",
-                        IllegalStateException.class,
-                        "The tag provider must contain at least one tag. "
-                                + "This can be accomplished by ensuring `tags()` returns a value on `"
-                                + StringTagProvider.class.getName() + "`."
-                ),
-                new GenerateSchemaExceptionParameters(
-                        new StringTagProvider(Set.of("Noun", "Verb", "O"), "O"),
-                        null,
-                        IllegalStateException.class,
-                        "A target namespace must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                ),
-                new GenerateSchemaExceptionParameters(
-                        new StringTagProvider(Set.of("Noun", "Verb", "O"), "O"),
-                        "",
-                        IllegalStateException.class,
-                        "A non-blank target namespace (`\"\"`) must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                ),
-                new GenerateSchemaExceptionParameters(
-                        new StringTagProvider(Set.of("Noun", "Verb", "O"), "O"),
-                        "  \t ",
-                        IllegalStateException.class,
-                        "A non-blank target namespace (`\"  \t \"`) must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                )
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void generateSchema_exception(GenerateSchemaExceptionParameters parameters) {
+    @Test
+    void generateSchema__emptyTagProvider() {
+        // ARRANGE //
         XmlTrainingData<String> data = new XmlTrainingData<>(
-                parameters.tagProvider(),
-                XmlTrainingDataConfiguration.builder().targetNamespace(parameters.targetNamespace()).build()
+                new StringTagProvider(Set.of(), "O"),
+                XmlTrainingDataConfiguration.builder().targetNamespace("https://fake.url").build()
         );
 
-        RuntimeException exception = assertThrows(
-                parameters.expectedException(),
+        // ACT //
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
                 () -> data.generateSchema(new ByteArrayOutputStream())
         );
-        assertEquals(parameters.expectedMessage(), exception.getMessage());
+
+        // ASSERT //
+        assertEquals(emptyTagProviderMessage(StringTagProvider.class), exception.getMessage());
     }
 
     @Test

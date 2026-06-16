@@ -77,10 +77,12 @@ import java.util.stream.StreamSupport;
  * ({@code https://coordinatekit.org/crf/schema}) is fixed and library-owned: it defines the
  * {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape and lives in the
  * static {@code crf-structure.xsd} resource. The <em>tag vocabulary</em> is dynamic and per-
- * {@link TagProvider}: {@link #generateSchema(OutputStream)} emits one element declaration per tag
- * in the configured {@link XmlTrainingDataConfiguration#targetNamespace() target namespace}. When a
- * target namespace is configured, the writer declares it as the document's default namespace, so
- * the bare tag elements it emits resolve into that namespace and match the generated tag schema.
+ * {@link TagProvider}: {@link #generateSchema(OutputStream)} emits one element declaration per tag.
+ * The {@link XmlTrainingDataConfiguration#targetNamespace() target namespace} is optional: with one
+ * configured, the tags are declared in it and the writer declares it as the document's default
+ * namespace; with none (the default), the tags are declared in no namespace, matching the bare tag
+ * elements the writer emits. Either way the library's own output validates against the schema it
+ * generates.
  *
  * <p>
  * When reading XML, {@code <crf:Excluded>} runs in the CRF schema namespace
@@ -159,8 +161,8 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      *
      * <p>
      * The default configuration uses {@link XmlTrainingDataConfiguration#DEFAULT_ROOT_ELEMENT_NAME} as
-     * the root element local name and leaves the target namespace unset, so schema generation is not
-     * available without supplying a configuration.
+     * the root element local name and leaves the target namespace unset, so generated schemas and
+     * written documents place their tag elements in no namespace.
      *
      * @param tagProvider the provider for encoding and decoding tags
      */
@@ -179,7 +181,8 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
         this.configuration = configuration;
         String rootElementName = configuration.rootElementName();
         String targetNamespace = configuration.targetNamespace();
-        String defaultNamespaceDeclaration = targetNamespace == null ? "" : " xmlns=\"" + targetNamespace + "\"";
+        String defaultNamespaceDeclaration = (targetNamespace == null || targetNamespace.isBlank()) ? ""
+                : " xmlns=\"" + targetNamespace + "\"";
         this.openDocumentBytes = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + "<crf:" + rootElementName
                 + " xmlns:crf=\"" + CRF_SCHEMA_NAMESPACE_URI + "\"" + defaultNamespaceDeclaration + ">\n")
                         .getBytes(StandardCharsets.UTF_8);
@@ -317,18 +320,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
 
     @Override
     public void generateSchema(OutputStream output) {
-        String targetNamespace = configuration.targetNamespace();
-        if (targetNamespace == null) {
-            throw new IllegalStateException(String.format("""
-                    A target namespace must be specified to generate a schema. \
-                    This can be accomplished by setting the `targetNamespace` parameter on `%s`.\
-                    """, getClass().getName()));
-        } else if (targetNamespace.isBlank()) {
-            throw new IllegalStateException(String.format("""
-                    A non-blank target namespace (`"%s"`) must be specified to generate a schema. \
-                    This can be accomplished by setting the `targetNamespace` parameter on `%s`.\
-                    """, targetNamespace, getClass().getName()));
-        } else if (tagProvider.tags().isEmpty()) {
+        if (tagProvider.tags().isEmpty()) {
             throw new IllegalStateException(String.format("""
                     The tag provider must contain at least one tag. \
                     This can be accomplished by ensuring `tags()` returns a value on `%s`.\
@@ -359,14 +351,18 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
         writer.writeStartDocument("UTF-8", "1.0");
         writer.writeCharacters("\n");
 
-        String targetNamespace = Objects.requireNonNull(configuration.targetNamespace());
+        String targetNamespace = configuration.targetNamespace();
         writer.writeStartElement("xs", "schema", XML_SCHEMA_NAMESPACE_URI);
         writer.writeNamespace("xs", XML_SCHEMA_NAMESPACE_URI);
-        // Declare the target namespace as the default so unprefixed references such as type="TagType"
-        // resolve into it; without this the generated schema cannot be compiled.
-        writer.writeDefaultNamespace(targetNamespace);
-        writer.writeAttribute("targetNamespace", targetNamespace);
-        writer.writeAttribute("elementFormDefault", "qualified");
+        if (targetNamespace != null && !targetNamespace.isBlank()) {
+            // Declare the target namespace as the default so unprefixed references such as
+            // type="TagType" resolve into it; without this the generated schema cannot be compiled.
+            // With no target namespace the unprefixed references resolve into no namespace, where
+            // TagType is likewise declared.
+            writer.writeDefaultNamespace(targetNamespace);
+            writer.writeAttribute("targetNamespace", targetNamespace);
+            writer.writeAttribute("elementFormDefault", "qualified");
+        }
         writer.writeCharacters("\n");
 
         generateSchemaTagType(writer);
@@ -527,12 +523,12 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      *
      * <p>
      * The tag schema is generated in memory by {@link #generateSchema(OutputStream)}, which enforces
-     * the target-namespace and non-empty-tag preconditions. Compiling both namespaces together resolves
-     * the structural grammar's strict tag wildcard against the tag schema's global element declarations
-     * without an {@code xs:import}.
+     * the non-empty-tag precondition. Compiling both schemas together resolves the structural grammar's
+     * strict tag wildcards against the tag schema's global element declarations without an
+     * {@code xs:import}.
      *
      * @return a schema that validates a document against both the structure and the tag vocabulary
-     * @throws IllegalStateException if no target namespace is configured or the tag set is empty
+     * @throws IllegalStateException if the tag set is empty
      * @throws UncheckedCrfException if either schema cannot be compiled
      */
     private Schema newValidationSchema() {
@@ -612,12 +608,12 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * expansion ("billion laughs") attacks in untrusted input cannot resolve.
      *
      * <p>
-     * Tag elements validate only when they sit in the configured
-     * {@link XmlTrainingDataConfiguration#targetNamespace() target namespace}. The writer declares that
-     * namespace as the document default, so a tag such as {@code <Noun>} resolves into it and matches
-     * the generated tag schema. A document written by an instance with no target namespace leaves its
-     * tag elements in no namespace, and the structural grammar's tag wildcard matches only namespaces
-     * other than the CRF schema namespace, so such a document does not validate.
+     * Tag elements validate against the generated tag vocabulary, which follows the configured
+     * {@link XmlTrainingDataConfiguration#targetNamespace() target namespace}: with a target namespace
+     * the tags are declared in it (and the writer declares it as the document default); with none they
+     * are declared in no namespace, matching the bare tag elements the writer emits by default. A
+     * document whose tags sit in a different namespace than the instance is configured for does not
+     * validate.
      */
     @Override
     public void validate(InputStream input) {
@@ -706,7 +702,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * access.
      *
      * @return the schema that validates documents against the structure and the tag vocabulary
-     * @throws IllegalStateException if no target namespace is configured or the tag set is empty
+     * @throws IllegalStateException if the tag set is empty
      * @throws UncheckedCrfException if either schema cannot be compiled
      */
     private Schema validationSchema() {

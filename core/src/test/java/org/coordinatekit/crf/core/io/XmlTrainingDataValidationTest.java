@@ -17,7 +17,7 @@ package org.coordinatekit.crf.core.io;
 
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.UncheckedCrfException;
-import org.jspecify.annotations.Nullable;
+import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,17 +27,22 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFoxWithExcluded;
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.emptyTagProviderMessage;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.lazySleepingDog;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,12 +130,33 @@ class XmlTrainingDataValidationTest {
             <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags"/>
             """;
 
-    // Tag elements left in no namespace (no default xmlns); the ##other wildcard excludes them.
+    // Tag elements left in no namespace, validated by a namespace-configured instance whose tag schema
+    // declares the tags in the target namespace; the strict wildcard finds no no-namespace declaration
+    // for them.
     // language=XML
     private static final String INVALID__NO_NAMESPACE_TAGS = """
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
                 <crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>
+            </crf:Collection>
+            """;
+
+    // A no-namespace document: tags carry no namespace (no default xmlns), matching what the writer
+    // emits when no target namespace is configured.
+    // language=XML
+    private static final String VALID_NO_NAMESPACE_DOCUMENT = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+                <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
+            </crf:Collection>
+            """;
+
+    // A no-namespace document carrying a tag with no declaration; the strict wildcard rejects it.
+    // language=XML
+    private static final String INVALID__NO_NAMESPACE_UNKNOWN_TAG = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+                <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
             </crf:Collection>
             """;
 
@@ -142,6 +168,10 @@ class XmlTrainingDataValidationTest {
                 new StringTagProvider(Set.of("Adjective", "Noun"), "Noun"),
                 XmlTrainingDataConfiguration.builder().targetNamespace(TAGS_NAMESPACE).build()
         );
+    }
+
+    private static XmlTrainingData<String> noNamespaceData() {
+        return new XmlTrainingData<>(new StringTagProvider(Set.of("Adjective", "Noun"), "Noun"));
     }
 
     private static ByteArrayInputStream inputStream(String xml) {
@@ -186,86 +216,68 @@ class XmlTrainingDataValidationTest {
     }
 
     @Test
-    void validate__emptyCollectionValidates() {
-        // ARRANGE //
-        XmlTrainingData<String> data = configuredData();
-
-        // ACT & ASSERT //
-        assertDoesNotThrow(() -> data.validate(inputStream(VALID_EMPTY_COLLECTION)));
-    }
-
-    record ValidateExceptionParameters(
-            StringTagProvider tagProvider,
-            @Nullable String targetNamespace,
-            Class<? extends RuntimeException> expectedException,
-            String expectedMessage
-    ) {}
-
-    static Stream<ValidateExceptionParameters> validate__exception() {
-        return Stream.of(
-                new ValidateExceptionParameters(
-                        new StringTagProvider(Set.of("Noun"), "Noun"),
-                        null,
-                        IllegalStateException.class,
-                        "A target namespace must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                ),
-                new ValidateExceptionParameters(
-                        new StringTagProvider(Set.of("Noun"), "Noun"),
-                        "",
-                        IllegalStateException.class,
-                        "A non-blank target namespace (`\"\"`) must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                ),
-                new ValidateExceptionParameters(
-                        new StringTagProvider(Set.of("Noun"), "Noun"),
-                        "  \t ",
-                        IllegalStateException.class,
-                        "A non-blank target namespace (`\"  \t \"`) must be specified to generate a schema. "
-                                + "This can be accomplished by setting the `targetNamespace` parameter on `"
-                                + XmlTrainingData.class.getName() + "`."
-                ),
-                new ValidateExceptionParameters(
-                        new StringTagProvider(Set.of(), "O"),
-                        TAGS_NAMESPACE,
-                        IllegalStateException.class,
-                        "The tag provider must contain at least one tag. "
-                                + "This can be accomplished by ensuring `tags()` returns a value on `"
-                                + StringTagProvider.class.getName() + "`."
-                )
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void validate__exception(ValidateExceptionParameters parameters) {
+    void validate__emptyTagProvider() {
         // ARRANGE //
         XmlTrainingData<String> data = new XmlTrainingData<>(
-                parameters.tagProvider(),
-                XmlTrainingDataConfiguration.builder().targetNamespace(parameters.targetNamespace()).build()
+                new StringTagProvider(Set.of(), "O"),
+                XmlTrainingDataConfiguration.builder().targetNamespace(TAGS_NAMESPACE).build()
         );
 
         // ACT //
-        RuntimeException exception = assertThrows(
-                parameters.expectedException(),
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
                 () -> data.validate(new ByteArrayInputStream(new byte[0]))
         );
 
         // ASSERT //
-        assertEquals(parameters.expectedMessage(), exception.getMessage());
+        assertEquals(emptyTagProviderMessage(StringTagProvider.class), exception.getMessage());
     }
 
-    record InvalidDocumentParameters(String name, String xml, String expectedElement) {}
+    record InvalidDocumentParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            String xml,
+            String expectedElement
+    ) {}
 
     static Stream<InvalidDocumentParameters> validate__invalidDocument() {
         return Stream.of(
-                new InvalidDocumentParameters("unknown_tag", INVALID__UNKNOWN_TAG, "Pronoun"),
-                new InvalidDocumentParameters("tag_under_root", INVALID__TAG_UNDER_ROOT, "Adjective"),
-                new InvalidDocumentParameters("excluded_under_root", INVALID__EXCLUDED_UNDER_ROOT, "Excluded"),
-                new InvalidDocumentParameters("excluded_with_child", INVALID__EXCLUDED_WITH_CHILD, "Excluded"),
-                new InvalidDocumentParameters("tag_in_no_namespace", INVALID__NO_NAMESPACE_TAGS, "Adjective")
+                new InvalidDocumentParameters(
+                        "unknown_tag",
+                        XmlTrainingDataValidationTest::configuredData,
+                        INVALID__UNKNOWN_TAG,
+                        "Pronoun"
+                ),
+                new InvalidDocumentParameters(
+                        "tag_under_root",
+                        XmlTrainingDataValidationTest::configuredData,
+                        INVALID__TAG_UNDER_ROOT,
+                        "Adjective"
+                ),
+                new InvalidDocumentParameters(
+                        "excluded_under_root",
+                        XmlTrainingDataValidationTest::configuredData,
+                        INVALID__EXCLUDED_UNDER_ROOT,
+                        "Excluded"
+                ),
+                new InvalidDocumentParameters(
+                        "excluded_with_child",
+                        XmlTrainingDataValidationTest::configuredData,
+                        INVALID__EXCLUDED_WITH_CHILD,
+                        "Excluded"
+                ),
+                new InvalidDocumentParameters(
+                        "tag_in_no_namespace",
+                        XmlTrainingDataValidationTest::configuredData,
+                        INVALID__NO_NAMESPACE_TAGS,
+                        "Adjective"
+                ),
+                new InvalidDocumentParameters(
+                        "no_namespace_unknown_tag",
+                        XmlTrainingDataValidationTest::noNamespaceData,
+                        INVALID__NO_NAMESPACE_UNKNOWN_TAG,
+                        "Pronoun"
+                )
         );
     }
 
@@ -273,7 +285,7 @@ class XmlTrainingDataValidationTest {
     @ParameterizedTest
     void validate__invalidDocument(InvalidDocumentParameters parameters) {
         // ARRANGE //
-        XmlTrainingData<String> data = configuredData();
+        XmlTrainingData<String> data = parameters.data().get();
 
         // ACT //
         UncheckedCrfException exception = assertThrows(
@@ -344,28 +356,83 @@ class XmlTrainingDataValidationTest {
         );
     }
 
-    @Test
-    void validate__validDocumentFromPath() throws IOException {
-        // ARRANGE //
-        Path file = temporaryDirectory.resolve("training.xml");
-        Files.writeString(file, VALID_DOCUMENT);
+    record ValidDocumentParameters(String name, Supplier<XmlTrainingData<String>> data, String xml) {}
 
-        // ACT & ASSERT //
-        assertDoesNotThrow(() -> configuredData().validate(file));
+    static Stream<ValidDocumentParameters> validate__validDocument() {
+        return Stream.of(
+                new ValidDocumentParameters(
+                        "empty_collection",
+                        XmlTrainingDataValidationTest::configuredData,
+                        VALID_EMPTY_COLLECTION
+                ),
+                new ValidDocumentParameters(
+                        "with_namespace",
+                        XmlTrainingDataValidationTest::configuredData,
+                        VALID_DOCUMENT
+                ),
+                new ValidDocumentParameters(
+                        "no_namespace",
+                        XmlTrainingDataValidationTest::noNamespaceData,
+                        VALID_NO_NAMESPACE_DOCUMENT
+                )
+        );
     }
 
-    @Test
-    void validate__writtenDocumentValidates() throws IOException {
+    @MethodSource
+    @ParameterizedTest
+    void validate__validDocument(ValidDocumentParameters parameters) {
         // ARRANGE //
-        XmlTrainingData<String> data = configuredData();
+        XmlTrainingData<String> data = parameters.data().get();
+
+        // ACT & ASSERT //
+        assertDoesNotThrow(() -> data.validate(inputStream(parameters.xml())));
+    }
+
+    record WrittenRoundTripParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            boolean expectsDefaultNamespace
+    ) {}
+
+    static Stream<WrittenRoundTripParameters> validate__writtenDocumentValidates() {
+        return Stream.of(
+                new WrittenRoundTripParameters("with_namespace", XmlTrainingDataValidationTest::configuredData, true),
+                new WrittenRoundTripParameters("no_namespace", XmlTrainingDataValidationTest::noNamespaceData, false)
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void validate__writtenDocumentValidates(WrittenRoundTripParameters parameters) throws IOException {
+        // ARRANGE //
+        XmlTrainingData<String> data = parameters.data().get();
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (var writer = data.writer(output)) {
             writer.write(brownFox());
             writer.write(lazySleepingDog());
             writer.write(brownFoxWithExcluded());
         }
+        String emitted = output.toString(StandardCharsets.UTF_8);
 
-        // ACT & ASSERT //
-        assertDoesNotThrow(() -> data.validate(new ByteArrayInputStream(output.toByteArray())));
+        // ASSERT //
+        if (parameters.expectsDefaultNamespace()) {
+            assertTrue(
+                    emitted.contains("xmlns=\"" + TAGS_NAMESPACE + "\""),
+                    "Namespace-mode output must declare the default namespace: " + emitted
+            );
+        } else {
+            assertFalse(
+                    emitted.contains("xmlns=\""),
+                    "No-namespace output must not declare a default namespace: " + emitted
+            );
+        }
+        assertDoesNotThrow(() -> data.validate(inputStream(emitted)));
+        try (var sequences = data.read(inputStream(emitted))) {
+            List<TrainingSequence<String>> actual = sequences.toList();
+            assertEquals(3, actual.size());
+            assertBrownFox(actual.get(0));
+            assertLazySleepingDog(actual.get(1));
+            assertBrownFox(actual.get(2));
+        }
     }
 }

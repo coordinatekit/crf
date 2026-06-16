@@ -20,10 +20,11 @@
   identical for every TagProvider; the per-TagProvider tag vocabulary is generated separately (see
   XmlTrainingData.generateSchema) and compiled together with this schema during validation.
 
-  Tags are referenced via a strict wildcard (xs:any namespace="##other"), so a global element
-  declaration must exist for each tag element — supplied by the generated tag schema. A tag element
-  with no matching declaration fails validation, which is how a mistyped or unknown tag name is
-  caught.
+  Tags are referenced via strict wildcards, so a global element declaration must exist for each tag
+  element — supplied by the generated tag schema. A tag element with no matching declaration fails
+  validation, which is how a mistyped or unknown tag name is caught. Tags may sit in no namespace
+  (the default) or in any namespace other than crf; the generated tag schema is emitted with or
+  without a target namespace to match, and either way its declarations satisfy the wildcards.
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:crf="https://coordinatekit.org/crf/schema"
@@ -37,16 +38,17 @@
         </xs:annotation>
     </xs:element>
 
-    <!-- ##other and the crf-namespaced Excluded do not overlap, so Unique Particle Attribution
-         holds. -->
+    <!-- ##other (any namespace but crf), ##local (no namespace), and the crf-namespaced Excluded
+         have pairwise-disjoint namespace sets, so Unique Particle Attribution holds. -->
     <xs:element name="Sequence">
         <xs:annotation>
-            <xs:documentation>A single training example: a run of tag elements (any namespace other
-                than crf) interleaved with crf:Excluded runs.</xs:documentation>
+            <xs:documentation>A single training example: a run of tag elements (in no namespace, or
+                any namespace other than crf) interleaved with crf:Excluded runs.</xs:documentation>
         </xs:annotation>
         <xs:complexType>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
                 <xs:any namespace="##other"/>
+                <xs:any namespace="##local"/>
                 <xs:element ref="crf:Excluded"/>
             </xs:choice>
         </xs:complexType>
