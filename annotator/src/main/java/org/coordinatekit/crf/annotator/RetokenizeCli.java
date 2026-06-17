@@ -33,57 +33,62 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
 
 /**
- * Picocli helper that parses the standard annotator flags ({@code --input}, {@code --output},
+ * Picocli helper that parses the standard retokenize flags ({@code --input}, {@code --output},
  * {@code --model}, {@code --threshold}) and hands the parsed options plus a system {@link Terminal}
- * to a user-supplied {@link AnnotatorFactory}.
+ * to a user-supplied {@link ReviewerFactory}.
  *
  * <p>
- * Downstream consumers write a small {@code main} that delegates to
- * {@link #run(String[], AnnotatorFactory)}; the factory wires the typed beans (tag provider,
- * tokenizer, feature extractor, optional CRF tagger) into an {@link Annotator}. The CLI handles
- * argument parsing, help output, the interactive-terminal precondition, and exit codes; the factory
- * only has to construct the annotator.
+ * This is the peer of {@link AnnotatorCli} for the retokenize flow: where {@code AnnotatorCli}
+ * drives {@link Annotator#annotate(Path, Path)}, this helper drives
+ * {@link RetokenizeReviewer#review(Path, Path)}. The two are equal, flat CLI helpers; the library
+ * does not own a top-level router. A downstream {@code main} owns the nesting, routing
+ * {@code args[0]} to one helper or the other (or shipping two binaries).
  *
  * <p>
- * Example downstream {@code main}:
+ * Example downstream {@code main} that owns the nesting:
  *
  * <pre>
  * {@code
  * public static void main(String[] arguments) {
- *     int exitCode = AnnotatorCli.run(arguments, (options, terminal) -> {
- *         TerminalTaggingInterface<MyFeature, MyTag> ui =
- *                 TerminalTaggingInterface.<MyFeature, MyTag>builder()
- *                         .tagProvider(new MyTagProvider())
- *                         .terminal(terminal)
- *                         .threshold(options.threshold())
- *                         .build();
- *         return Annotator.<MyFeature, MyTag>builder()
- *                 .tagProvider(new MyTagProvider())
- *                 .tokenizer(new WhitespaceTokenizer())
- *                 .taggingInterface(ui)
- *                 .terminal(terminal)
- *                 .build();
- *     });
+ *     String[] rest = Arrays.copyOfRange(arguments, Math.min(1, arguments.length), arguments.length);
+ *     int exitCode = switch (arguments.length == 0 ? "" : arguments[0]) {
+ *         case "annotate"   -> AnnotatorCli.run(rest, annotatorFactory);
+ *         case "retokenize" -> RetokenizeCli.run(rest, reviewerFactory);
+ *         default -> {
+ *             System.err.println("usage: <tool> {annotate|retokenize} ...");
+ *             yield 2;
+ *         }
+ *     };
  *     System.exit(exitCode);
  * }
  * }
  * </pre>
  *
  * <p>
+ * The {@code reviewerFactory} wires the typed beans (tag provider, tokenizer, feature extractor,
+ * optional CRF tagger) into a {@link RetokenizeReviewer}, wiring the <em>same tokenizer</em> into
+ * both the reviewer and any {@link org.coordinatekit.crf.core.tag.CrfTagger CrfTagger}, as
+ * {@link RetokenizeReviewer}'s contract requires. The CLI handles argument parsing, help output,
+ * the interactive-terminal precondition, and exit codes; the factory only has to construct the
+ * reviewer.
+ *
+ * <p>
  * Exit codes:
  *
  * <ul>
- * <li>{@code 0} — annotation completed (or {@code --help} was requested);</li>
- * <li>{@code 1} — interactive-terminal precondition failed, the terminal could not be opened, or
- * {@link Annotator#annotate(Path, Path)} threw an {@link IOException};</li>
+ * <li>{@code 0} — review completed (or {@code --help} was requested);</li>
+ * <li>{@code 1} — interactive-terminal precondition failed, the terminal could not be opened, the
+ * review's fresh-pass precondition was violated (input path equals output, or the output exists and
+ * is non-empty), or {@link RetokenizeReviewer#review(Path, Path)} threw an
+ * {@link IOException};</li>
  * <li>{@code 2} — picocli rejected the arguments (missing required flag, invalid threshold, unknown
  * option, …).</li>
  * </ul>
  */
 @NullMarked
-public final class AnnotatorCli {
-    private AnnotatorCli() {
-        throw new UnsupportedOperationException("AnnotatorCli is a utility class and cannot be instantiated");
+public final class RetokenizeCli {
+    private RetokenizeCli() {
+        throw new UnsupportedOperationException("RetokenizeCli is a utility class and cannot be instantiated");
     }
 
     /**
@@ -118,23 +123,37 @@ public final class AnnotatorCli {
 
     /**
      * Invokes {@code factory} with the supplied {@code options} and {@code terminal} and runs the
-     * resulting annotator. The terminal is not closed by this method; the caller owns its lifecycle.
+     * resulting reviewer. The terminal is not closed by this method; the caller owns its lifecycle.
+     *
+     * <p>
+     * The fresh-pass precondition is checked <em>before</em> the factory builds the reviewer, so a bad
+     * path fails before a model is loaded. A {@link ReviewPreconditionException} (input equals output,
+     * or the output exists and is non-empty) is reported to {@code err} and mapped to exit {@code 1};
+     * any other unchecked exception — such as a tokenizer/tagger mismatch surfaced while writing —
+     * propagates so it is not masked as a user error.
      *
      * @param options the parsed CLI options
-     * @param factory the factory that constructs the annotator from options and terminal
+     * @param factory the factory that constructs the reviewer from options and terminal
      * @param terminal the JLine terminal to hand to the factory
-     * @return {@code 0} on success
-     * @throws IOException if {@link Annotator#annotate(Path, Path)} fails
+     * @param err the writer for diagnostic output
+     * @return {@code 0} on success, {@code 1} if a fresh-pass precondition was violated
+     * @throws IOException if {@link RetokenizeReviewer#review(Path, Path)} fails
      */
-    static int run(Options options, AnnotatorFactory factory, Terminal terminal) throws IOException {
-        Annotator<?, ?> annotator = factory.create(options, terminal);
-        annotator.annotate(options.input(), options.output());
-        return 0;
+    static int run(Options options, ReviewerFactory factory, Terminal terminal, PrintWriter err) throws IOException {
+        try {
+            RetokenizeReviewer.validateFreshPass(options.input(), options.output());
+            RetokenizeReviewer<?, ?> reviewer = factory.create(options, terminal);
+            reviewer.review(options.input(), options.output());
+            return 0;
+        } catch (ReviewPreconditionException exception) {
+            err.println("Retokenize failed: " + exception.getMessage());
+            return 1;
+        }
     }
 
     /**
-     * Parses {@code arguments}, opens an interactive system terminal, and runs the annotator produced
-     * by {@code factory}. Returns a process exit code suitable for {@link System#exit(int)}.
+     * Parses {@code arguments}, opens an interactive system terminal, and runs the reviewer produced by
+     * {@code factory}. Returns a process exit code suitable for {@link System#exit(int)}.
      *
      * <p>
      * The interactive-terminal precondition rejects JLine "dumb" terminal types, which JLine returns
@@ -143,24 +162,24 @@ public final class AnnotatorCli {
      * than a silent write of garbage to the output XML.
      *
      * @param arguments the raw command-line arguments
-     * @param factory the factory that constructs the annotator from options and terminal
+     * @param factory the factory that constructs the reviewer from options and terminal
      * @return the process exit code
      */
-    public static int run(String[] arguments, AnnotatorFactory factory) {
+    public static int run(String[] arguments, ReviewerFactory factory) {
         return run(arguments, factory, () -> TerminalBuilder.builder().system(true).build());
     }
 
     /**
-     * Parses {@code arguments}, opens a terminal via {@code terminalSupplier}, and runs the annotator
+     * Parses {@code arguments}, opens a terminal via {@code terminalSupplier}, and runs the reviewer
      * produced by {@code factory}. This is the testable seam behind
-     * {@link #run(String[], AnnotatorFactory)}, which supplies a system terminal.
+     * {@link #run(String[], ReviewerFactory)}, which supplies a system terminal.
      *
      * @param arguments the raw command-line arguments
-     * @param factory the factory that constructs the annotator from options and terminal
+     * @param factory the factory that constructs the reviewer from options and terminal
      * @param terminalSupplier supplies the JLine terminal to run against
      * @return the process exit code
      */
-    static int run(String[] arguments, AnnotatorFactory factory, CliSupport.TerminalSupplier terminalSupplier) {
+    static int run(String[] arguments, ReviewerFactory factory, CliSupport.TerminalSupplier terminalSupplier) {
         Objects.requireNonNull(arguments, "arguments must not be null");
         Objects.requireNonNull(factory, "factory must not be null");
         Objects.requireNonNull(terminalSupplier, "terminalSupplier must not be null");
@@ -181,35 +200,35 @@ public final class AnnotatorCli {
         }
 
         return CliSupport.runInteractive(
-                "annotator",
-                "Annotation",
+                "retokenize",
+                "Retokenize",
                 terminalSupplier,
                 err,
-                terminal -> run(options, factory, terminal)
+                terminal -> run(options, factory, terminal, err)
         );
     }
 
     /**
      * Factory the downstream {@code main} supplies to wire its typed beans (tag provider, tokenizer,
-     * feature extractor, optional CRF tagger) into an {@link Annotator}.
+     * feature extractor, optional CRF tagger) into a {@link RetokenizeReviewer}.
      */
     @FunctionalInterface
-    public interface AnnotatorFactory {
+    public interface ReviewerFactory {
         /**
-         * Constructs an annotator from the parsed CLI options and the JLine terminal opened by the CLI.
+         * Constructs a reviewer from the parsed CLI options and the JLine terminal opened by the CLI.
          *
          * @param options the parsed CLI options
-         * @param terminal the JLine terminal to install on the annotator's tagging interface; ownership
+         * @param terminal the JLine terminal to install on the reviewer's tagging interface; ownership
          *        remains with the CLI
-         * @return a configured annotator ready to {@link Annotator#annotate(Path, Path) annotate}
+         * @return a configured reviewer ready to {@link RetokenizeReviewer#review(Path, Path) review}
          */
-        Annotator<?, ?> create(Options options, Terminal terminal);
+        RetokenizeReviewer<?, ?> create(Options options, Terminal terminal);
     }
 
-    /** Parsed CLI options handed to the downstream {@link AnnotatorFactory}. */
+    /** Parsed CLI options handed to the downstream {@link ReviewerFactory}. */
     public interface Options {
         /**
-         * Returns the path to the plain-text input file (UTF-8), one sequence per line.
+         * Returns the path to the XML training-data file to review.
          *
          * @return the input file path
          */
@@ -218,7 +237,8 @@ public final class AnnotatorCli {
         /**
          * Returns the path to a serialized model, or {@code null} if {@code --model} was not supplied. The
          * downstream factory decides how to materialize a {@link org.coordinatekit.crf.core.tag.CrfTagger
-         * CrfTagger} from this path.
+         * CrfTagger} from this path; the threshold drives low-confidence highlighting only when a model is
+         * supplied.
          *
          * @return the model path, or {@code null} if no model was supplied
          */
@@ -226,7 +246,7 @@ public final class AnnotatorCli {
         Path model();
 
         /**
-         * Returns the path to the XML output file; created or appended.
+         * Returns the path to the XML output file; must be absent or empty, and must differ from the input.
          *
          * @return the output file path
          */
@@ -242,21 +262,20 @@ public final class AnnotatorCli {
 
     private record DefaultOptions(Path input, @Nullable Path model, Path output, double threshold) implements Options {}
 
-    @Command(name = "annotator", mixinStandardHelpOptions = true, description = "Walk an input file line-by-line, tag each sequence via an interactive "
-            + "prompt, and append accepted sequences to an XML training-data file.")
+    @Command(name = "retokenize", mixinStandardHelpOptions = true, description = "Walk an XML training-data file, re-tokenize each sequence with the new "
+            + "tokenizer, re-tag misaligned sequences via an interactive prompt, and write a corrected XML file.")
     private static final class ParsedArguments {
-        @Option(names = {"-i",
-                        "--input"}, required = true, description = "Plain-text input file (UTF-8), one sequence per line.")
+        @Option(names = {"-i", "--input"}, required = true, description = "XML training-data file to review.")
         @Nullable
         Path input;
 
         @Option(names = {"-m",
-                        "--model"}, description = "Path to a serialized model. Optional; if absent the annotator "
-                                + "runs without tag suggestions.")
+                        "--model"}, description = "Path to a serialized model. Optional; if absent re-tagging runs "
+                                + "without tag suggestions.")
         @Nullable
         Path model;
 
-        @Option(names = {"-o", "--output"}, required = true, description = "XML output file; created or appended.")
+        @Option(names = {"-o", "--output"}, required = true, description = "XML output file; must be absent or empty.")
         @Nullable
         Path output;
 
