@@ -48,12 +48,16 @@
  * so they cannot share one file:
  *
  * <ul>
- * <li><b>Structural grammar</b> — fixed, library-owned, and identical for every tag provider. It
+ * <li><b>Structural grammar</b> is fixed, library-owned, and identical for every tag provider. It
  * defines the {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape in
  * the CRF schema namespace ({@code https://coordinatekit.org/crf/schema}) and lives in the static
- * {@code crf-structure.xsd} resource. Tags are referenced through strict wildcards (no namespace,
- * or any namespace other than crf), so each tag element needs a matching global declaration.
- * <li><b>Tag vocabulary</b> — dynamic and per-tag-provider. {@code generateSchema} emits one
+ * {@code crf-structure.xsd} resource. Tags are referenced through two disjoint wildcards.
+ * Namespaced tags (any namespace other than crf) use a strict wildcard, so each needs a matching
+ * global declaration and a mistyped tag is rejected. Configuring a target namespace therefore gives
+ * a closed, validated vocabulary. No-namespace tags use a lax wildcard, validated against a
+ * declaration when present and skipped when absent, so leaving the target namespace unset gives an
+ * open vocabulary and lets the structural schema validate standalone.
+ * <li><b>Tag vocabulary</b> is dynamic and per-tag-provider. {@code generateSchema} emits one
  * element declaration per tag, in the configured target namespace or in no namespace when none is
  * configured.
  * </ul>

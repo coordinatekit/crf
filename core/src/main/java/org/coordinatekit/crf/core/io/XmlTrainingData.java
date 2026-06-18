@@ -524,8 +524,9 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * <p>
      * The tag schema is generated in memory by {@link #generateSchema(OutputStream)}, which enforces
      * the non-empty-tag precondition. Compiling both schemas together resolves the structural grammar's
-     * strict tag wildcards against the tag schema's global element declarations without an
-     * {@code xs:import}.
+     * strict namespaced-tag wildcard against the tag schema's global element declarations without an
+     * {@code xs:import}. The no-namespace tag wildcard is lax, so undeclared no-namespace tags are
+     * permitted (an open vocabulary) rather than rejected.
      *
      * @return a schema that validates a document against both the structure and the tag vocabulary
      * @throws IllegalStateException if the tag set is empty

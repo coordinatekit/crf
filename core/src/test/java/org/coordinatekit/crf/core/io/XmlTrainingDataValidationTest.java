@@ -131,10 +131,10 @@ class XmlTrainingDataValidationTest {
             """;
 
     // Tag elements left in no namespace, validated by a namespace-configured instance whose tag schema
-    // declares the tags in the target namespace; the strict wildcard finds no no-namespace declaration
-    // for them.
+    // declares the tags in the target namespace; the lax no-namespace wildcard finds no matching
+    // declaration and skips them, so the document validates.
     // language=XML
-    private static final String INVALID__NO_NAMESPACE_TAGS = """
+    private static final String VALID_NO_NAMESPACE_TAGS_UNDER_NAMESPACE_VALIDATOR = """
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
                 <crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>
@@ -151,9 +151,10 @@ class XmlTrainingDataValidationTest {
             </crf:Collection>
             """;
 
-    // A no-namespace document carrying a tag with no declaration; the strict wildcard rejects it.
+    // A no-namespace document carrying a tag with no declaration; the lax wildcard treats the
+    // no-namespace path as an open vocabulary, so it validates (the user's bare-tag case).
     // language=XML
-    private static final String INVALID__NO_NAMESPACE_UNKNOWN_TAG = """
+    private static final String VALID_NO_NAMESPACE_UNDECLARED_TAG = """
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
                 <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
@@ -265,18 +266,6 @@ class XmlTrainingDataValidationTest {
                         XmlTrainingDataValidationTest::configuredData,
                         INVALID__EXCLUDED_WITH_CHILD,
                         "Excluded"
-                ),
-                new InvalidDocumentParameters(
-                        "tag_in_no_namespace",
-                        XmlTrainingDataValidationTest::configuredData,
-                        INVALID__NO_NAMESPACE_TAGS,
-                        "Adjective"
-                ),
-                new InvalidDocumentParameters(
-                        "no_namespace_unknown_tag",
-                        XmlTrainingDataValidationTest::noNamespaceData,
-                        INVALID__NO_NAMESPACE_UNKNOWN_TAG,
-                        "Pronoun"
                 )
         );
     }
@@ -374,6 +363,16 @@ class XmlTrainingDataValidationTest {
                         "no_namespace",
                         XmlTrainingDataValidationTest::noNamespaceData,
                         VALID_NO_NAMESPACE_DOCUMENT
+                ),
+                new ValidDocumentParameters(
+                        "no_namespace_undeclared_tag",
+                        XmlTrainingDataValidationTest::noNamespaceData,
+                        VALID_NO_NAMESPACE_UNDECLARED_TAG
+                ),
+                new ValidDocumentParameters(
+                        "no_namespace_tags_under_namespace_validator",
+                        XmlTrainingDataValidationTest::configuredData,
+                        VALID_NO_NAMESPACE_TAGS_UNDER_NAMESPACE_VALIDATOR
                 )
         );
     }

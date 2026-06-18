@@ -20,11 +20,21 @@
   identical for every TagProvider; the per-TagProvider tag vocabulary is generated separately (see
   XmlTrainingData.generateSchema) and compiled together with this schema during validation.
 
-  Tags are referenced via strict wildcards, so a global element declaration must exist for each tag
-  element — supplied by the generated tag schema. A tag element with no matching declaration fails
-  validation, which is how a mistyped or unknown tag name is caught. Tags may sit in no namespace
-  (the default) or in any namespace other than crf; the generated tag schema is emitted with or
-  without a target namespace to match, and either way its declarations satisfy the wildcards.
+  Tags are referenced via two disjoint wildcards, one per namespace case.
+
+  - Namespaced tags (any namespace other than crf) use a strict wildcard, so a global element
+    declaration must exist for each. The generated tag schema supplies those declarations when a
+    target namespace is configured. A namespaced tag with no matching declaration fails validation,
+    which is how a mistyped or unknown tag name is caught. Configuring a namespace opts into a
+    closed, validated vocabulary.
+  - No-namespace tags use a lax wildcard. They are validated against a declaration when one is
+    present (the library compiles in the generated tag schema) and skipped when absent. This keeps
+    the no-namespace path an open vocabulary and lets this schema validate a document standalone
+    (e.g. in an IDE) without the generated tag schema, where strict would be unsatisfiable for a bare
+    tag.
+
+  Net effect, consistent with the optional target namespace: configure a namespace for a closed,
+  validated vocabulary; leave it off for an open one.
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:crf="https://coordinatekit.org/crf/schema"
@@ -39,7 +49,11 @@
     </xs:element>
 
     <!-- ##other (any namespace but crf), ##local (no namespace), and the crf-namespaced Excluded
-         have pairwise-disjoint namespace sets, so Unique Particle Attribution holds. -->
+         have pairwise-disjoint namespace sets, so Unique Particle Attribution holds. The ##other
+         wildcard is strict: each namespaced tag needs a global declaration, which is how a mistyped
+         tag is caught. The ##local wildcard is lax: no-namespace tags form an open vocabulary,
+         validated against a declaration when present and skipped when absent, so this schema also
+         works standalone. -->
     <xs:element name="Sequence">
         <xs:annotation>
             <xs:documentation>A single training example: a run of tag elements (in no namespace, or
@@ -48,7 +62,7 @@
         <xs:complexType>
             <xs:choice minOccurs="0" maxOccurs="unbounded">
                 <xs:any namespace="##other"/>
-                <xs:any namespace="##local"/>
+                <xs:any namespace="##local" processContents="lax"/>
                 <xs:element ref="crf:Excluded"/>
             </xs:choice>
         </xs:complexType>
