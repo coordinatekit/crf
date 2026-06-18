@@ -96,13 +96,12 @@ public final class XmlTrainingDataConfiguration {
     }
 
     /**
-     * Returns the target namespace used for XSD schema generation, or {@code null} if no schema
-     * generation is required.
+     * Returns the target namespace used for XSD schema generation, or {@code null} if tag elements
+     * should sit in no namespace.
      *
      * <p>
-     * When schema generation is invoked via
-     * {@link XmlTrainingData#generateSchema(java.io.OutputStream)} this value must be non-null and
-     * non-blank.
+     * The namespace is optional. A non-blank value places tag elements in it for both generated schemas
+     * and written documents; a {@code null} or blank value leaves them in no namespace.
      *
      * @return the target namespace URI, or {@code null} if unset
      */
@@ -165,10 +164,11 @@ public final class XmlTrainingDataConfiguration {
          * Sets the target namespace used for XSD schema generation.
          *
          * <p>
-         * A {@code null} value indicates that schema generation is not configured. Blank values are
-         * permitted by the builder but will cause schema generation to fail at use time.
+         * The namespace is optional. A non-blank value places tag elements in that namespace; a
+         * {@code null} or blank value leaves them in no namespace.
          *
-         * @param targetNamespace the target namespace URI, or {@code null} to leave unset
+         * @param targetNamespace the target namespace URI, or {@code null} to leave tag elements in no
+         *        namespace
          * @return this builder
          */
         public Builder targetNamespace(@Nullable String targetNamespace) {

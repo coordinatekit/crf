@@ -34,9 +34,8 @@ import java.nio.file.Path;
  * structure and unknown or mistyped tag names.
  *
  * <p>
- * Tag-name validation requires a target namespace, since the tag vocabulary is declared in that
- * namespace. Implementations that have no target namespace configured reject validation requests
- * rather than silently skipping tag checks.
+ * The tag vocabulary is declared in the configured target namespace, or in no namespace when none
+ * is configured; tag names are checked either way, so a target namespace is optional.
  *
  * @see XmlTrainingData
  * @see TrainingSchemaGenerator
@@ -52,8 +51,8 @@ public interface TrainingDataValidator {
      * @param input the input stream to read the training data document from
      * @throws org.coordinatekit.crf.core.UncheckedCrfException if the document is invalid or cannot be
      *         read
-     * @throws IllegalStateException if the validator is not properly configured (e.g., missing target
-     *         namespace or empty tag set)
+     * @throws IllegalStateException if the validator is not properly configured (e.g., an empty tag
+     *         set)
      */
     void validate(InputStream input);
 
@@ -66,8 +65,8 @@ public interface TrainingDataValidator {
      *
      * @param file the path of the training data document to validate
      * @throws UncheckedCrfException if the document is invalid or cannot be read
-     * @throws IllegalStateException if the validator is not properly configured (e.g., missing target
-     *         namespace or empty tag set)
+     * @throws IllegalStateException if the validator is not properly configured (e.g., an empty tag
+     *         set)
      */
     default void validate(Path file) {
         try (InputStream input = Files.newInputStream(file)) {

@@ -64,6 +64,11 @@ final class TrainingSequenceFixtures {
                 .ofSegments(List.of(token("Adjective", "Brown"), excluded(" "), token("Noun", "Fox"), excluded("!")));
     }
 
+    static String emptyTagProviderMessage(Class<?> providerType) {
+        return "The tag provider must contain at least one tag. "
+                + "This can be accomplished by ensuring `tags()` returns a value on `" + providerType.getName() + "`.";
+    }
+
     static TrainingSequence<String> lazySleepingDog() {
         return TrainingSequence.ofTokens(List.of("Lazy", "Sleeping", "Dog"), List.of("Adjective", "Adjective", "Noun"));
     }

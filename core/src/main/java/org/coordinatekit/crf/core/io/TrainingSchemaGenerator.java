@@ -41,8 +41,8 @@ public interface TrainingSchemaGenerator {
      *
      * @param output the output stream to write the schema to
      * @throws org.coordinatekit.crf.core.UncheckedCrfException if an error occurs during generation
-     * @throws IllegalStateException if the generator is not properly configured (e.g., missing target
-     *         namespace or empty tag set)
+     * @throws IllegalStateException if the generator is not properly configured (e.g., an empty tag
+     *         set)
      */
     void generateSchema(OutputStream output);
 }
