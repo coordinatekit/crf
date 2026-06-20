@@ -17,13 +17,21 @@ package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
+import org.coordinatekit.crf.core.preprocessing.Segment;
+import org.coordinatekit.crf.core.preprocessing.Segments;
+import org.coordinatekit.crf.core.preprocessing.Tokenization;
+import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
+import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -31,11 +39,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
+import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
 /** Shared fixtures and helpers for the annotator unit and integration tests. */
 public final class AnnotatorTestSupport {
@@ -48,6 +61,15 @@ public final class AnnotatorTestSupport {
         AttributedStyle style = AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW);
         String ansi = new AttributedString("X", style).toAnsi();
         return ansi.substring(0, ansi.indexOf('X'));
+    }
+
+    /**
+     * Returns a {@link DumbTerminal} that writes to the caller-supplied {@code output}, so tests can
+     * read back what the reviewer rendered (summaries, warnings). Co-locates the capture plumbing with
+     * {@link #dumbTerminal} and {@link #quietTerminal}.
+     */
+    public static Terminal capturingTerminal(ByteArrayOutputStream output) throws IOException {
+        return new DumbTerminal("test", "ansi", new ByteArrayInputStream(new byte[0]), output, StandardCharsets.UTF_8);
     }
 
     public static DumbTerminal dumbTerminal(String scriptedInput) throws IOException {
@@ -131,6 +153,92 @@ public final class AnnotatorTestSupport {
     public static List<String> tokensOf(TrainingSequence<String> sequence) {
         return sequence.stream().map(TrainingPositionedToken::token).toList();
     }
+
+    /**
+     * Builds a training sequence whose tokens are joined by single spaces, with the spaces captured as
+     * excluded runs so the surface round-trips. A token ending in punctuation (such as
+     * {@code "Smith,"}) makes the sequence misalign under {@link PunctuationTokenizer}.
+     */
+    public static TrainingSequence<String> words(List<String> tokens, List<String> tags) {
+        List<TrainingSegment<String>> segments = new ArrayList<>();
+        for (int index = 0; index < tokens.size(); index++) {
+            if (index > 0) {
+                segments.add(excluded(" "));
+            }
+            segments.add(token(tags.get(index), tokens.get(index)));
+        }
+        return TrainingSequence.ofSegments(segments);
+    }
+
+    @SafeVarargs
+    public static Path writeInput(Path directory, TrainingSequence<String>... sequences) throws IOException {
+        return writeSequences(directory.resolve("input.xml"), sequences);
+    }
+
+    @SafeVarargs
+    public static Path writeSequences(Path file, TrainingSequence<String>... sequences) throws IOException {
+        XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
+        try (TrainingSequenceWriter<String> writer = xml.appendingWriter(file)) {
+            for (TrainingSequence<String> sequence : sequences) {
+                writer.write(sequence);
+            }
+        }
+        return file;
+    }
+
+    /**
+     * A whitespace tokenizer that additionally peels each chunk's trailing run of {@code ','} and
+     * {@code '.'} characters into separate single-character tokens, and rejects any surface containing
+     * {@code '?'}. Surfaces tokenized whole under the old data therefore misalign here.
+     */
+    @NullMarked
+    public static final class PunctuationTokenizer implements Tokenizer {
+        @Override
+        public Tokenization tokenize(String input) {
+            Objects.requireNonNull(input, "input must not be null");
+            if (input.isBlank()) {
+                throw new InvalidInputException(input, "The input string is blank");
+            }
+            if (input.indexOf('?') >= 0) {
+                throw new InvalidInputException(input, "The input string contains an unsupported '?' character");
+            }
+
+            List<Segment> segments = new ArrayList<>();
+            int index = 0;
+            int length = input.length();
+            while (index < length) {
+                int whitespaceStart = index;
+                while (index < length && Character.isWhitespace(input.charAt(index))) {
+                    index++;
+                }
+                if (index > whitespaceStart) {
+                    segments.add(Segments.excluded(input.substring(whitespaceStart, index)));
+                }
+                if (index >= length) {
+                    break;
+                }
+                int chunkStart = index;
+                while (index < length && !Character.isWhitespace(input.charAt(index))) {
+                    index++;
+                }
+                String chunk = input.substring(chunkStart, index);
+                int wordEnd = chunk.length();
+                while (wordEnd > 0 && (chunk.charAt(wordEnd - 1) == ',' || chunk.charAt(wordEnd - 1) == '.')) {
+                    wordEnd--;
+                }
+                if (wordEnd > 0) {
+                    segments.add(Segments.token(chunk.substring(0, wordEnd)));
+                }
+                for (int position = wordEnd; position < chunk.length(); position++) {
+                    segments.add(Segments.token(String.valueOf(chunk.charAt(position))));
+                }
+            }
+            return new Tokenization(segments);
+        }
+    }
+
+    record RetokenizeTestOptions(Path input, @Nullable Path model, Path output, double threshold)
+            implements RetokenizeCli.Options {}
 
     record TestOptions(Path input, @Nullable Path model, Path output, double threshold)
             implements AnnotatorCli.Options {}

@@ -21,11 +21,8 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.Segment;
-import org.coordinatekit.crf.core.preprocessing.SegmentKind;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
-import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -42,7 +39,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -52,8 +48,9 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
-import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
-import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
+import static org.coordinatekit.crf.annotator.AnnotatorSupport.extractDisplayFeatures;
+import static org.coordinatekit.crf.annotator.AnnotatorSupport.resolveVerboseFeatures;
+import static org.coordinatekit.crf.annotator.AnnotatorSupport.toSegments;
 
 /**
  * Orchestrates an interactive annotation session over an input file of one-sequence-per-line text.
@@ -204,27 +201,6 @@ public final class Annotator<F, T extends Comparable<T>> {
     }
 
     /**
-     * Runs a display feature extractor over every position of a positioned-token sequence.
-     *
-     * @param extractor the extractor to run, or {@code null} when not configured
-     * @param positionedTokens the positioned tokens to extract features from
-     * @return one feature set per token, or {@code null} when {@code extractor} is {@code null}
-     */
-    private @Nullable List<Set<F>> extractDisplayFeatures(
-            @Nullable FeatureExtractor<F> extractor,
-            Sequence<? extends PositionedToken> positionedTokens
-    ) {
-        if (extractor == null) {
-            return null;
-        }
-        List<Set<F>> features = new ArrayList<>(positionedTokens.size());
-        for (int position = 0; position < positionedTokens.size(); position++) {
-            features.add(extractor.extractAt(positionedTokens, position));
-        }
-        return features;
-    }
-
-    /**
      * Computes a 64-bit content fingerprint of a token list for content-match resume. Tokens are
      * encoded as UTF-8 with a NUL byte separator and fed through SHA-256; the leading 8 bytes of the
      * digest are returned as a {@code long}.
@@ -282,7 +258,7 @@ public final class Annotator<F, T extends Comparable<T>> {
         Sequence<? extends PositionedToken> presentedTokens = tagged != null ? tagged.taggedSequence()
                 : tokenized.sequence();
         List<Set<F>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
-        List<Set<F>> verboseFeatures = resolveVerboseFeatures(tagged, presentedTokens);
+        List<Set<F>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
 
         ++state.presentationNumber;
         int currentPresentation = state.skipped + state.presentationNumber;
@@ -338,62 +314,6 @@ public final class Annotator<F, T extends Comparable<T>> {
             });
         }
         return seenHashes;
-    }
-
-    /**
-     * Resolves the per-token verbose display features for a line, by source priority: the configured
-     * {@code verboseFeatureExtractor} when set, then the tagger's embedded
-     * {@link TaggedPositionedToken#features() features} when the line was tagged, then none.
-     *
-     * @param tagged the tagger's output for the line, or {@code null} on the no-tagger path
-     * @param positionedTokens the positioned tokens of the line
-     * @return one verbose feature set per token, or {@code null} when no verbose source applies
-     */
-    private @Nullable List<Set<F>> resolveVerboseFeatures(
-            @Nullable TaggedTokenization<F, T> tagged,
-            Sequence<? extends PositionedToken> positionedTokens
-    ) {
-        if (verboseFeatureExtractor != null) {
-            return extractDisplayFeatures(verboseFeatureExtractor, positionedTokens);
-        }
-        if (tagged != null) {
-            return tagged.taggedSequence().stream().map(TaggedPositionedToken::features).toList();
-        }
-        return null;
-    }
-
-    /**
-     * Assembles the ordered training segments for an accepted sequence by mapping each tokenizer
-     * segment in document order: excluded runs pass through untagged, and each token segment is paired
-     * with the user-chosen tag at the matching token index. The mapping is surface-preserving, so
-     * {@link TrainingSequence#surface()} reproduces the original line exactly.
-     *
-     * @param tokenized the authoritative tokenization, carrying tokens and excluded runs as segments
-     * @param finalTags the per-token tags chosen by the user, one per token in order
-     * @return the segments in document order, ready for {@link TrainingSequence#ofSegments(List)}
-     */
-    private List<TrainingSegment<T>> toSegments(Tokenization tokenized, List<T> finalTags) {
-        long tokenSegmentCount = tokenized.segments().stream().filter(segment -> segment.kind() == SegmentKind.TOKEN)
-                .count();
-        if (finalTags.size() != tokenSegmentCount) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "Expected one tag per token segment: got %d tags for %d token segments.",
-                            finalTags.size(),
-                            tokenSegmentCount
-                    )
-            );
-        }
-        List<TrainingSegment<T>> segments = new ArrayList<>();
-        int tokenIndex = 0;
-        for (Segment segment : tokenized.segments()) {
-            if (segment.kind() == SegmentKind.TOKEN) {
-                segments.add(token(finalTags.get(tokenIndex++), segment.text()));
-            } else {
-                segments.add(excluded(segment.text()));
-            }
-        }
-        return segments;
     }
 
     private static final class AnnotationState<T extends Comparable<T>> {
