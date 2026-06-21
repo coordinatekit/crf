@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
@@ -27,12 +28,12 @@ import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
+import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,6 +57,16 @@ public final class AnnotatorTestSupport {
 
     private AnnotatorTestSupport() {}
 
+    /** Builds the annotate flow's typed beans (string tags, whitespace tokenizer) onto a terminal. */
+    public static AnnotatorRunner.AnnotatorFactory annotatorFactory() {
+        return (configuration, sharedTerminal) -> {
+            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
+                    .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(configuration.threshold()).build();
+            return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
+                    .terminal(sharedTerminal).tokenizer(new WhitespaceTokenizer()).build();
+        };
+    }
+
     /** Returns the ANSI escape prefix emitted for a bold-yellow style, for asserting styled rows. */
     public static String boldYellowEscape() {
         AttributedStyle style = AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW);
@@ -65,14 +76,25 @@ public final class AnnotatorTestSupport {
 
     /**
      * Returns a {@link DumbTerminal} that writes to the caller-supplied {@code output}, so tests can
-     * read back what the reviewer rendered (summaries, warnings). Co-locates the capture plumbing with
-     * {@link #dumbTerminal} and {@link #quietTerminal}.
+     * read back what the reviewer rendered (summaries, warnings). Like {@link #interactiveTerminal} it
+     * carries the {@code "ansi"} type, so it passes the interactive-terminal precondition.
      */
     public static Terminal capturingTerminal(ByteArrayOutputStream output) throws IOException {
         return new DumbTerminal("test", "ansi", new ByteArrayInputStream(new byte[0]), output, StandardCharsets.UTF_8);
     }
 
-    public static DumbTerminal dumbTerminal(String scriptedInput) throws IOException {
+    /** Returns each token's initial tag, in token order. */
+    public static <F, T extends Comparable<T>> List<T> initialTagsOf(AnnotatorSequence<F, T> sequence) {
+        return sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
+    }
+
+    /**
+     * Returns a {@link DumbTerminal} carrying the {@code "ansi"} type and the given scripted input.
+     * Despite the {@code DumbTerminal} implementation class, the {@code "ansi"} type <em>passes</em>
+     * the interactive-terminal precondition, so this is the terminal the happy-path tests run against.
+     * Contrast {@link #nonInteractiveTerminal()}.
+     */
+    public static DumbTerminal interactiveTerminal(String scriptedInput) throws IOException {
         return new DumbTerminal(
                 "test",
                 "ansi",
@@ -82,16 +104,12 @@ public final class AnnotatorTestSupport {
         );
     }
 
-    /** Returns each token's initial tag, in token order. */
-    public static <F, T extends Comparable<T>> List<T> initialTagsOf(AnnotatorSequence<F, T> sequence) {
-        return sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
-    }
-
-    public static DumbTerminal quietTerminal() throws IOException {
-        return dumbTerminal("");
-    }
-
-    public static DumbTerminal rejectedTerminal() throws IOException {
+    /**
+     * Returns a {@link DumbTerminal} carrying the {@link Terminal#TYPE_DUMB} type, which <em>fails</em>
+     * the interactive-terminal precondition. This is the terminal the {@code run__dumbTerminalRejected}
+     * tests run against. Contrast {@link #interactiveTerminal(String)}.
+     */
+    public static DumbTerminal nonInteractiveTerminal() throws IOException {
         return new DumbTerminal(
                 "test",
                 Terminal.TYPE_DUMB,
@@ -101,11 +119,32 @@ public final class AnnotatorTestSupport {
         );
     }
 
+    /**
+     * Returns an interactive {@link DumbTerminal} with no scripted input, for tests that reach an error
+     * or precondition before reading a response.
+     */
+    public static DumbTerminal quietTerminal() throws IOException {
+        return interactiveTerminal("");
+    }
+
     public static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {
         XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
         try (Stream<TrainingSequence<String>> stream = xml.read(outputFile)) {
             return stream.toList();
         }
+    }
+
+    /**
+     * Builds the retokenize flow's typed beans (string tags, {@link PunctuationTokenizer}) onto a
+     * terminal.
+     */
+    public static RetokenizeRunner.ReviewerFactory reviewerFactory() {
+        return (configuration, sharedTerminal) -> {
+            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
+                    .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(configuration.threshold()).build();
+            return RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
+                    .terminal(sharedTerminal).tokenizer(new PunctuationTokenizer()).build();
+        };
     }
 
     public static <T> Map<T, Double> scoreMap(T firstTag, double firstScore, T secondTag, double secondScore) {
@@ -237,9 +276,4 @@ public final class AnnotatorTestSupport {
         }
     }
 
-    record RetokenizeTestOptions(Path input, @Nullable Path model, Path output, double threshold)
-            implements RetokenizeCli.Options {}
-
-    record TestOptions(Path input, @Nullable Path model, Path output, double threshold)
-            implements AnnotatorCli.Options {}
 }
