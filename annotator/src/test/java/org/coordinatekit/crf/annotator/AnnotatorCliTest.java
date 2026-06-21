@@ -15,42 +15,43 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.TAG_PROVIDER;
-import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.dumbTerminal;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.annotatorFactory;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.interactiveTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.readOutput;
-import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.tokensOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.coordinatekit.crf.annotator.AnnotatorTestSupport.TestOptions;
-import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
-import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
-import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.jline.terminal.Terminal;
-import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import picocli.CommandLine.ParameterException;
 
+/**
+ * Tests the picocli adapter concerns: parsing the standard flags into an
+ * {@link AnnotatorConfiguration}, mapping parse failures to exit {@code 2}, and the {@code --help}
+ * short-circuit to exit {@code 0}. The end-to-end parse→runner wiring is exercised through the
+ * caller-owned-terminal seam
+ * {@link AnnotatorCli#run(String[], AnnotatorRunner.AnnotatorFactory, Terminal)}; the
+ * interactive-terminal precondition and the standalone execution paths are covered by
+ * {@link AnnotatorRunnerTest}.
+ */
 class AnnotatorCliTest {
     record ParseExceptionParameters(
             String name,
@@ -59,33 +60,20 @@ class AnnotatorCliTest {
             String expectedMessageSubstring
     ) {}
 
-    private final ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
-    private final ByteArrayOutputStream capturedOut = new ByteArrayOutputStream();
-    private @Nullable PrintStream originalErr;
-    private @Nullable PrintStream originalOut;
+    /**
+     * Mirrors {@link RetokenizeCliTest}'s record: the threshold is supplied as a raw argument string
+     * (this is the parsing seam) and the expected parsed {@code double}. The configuration tests use a
+     * differently-shaped record because they pass {@code double}s to the builder directly.
+     */
+    record ThresholdAcceptedParameters(String name, String threshold, double expected) {}
 
-    @BeforeEach
-    void redirectStandardStreams() {
-        originalOut = System.out;
-        originalErr = System.err;
-        System.setOut(new PrintStream(capturedOut, true, StandardCharsets.UTF_8));
-        System.setErr(new PrintStream(capturedErr, true, StandardCharsets.UTF_8));
-    }
-
-    @AfterEach
-    void restoreStandardStreams() {
-        if (originalOut != null) {
-            System.setOut(originalOut);
-        }
-        if (originalErr != null) {
-            System.setErr(originalErr);
-        }
-    }
+    @RegisterExtension
+    final CapturedStandardStreams streams = new CapturedStandardStreams();
 
     @Test
     void parseArguments__defaults(@TempDir Path tempDirectory) {
         // ACT //
-        AnnotatorCli.Options options = parse(
+        AnnotatorConfiguration configuration = parse(
                 "--input",
                 tempDirectory.resolve("in.txt").toString(),
                 "--output",
@@ -93,11 +81,11 @@ class AnnotatorCliTest {
         );
 
         // ASSERT //
-        assertNotNull(options);
-        assertEquals(tempDirectory.resolve("in.txt"), options.input());
-        assertEquals(tempDirectory.resolve("out.xml"), options.output());
-        assertNull(options.model());
-        assertEquals(0.80, options.threshold());
+        assertNotNull(configuration);
+        assertEquals(tempDirectory.resolve("in.txt"), configuration.input());
+        assertEquals(tempDirectory.resolve("out.xml"), configuration.output());
+        assertNull(configuration.model());
+        assertEquals(AnnotatorConfiguration.DEFAULT_THRESHOLD, configuration.threshold());
     }
 
     static Stream<ParseExceptionParameters> parseArguments__exception() {
@@ -161,7 +149,7 @@ class AnnotatorCliTest {
         String model = tempDirectory.resolve("model.bin").toString();
 
         // ACT //
-        AnnotatorCli.Options longOptions = parse(
+        AnnotatorConfiguration longConfiguration = parse(
                 "--input",
                 input,
                 "--output",
@@ -171,93 +159,124 @@ class AnnotatorCliTest {
                 "--threshold",
                 "0.5"
         );
-        AnnotatorCli.Options shortOptions = parse("-i", input, "-o", output, "-m", model, "-t", "0.5");
+        AnnotatorConfiguration shortConfiguration = parse("-i", input, "-o", output, "-m", model, "-t", "0.5");
 
         // ASSERT //
-        assertEquals(longOptions, shortOptions);
-        assertNotNull(longOptions);
-        assertEquals(tempDirectory.resolve("model.bin"), longOptions.model());
-        assertEquals(0.5, longOptions.threshold());
+        assertNotNull(longConfiguration);
+        assertNotNull(shortConfiguration);
+        assertEquals(longConfiguration.input(), shortConfiguration.input());
+        assertEquals(longConfiguration.model(), shortConfiguration.model());
+        assertEquals(longConfiguration.output(), shortConfiguration.output());
+        assertEquals(longConfiguration.threshold(), shortConfiguration.threshold());
+        assertEquals(tempDirectory.resolve("model.bin"), longConfiguration.model());
+        assertEquals(0.5, longConfiguration.threshold());
     }
 
-    @Test
-    void run__annotateIOExceptionReturnsExitCodeOne(@TempDir Path tempDirectory) {
-        // ARRANGE //
-        Path missingInput = tempDirectory.resolve("does-not-exist.txt");
-        String[] arguments = {"-i", missingInput.toString(), "-o", tempDirectory.resolve("out.xml").toString()};
-
-        // ACT //
-        int exitCode = AnnotatorCli.run(arguments, annotatorFactory(), AnnotatorTestSupport::quietTerminal);
-
-        // ASSERT //
-        assertEquals(1, exitCode);
-        String stderr = capturedErr.toString(StandardCharsets.UTF_8);
-        assertTrue(stderr.contains("Annotation failed:"), "expected stderr to report the failure; was: " + stderr);
-        assertTrue(stderr.contains(missingInput.toString()), "expected stderr to include the underlying message");
-    }
-
-    @Test
-    void run__dumbTerminalRejected(@TempDir Path tempDirectory) {
-        // ARRANGE //
-        String[] arguments = {"-i", tempDirectory.resolve("in.txt").toString(), "-o",
-                        tempDirectory.resolve("out.xml").toString()};
-        AnnotatorCli.AnnotatorFactory factory = (options, terminal) -> {
-            throw new AssertionError("factory should not be invoked");
-        };
-
-        // ACT //
-        int exitCode = AnnotatorCli.run(arguments, factory, AnnotatorTestSupport::rejectedTerminal);
-
-        // ASSERT //
-        assertEquals(1, exitCode);
-        assertTrue(
-                capturedErr.toString(StandardCharsets.UTF_8).contains("interactive terminal"),
-                "expected stderr to contain precondition message, was: " + capturedErr.toString(StandardCharsets.UTF_8)
+    static Stream<ThresholdAcceptedParameters> parseArguments__thresholdBoundariesAccepted() {
+        return Stream.of(
+                new ThresholdAcceptedParameters("lower_bound", "0.0", 0.0),
+                new ThresholdAcceptedParameters("upper_bound", "1.0", 1.0)
         );
     }
 
-    @Test
-    void run__happyPathWritesAcceptedSequences(@TempDir Path tempDirectory) throws IOException {
-        // ARRANGE //
-        Path inputFile = tempDirectory.resolve("in.txt");
-        Path outputFile = tempDirectory.resolve("out.xml");
-        Files.writeString(inputFile, "the quick brown\nfox jumps over\nthe lazy dog\n", StandardCharsets.UTF_8);
-        try (Terminal terminal = dumbTerminal("A\nA\nX\n")) {
-            AnnotatorCli.Options options = new TestOptions(inputFile, null, outputFile, 0.80);
+    @MethodSource
+    @ParameterizedTest
+    void parseArguments__thresholdBoundariesAccepted(
+            ThresholdAcceptedParameters parameters,
+            @TempDir Path tempDirectory
+    ) {
+        // ACT //
+        AnnotatorConfiguration configuration = parse(
+                "--input",
+                tempDirectory.resolve("in.txt").toString(),
+                "--output",
+                tempDirectory.resolve("out.xml").toString(),
+                "--threshold",
+                parameters.threshold()
+        );
 
-            // ACT //
-            int exitCode = AnnotatorCli.run(options, annotatorFactory(), terminal);
-
-            // ASSERT //
-            assertEquals(0, exitCode);
-        }
-        List<TrainingSequence<String>> written = readOutput(outputFile);
-        assertEquals(2, written.size());
-        assertEquals(List.of("the", "quick", "brown"), tokensOf(written.get(0)));
-        assertEquals(List.of("fox", "jumps", "over"), tokensOf(written.get(1)));
+        // ASSERT //
+        assertNotNull(configuration);
+        assertEquals(
+                parameters.expected(),
+                configuration.threshold(),
+                "inclusive boundary must be accepted and round-trip"
+        );
     }
 
     @Test
     void run__helpFlagPrintsUsageAndReturnsZero() {
         // ACT //
-        int exitCode = AnnotatorCli.run(new String[] {"--help"}, (options, terminal) -> {
+        int exitCode = AnnotatorCli.run(new String[] {"--help"}, (configuration, terminal) -> {
             throw new AssertionError("factory should not be invoked when --help is requested");
+        });
+
+        // ASSERT //
+        assertEquals(0, exitCode);
+        assertTrue(
+                streams.out().contains("--input"),
+                "help output should include the usage banner; was: " + streams.out()
+        );
+    }
+
+    @Test
+    void run__parseFailureReturnsExitCodeTwo() {
+        // ACT //
+        int exitCode = AnnotatorCli.run(new String[] {"--input", "in.txt"}, (configuration, terminal) -> {
+            throw new AssertionError("factory should not be invoked when parsing fails");
+        });
+
+        // ASSERT //
+        assertEquals(2, exitCode);
+        assertTrue(
+                streams.err().contains("--output"),
+                "expected stderr to name the missing required flag; was: " + streams.err()
+        );
+        assertTrue(
+                streams.err().contains("Usage:"),
+                "expected stderr to also emit the usage banner; was: " + streams.err()
+        );
+    }
+
+    @Test
+    void run__versionFlagReturnsZero() {
+        // ACT //
+        int exitCode = AnnotatorCli.run(new String[] {"--version"}, (configuration, terminal) -> {
+            throw new AssertionError("factory should not be invoked when --version is requested");
         });
 
         // ASSERT //
         assertEquals(0, exitCode);
     }
 
-    private static AnnotatorCli.AnnotatorFactory annotatorFactory() {
-        return (parsedOptions, sharedTerminal) -> {
-            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
-                    .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(parsedOptions.threshold()).build();
-            return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
-                    .terminal(sharedTerminal).tokenizer(new WhitespaceTokenizer()).build();
+    @Test
+    void run__wiresParsedConfigurationThroughRunner(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path inputFile = tempDirectory.resolve("in.txt");
+        Path outputFile = tempDirectory.resolve("out.xml");
+        Files.writeString(inputFile, "the quick brown\nfox jumps over\n", StandardCharsets.UTF_8);
+        String[] arguments = {"--input", inputFile.toString(), "--output", outputFile.toString(), "--threshold", "0.5"};
+        AtomicReference<AnnotatorConfiguration> seen = new AtomicReference<>();
+        AnnotatorRunner.AnnotatorFactory factory = (configuration, terminal) -> {
+            seen.set(configuration);
+            return annotatorFactory().create(configuration, terminal);
         };
+
+        // ACT //
+        try (Terminal terminal = interactiveTerminal("A\nA\n")) {
+            int exitCode = AnnotatorCli.run(arguments, factory, terminal);
+
+            // ASSERT //
+            assertEquals(0, exitCode);
+        }
+        assertNotNull(seen.get(), "factory should have been invoked");
+        assertEquals(inputFile, seen.get().input());
+        assertEquals(outputFile, seen.get().output());
+        assertEquals(0.5, seen.get().threshold());
+        assertEquals(2, readOutput(outputFile).size());
     }
 
-    private static AnnotatorCli.Options parse(String... arguments) {
+    private static AnnotatorConfiguration parse(String... arguments) {
         StringWriter sink = new StringWriter();
         return AnnotatorCli.parseArguments(arguments, new PrintWriter(sink), new PrintWriter(sink));
     }
