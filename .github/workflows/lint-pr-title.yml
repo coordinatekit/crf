@@ -30,6 +30,7 @@ jobs:
             revert
           scopes: |
             annotator
+            cli
             core
             mallet
           requireScope: false

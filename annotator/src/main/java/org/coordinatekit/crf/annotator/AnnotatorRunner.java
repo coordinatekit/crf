@@ -30,12 +30,12 @@ import java.util.Objects;
  * Parser-free invocation of the annotate flow.
  *
  * <p>
- * This is the home of the annotate invocation logic, separated from the picocli adapter
- * {@link AnnotatorCli}. A caller that parses with its own command-line framework builds an
- * {@link AnnotatorConfiguration} and calls {@link #run(AnnotatorConfiguration, AnnotatorFactory)};
- * this class performs the interactive-terminal precondition and maps exit codes, but does no
- * argument parsing and imports no command-line parser. The shared terminal glue lives in
- * {@link TerminalSupport}.
+ * This is the home of the annotate invocation logic, separated from the picocli command
+ * {@code AnnotatorCommand} (in the {@code cli} module). A caller that parses with its own
+ * command-line framework builds an {@link AnnotatorConfiguration} and calls
+ * {@link #run(AnnotatorConfiguration, AnnotatorFactory)}; this class performs the
+ * interactive-terminal precondition and maps exit codes, but does no argument parsing and imports
+ * no command-line parser. The shared terminal glue lives in {@link TerminalSupport}.
  *
  * <p>
  * The interactive-terminal precondition rejects JLine "dumb" terminal types, which JLine returns

@@ -50,12 +50,14 @@ their APIs are designed for flexibility, which often means writing significant b
 - **Multi-threaded Training** - Parallel training support via MALLET
 - **Configurable** - Fine-grained control over training parameters, regularization, and model output
 - **Interactive Annotator** - Terminal-based UI for tagging sequences and writing the XML training data — see [`annotator/README.md`](annotator/README.md)
+- **`crf` command** - One command-line entry point for the interactive `annotate` and `retokenize` tools; register your components as services, no `main` required — see [`cli/README.md`](cli/README.md)
 
 ## Project Structure
 
 ```
 crf/
 ├── annotator/  # Terminal-based interactive annotator for building training data
+├── cli/        # picocli `crf` command with annotate and retokenize subcommands
 ├── core/       # Core abstractions, interfaces, and preprocessing pipeline
 └── mallet/     # MALLET-based CRF trainer implementation
 ```

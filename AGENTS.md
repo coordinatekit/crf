@@ -64,7 +64,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
 ```
 
 - **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- **Scopes** (optional): `core`, `mallet`
+- **Scopes** (optional): `core`, `mallet`, `annotator`, `cli`
 - Description must start with a lowercase letter
 - Use imperative mood ("add feature" not "added feature")
 
@@ -183,6 +183,8 @@ This is a Conditional Random Fields (CRF) library for sequence labeling tasks, b
 
 - **core**: Abstractions, interfaces, and preprocessing pipeline (no MALLET dependency)
 - **mallet**: MALLET-based CRF trainer implementation
+- **annotator**: Parser-free `Configuration` and `Runner` types for the interactive `annotate` and `retokenize` flows
+- **cli**: The picocli command-line front end. Wires the `annotate` and `retokenize` subcommands under a root `crf` command and delegates to the `annotator` runners
 
 ### Key Abstractions
 
@@ -190,7 +192,19 @@ This is a Conditional Random Fields (CRF) library for sequence labeling tasks, b
 - `FeatureExtractor<F>`: Extracts features from tokens at each position in a sequence
 - `CrfTrainer`: Trains CRF models from paths and serializes output
 - `CrfTagger<F, T>`: Tags input sequences using a trained model
+- `CrfTaggerLoader`: Loads a `CrfTagger` from a serialized model file; the SPI the `mallet` module implements with `MalletCrfTaggerLoader`
 - `TrainingDataSequencer<T>`: Reads training data from files into `TrainingSequence` streams
+
+### Service Discovery
+
+The CLI does not construct domain services directly. `org.coordinatekit.crf.core.spi` resolves each
+SPI (tokenizer, feature extractor, tag provider, tagger loader) through `java.util.ServiceLoader`, so
+a downstream registers `META-INF/services` files instead of writing a `main` or a factory.
+
+- `CrfServices`: Discovers the domain SPIs and binds each slot to its built-in default
+- `AmbiguousServiceException`: Thrown when more than one provider of a service type is registered and none was supplied explicitly
+
+A slot resolves by the precedence `explicit > single discovered provider > fallback`. The generic discovery kernel is package-private and reached through `CrfServices`.
 
 ### Training Data Format
 

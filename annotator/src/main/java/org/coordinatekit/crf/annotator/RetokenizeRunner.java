@@ -33,9 +33,9 @@ import java.util.Objects;
  * This is the peer of {@link AnnotatorRunner} for the retokenize flow: where
  * {@code AnnotatorRunner} drives {@link Annotator#annotate(Path, Path)}, this class drives
  * {@link RetokenizeReviewer#review(Path, Path)}. It is the home of the retokenize invocation logic,
- * separated from the picocli adapter {@link RetokenizeCli}. A caller that parses with its own
- * command-line framework builds a {@link RetokenizeConfiguration} and calls
- * {@link #run(RetokenizeConfiguration, ReviewerFactory)}; this class performs the
+ * separated from the picocli command {@code RetokenizeCommand} (in the {@code cli} module). A
+ * caller that parses with its own command-line framework builds a {@link RetokenizeConfiguration}
+ * and calls {@link #run(RetokenizeConfiguration, ReviewerFactory)}; this class performs the
  * interactive-terminal precondition, the fresh-pass precondition, and the exit-code mapping, but
  * does no argument parsing and imports no command-line parser. The shared terminal glue lives in
  * {@link TerminalSupport}.

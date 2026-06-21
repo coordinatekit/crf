@@ -22,69 +22,17 @@ If you only need to _programmatically_ generate training data, depend on
 `XmlTrainingData.appendingWriter(...)`. The annotator is the human-in-the-loop
 layer on top.
 
-## Wiring
+## Running it
 
-The annotator module depends only on `core` and JLine. To use it with a
-MALLET-backed tagger, depend on `mallet` too and construct the
-`MalletCrfTagger` in your `main`.
+The annotator runs through the `crf annotate` command in the `cli` module. There
+is no `main` to write: `crf` discovers your components through `ServiceLoader` and
+assembles the annotator for you. See [`cli/README.md`](../cli/README.md) for how
+to depend on the module, register your components as services, and the full flag
+and exit-code reference.
 
-```groovy
-dependencies {
-    implementation "org.coordinatekit.crf:annotator:0.1.0"
-    // Optional, only if you want model-assisted suggestions:
-    implementation "org.coordinatekit.crf:mallet:0.1.0"
-}
-```
-
-## Sample `main`
-
-Write a small entry point that wires your tag provider, tokenizer, optional
-tagger, and feature extractor through `AnnotatorCli.run(...)`:
-
-```java
-public final class MyAnnotator {
-    public static void main(String[] arguments) {
-        int exitCode = AnnotatorCli.run(arguments, (options, terminal) -> {
-            FeatureExtractor<MyFeature> featureExtractor = new MyFeatureExtractor();
-
-            CrfTagger<MyFeature, MyTag> tagger = options.model() == null
-                    ? null
-                    : new MalletCrfTagger<>(
-                            featureExtractor,
-                            options.model(),
-                            new MyTagProvider(),
-                            new WhitespaceTokenizer()
-                    );
-
-            TerminalTaggingInterface<MyFeature, MyTag> ui =
-                    TerminalTaggingInterface.<MyFeature, MyTag>builder()
-                            .tagProvider(new MyTagProvider())
-                            .terminal(terminal)
-                            .threshold(options.threshold())
-                            .build();
-
-            return Annotator.<MyFeature, MyTag>builder()
-                    .tagProvider(new MyTagProvider())
-                    .tokenizer(new WhitespaceTokenizer())
-                    .tagger(tagger)
-                    .taggingInterface(ui)
-                    .terminal(terminal)
-                    .build();
-        });
-        System.exit(exitCode);
-    }
-}
-```
-
-## Flags
-
-| Flag                | Required | Default | Notes                                                                                      |
-| ------------------- | -------- | ------- | ------------------------------------------------------------------------------------------ |
-| `--input`, `-i`     | yes      | —       | Plain-text UTF-8 input file, one sequence per line.                                        |
-| `--output`, `-o`    | yes      | —       | XML output; created or appended. Flushed after every acceptance.                           |
-| `--model`, `-m`     | no       | none    | Path to a serialized model. Your factory decides how to materialize a `CrfTagger` from it. |
-| `--threshold`, `-t` | no       | `0.80`  | Confidence below which tokens are highlighted (bold + yellow). Must be in `[0.0, 1.0]`.    |
-| `-h`, `--help`      | —        | —       | Print the usage banner and exit.                                                           |
+The annotator module itself (`Annotator`, `AnnotatorRunner`,
+`AnnotatorConfiguration`) stays a plain library, so you can still embed the flow
+directly if the `crf` command doesn't fit.
 
 ## Per-sequence actions
 
@@ -113,11 +61,3 @@ sequence remained to present).
 file.** If you change tokenizers between sessions, previously-tagged sequences
 may no longer match incoming input and will be re-presented. A surprisingly
 low skip count after switching tokenizers is the cue that something changed.
-
-## Exit codes
-
-| Code | Meaning                                                                                                                          |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `0`  | Annotation completed (or `--help` was requested).                                                                                |
-| `1`  | Interactive-terminal precondition failed, the terminal could not be opened, or `Annotator.annotate(...)` threw an `IOException`. |
-| `2`  | Picocli rejected the arguments (missing required flag, invalid threshold, unknown option).                                       |

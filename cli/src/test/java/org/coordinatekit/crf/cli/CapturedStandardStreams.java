@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.coordinatekit.crf.annotator;
+package org.coordinatekit.crf.cli;
 
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -28,7 +28,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * JUnit 5 extension that redirects {@link System#out} and {@link System#err} to in-memory buffers
  * for the duration of each test and restores the originals afterwards. Register it as an instance
- * field so tests can read what was captured:
+ * field so the launcher test can read what the {@code crf} command wrote to the default streams:
  *
  * <pre>
  * {
@@ -38,12 +38,11 @@ import java.nio.charset.StandardCharsets;
  * }
  * </pre>
  *
- * Then assert on {@link #out()} / {@link #err()}. This replaces the per-class redirect-and-restore
- * lifecycle the CLI and runner tests would otherwise each carry.
+ * Then assert on {@link #out()} / {@link #err()}.
  *
  * <p>
- * This is copied as {@code org.coordinatekit.crf.cli.CapturedStandardStreams}; the two are kept
- * identical. Until a shared test-fixtures module exists, change both together.
+ * This is a copy of {@code org.coordinatekit.crf.annotator.CapturedStandardStreams}; the two are
+ * kept identical. Until a shared test-fixtures module exists, change both together.
  */
 @NullMarked
 final class CapturedStandardStreams implements BeforeEachCallback, AfterEachCallback {
