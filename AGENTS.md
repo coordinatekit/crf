@@ -32,8 +32,11 @@ acceptable.
 
 ### Alphabetical Ordering
 
-Class members ordered alphabetically (case-insensitive) within their category: constants, fields, constructors (by
-parameter count), methods. Applies to instance/static fields, instance/static methods, constants, and enum values.
+Order class members alphabetically (case-insensitive) within each category: constants, fields, constructors (by
+parameter count), then methods. This covers static and instance members alike, plus enum constants.
+
+Deviate only when another order is part of correctness, like enum constants a lookup walks in numeric order. Add a
+comment at the declaration explaining why.
 
 ### Records vs Classes
 
