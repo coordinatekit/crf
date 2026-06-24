@@ -151,19 +151,39 @@ public final class Banner implements CommandLine.IHelpSectionRenderer {
             );
         }
 
-        /** Returns the blue component of the accent color, 0-255. */
+        /**
+         * The blue component of the accent color, 0-255.
+         *
+         * @return the blue component of the accent color
+         */
         int accentBlue();
 
-        /** Returns the green component of the accent color, 0-255. */
+        /**
+         * The green component of the accent color, 0-255.
+         *
+         * @return the green component of the accent color
+         */
         int accentGreen();
 
-        /** Returns the red component of the accent color, 0-255. */
+        /**
+         * The red component of the accent color, 0-255.
+         *
+         * @return the red component of the accent color
+         */
         int accentRed();
 
-        /** Returns the large wordmark art, one string per row. */
+        /**
+         * The large wordmark art, one string per row.
+         *
+         * @return the large wordmark art
+         */
         List<String> bigArt();
 
-        /** Returns the small wordmark art, one string per row. */
+        /**
+         * The small wordmark art, one string per row.
+         *
+         * @return the small wordmark art
+         */
         List<String> smallArt();
     }
 
