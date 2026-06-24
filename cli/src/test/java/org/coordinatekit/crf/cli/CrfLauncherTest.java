@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
  * entry against the captured standard streams.
  */
 class CrfLauncherTest {
+    /** The escape that opens every ANSI control sequence; its absence proves uncolored output. */
+    private static final String ANSI_ESCAPE = "\u001b";
+
+    /** A run of mark glyphs unique to the brand banner; a clean marker that the art was rendered. */
+    private static final String BANNER_MARKER = "#########";
+
     @RegisterExtension
     final CapturedStandardStreams streams = new CapturedStandardStreams();
 
@@ -42,6 +49,19 @@ class CrfLauncherTest {
         assertTrue(
                 streams.err().contains("TagProvider"),
                 "stderr should guide the user to register a TagProvider; was: " + streams.err()
+        );
+    }
+
+    @Test
+    void run__annotateHelpOmitsBanner() {
+        // ACT //
+        int exitCode = CrfLauncher.run(new String[] {"annotate", "--help"});
+
+        // ASSERT //
+        assertEquals(0, exitCode);
+        assertFalse(
+                streams.out().contains(BANNER_MARKER),
+                "subcommand help should not carry the root banner; was: " + streams.out()
         );
     }
 
@@ -60,6 +80,14 @@ class CrfLauncherTest {
                 streams.out().contains("retokenize"),
                 "help should list the retokenize subcommand; was: " + streams.out()
         );
+        // The banner renders above the usage block...
+        assertTrue(streams.out().contains(BANNER_MARKER), "help should show the brand banner; was: " + streams.out());
+        assertTrue(
+                streams.out().indexOf(BANNER_MARKER) < streams.out().indexOf("Usage"),
+                "the banner should appear above the usage block; was: " + streams.out()
+        );
+        // ...and the test runs under a dumb terminal, so it must be uncolored.
+        assertFalse(streams.out().contains(ANSI_ESCAPE), "captured help output must carry no ANSI bytes");
     }
 
     @Test
@@ -70,6 +98,10 @@ class CrfLauncherTest {
         // ASSERT //
         assertEquals(2, exitCode);
         assertTrue(streams.err().contains("annotate"), "usage should list the subcommands; was: " + streams.err());
+        assertTrue(
+                streams.err().contains(BANNER_MARKER),
+                "the bare command should show the brand banner; was: " + streams.err()
+        );
     }
 
     @Test
@@ -102,9 +134,10 @@ class CrfLauncherTest {
 
         // ASSERT //
         assertEquals(0, exitCode);
-        assertTrue(
-                streams.out().contains("crf (development build)"),
-                "version output should be the documented loose-classpath fallback; was: " + streams.out()
+        assertTrue(streams.out().contains("crf"), "version output should name the tool; was: " + streams.out());
+        assertFalse(
+                streams.out().contains(BANNER_MARKER),
+                "the version output should not carry the banner; was: " + streams.out()
         );
     }
 }

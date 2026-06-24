@@ -19,6 +19,7 @@ import org.jspecify.annotations.NullMarked;
 
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Objects;
 
 import picocli.CommandLine;
@@ -48,6 +49,15 @@ import picocli.CommandLine;
  */
 @NullMarked
 public final class CrfLauncher {
+    /**
+     * The CRF wordmark: its figlet art and the cyan accent the "CRF" name is painted in. The
+     * "CoordinateKit" half of the banner and the brand colors are fixed inside {@link Banner}; this is
+     * the only product-specific piece, so a sibling tool reuses {@code Banner} unchanged and supplies
+     * its own product here.
+     */
+    private static final Banner.Product CRF_PRODUCT = Banner.Product
+            .fromResources(CrfLauncher.class, "banner/crf-big.txt", "banner/crf-small.txt", 91, 199, 227);
+
     private CrfLauncher() {
         throw new UnsupportedOperationException("CrfLauncher is a utility class and cannot be instantiated");
     }
@@ -62,7 +72,13 @@ public final class CrfLauncher {
     static CommandLine commandLine(ResolvedServices.Builder servicesBuilder) {
         // Every subcommand shares this one builder, which is safe: picocli runs at most one subcommand
         // per invocation, and each subcommand calls resolve() to read its own immutable set of services.
-        return new CommandLine(new RootCommand()).addSubcommand(new AnnotatorCommand(servicesBuilder))
+        CommandLine commandLine = new CommandLine(new RootCommand());
+        // Show the brand banner above the root usage (crf --help and bare crf). Only the root command's
+        // section map is touched, so subcommand help and --version are unaffected.
+        Map<String, CommandLine.IHelpSectionRenderer> sections = commandLine.getHelpSectionMap();
+        sections.put(CommandLine.Model.UsageMessageSpec.SECTION_KEY_HEADER, new Banner(CRF_PRODUCT));
+        commandLine.setHelpSectionMap(sections);
+        return commandLine.addSubcommand(new AnnotatorCommand(servicesBuilder))
                 .addSubcommand(new RetokenizeCommand(servicesBuilder));
     }
 
