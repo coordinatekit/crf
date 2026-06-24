@@ -32,10 +32,10 @@ import java.io.PrintWriter;
  * lives here so each runner only supplies its command-specific labels and the action to run.
  *
  * <p>
- * This class imports no command-line parser; the picocli adapters ({@link AnnotatorCli},
- * {@link RetokenizeCli}) own all parsing. {@link #runInteractive} owns the terminal lifecycle for
- * the common case, while {@link #runInTerminal} runs the precondition and the action against a
- * terminal the caller already owns.
+ * This class imports no command-line parser; the picocli commands in the {@code cli} module own all
+ * parsing. {@link #runInteractive} owns the terminal lifecycle for the common case, while
+ * {@link #runInTerminal} runs the precondition and the action against a terminal the caller already
+ * owns.
  */
 @NullMarked
 final class TerminalSupport {

@@ -1,0 +1,24 @@
+plugins {
+    id "application"
+}
+
+dependencies {
+    implementation project(":annotator")
+    implementation project(":core")
+
+    implementation libs.picocli
+    implementation libs.jline
+}
+
+application {
+    mainClass = "org.coordinatekit.crf.cli.CrfLauncher"
+}
+
+jar {
+    manifest {
+        attributes(
+                "Implementation-Title": "crf",
+                "Implementation-Version": project.version
+        )
+    }
+}

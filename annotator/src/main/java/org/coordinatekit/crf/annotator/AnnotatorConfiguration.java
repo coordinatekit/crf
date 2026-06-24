@@ -26,8 +26,8 @@ import java.nio.file.Path;
  * <p>
  * This immutable, builder-driven class carries the data an annotation run needs — the input file,
  * the optional model, the output file, and the highlighting threshold — without any dependency on a
- * particular command-line parser. {@link AnnotatorCli} builds one from picocli-parsed arguments,
- * but any other CLI framework can build one directly and hand it to
+ * particular command-line parser. The {@code cli} module's {@code AnnotatorCommand} builds one from
+ * picocli-parsed arguments, but any other CLI framework can build one directly and hand it to
  * {@link AnnotatorRunner#run(AnnotatorConfiguration, AnnotatorRunner.AnnotatorFactory)}.
  *
  * <p>
@@ -50,6 +50,13 @@ import java.nio.file.Path;
 public final class AnnotatorConfiguration {
     /** The default highlighting threshold used when none is set on the {@link Builder}. */
     public static final double DEFAULT_THRESHOLD = 0.80;
+
+    /**
+     * The {@link #DEFAULT_THRESHOLD} as a compile-time {@code String} for picocli's
+     * {@code @Option(defaultValue = ...)}, which requires a constant expression. Kept in agreement with
+     * {@link #DEFAULT_THRESHOLD} by {@code AnnotatorCommandTest.configuration__defaults}.
+     */
+    public static final String DEFAULT_THRESHOLD_TEXT = "0.80";
 
     private final Path input;
     private final @Nullable Path model;

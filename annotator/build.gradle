@@ -1,7 +1,6 @@
 dependencies {
     api project(":core")
 
-    implementation libs.picocli
     implementation libs.jline
 
     testImplementation libs.jline.terminal.jansi
