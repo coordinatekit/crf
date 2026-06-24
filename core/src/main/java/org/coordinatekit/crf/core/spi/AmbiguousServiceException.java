@@ -31,7 +31,18 @@ import java.util.stream.Collectors;
  */
 @NullMarked
 public final class AmbiguousServiceException extends UncheckedCrfException {
+    /**
+     * The fully qualified class names of the registered implementations, sorted.
+     *
+     * @serial
+     */
     private final List<String> implementationNames;
+
+    /**
+     * The human-readable name of the ambiguous service.
+     *
+     * @serial
+     */
     private final String serviceName;
 
     /**
