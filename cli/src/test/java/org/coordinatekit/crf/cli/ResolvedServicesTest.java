@@ -17,11 +17,13 @@ package org.coordinatekit.crf.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tests {@link ResolvedServices}: the per-slot resolution precedence
@@ -50,7 +53,10 @@ class ResolvedServicesTest {
         throw new UnsupportedOperationException("not used");
     };
 
-    private static CrfTaggerLoader loaderReturning(CrfTagger<?, ?> tagger) {
+    private static CrfTaggerLoader loaderCapturing(
+            AtomicReference<FeatureExtractor<?>> captured,
+            CrfTagger<?, ?> tagger
+    ) {
         return new CrfTaggerLoader() {
             @SuppressWarnings("unchecked")
             @NullMarked
@@ -61,9 +67,14 @@ class ResolvedServicesTest {
                     TagProvider<T> tagProvider,
                     Tokenizer tokenizer
             ) {
+                captured.set(featureExtractor);
                 return (CrfTagger<F, T>) tagger;
             }
         };
+    }
+
+    private static CrfTaggerLoader loaderReturning(CrfTagger<?, ?> tagger) {
+        return loaderCapturing(new AtomicReference<>(), tagger);
     }
 
     private static CrfTaggerLoader loaderThrowing(IOException cause) {
@@ -86,7 +97,7 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .featureExtractor(featureExtractor).taggerLoader(loaderThrowing(new IOException("disk gone")))
+                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderThrowing(new IOException("disk gone")))
                 .resolve();
 
         // ACT //
@@ -107,7 +118,7 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .featureExtractor(featureExtractor).taggerLoader(loaderReturning(UNUSED_TAGGER)).resolve();
+                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderReturning(UNUSED_TAGGER)).resolve();
 
         // ACT //
         CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
@@ -117,17 +128,39 @@ class ResolvedServicesTest {
     }
 
     @Test
+    void loadTagger__modelUsesFullFeatureExtractor() {
+        // ARRANGE //
+        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
+        AtomicReference<FeatureExtractor<?>> captured = new AtomicReference<>();
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loaderCapturing(captured, UNUSED_TAGGER))
+                .resolve();
+
+        // ACT //
+        resolvedServices.loadTagger(Path.of("model.bin"));
+
+        // ASSERT //
+        assertSame(fullFeatureExtractor, captured.get(), "the loader should receive the full feature extractor");
+    }
+
+    @Test
     void loadTagger__modelWithoutFeatureExtractorLoads() {
         // ARRANGE //
+        AtomicReference<FeatureExtractor<?>> captured = new AtomicReference<>();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .taggerLoader(loaderReturning(UNUSED_TAGGER)).resolve();
+                .taggerLoader(loaderCapturing(captured, UNUSED_TAGGER)).resolve();
 
         // ACT //
         CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
 
         // ASSERT //
         assertSame(UNUSED_TAGGER, loaded);
-        assertNull(resolvedServices.featureExtractor(), "no feature extractor should be resolved");
+        assertNull(resolvedServices.fullFeatureExtractor(), "no full feature extractor should be resolved");
+        assertNotNull(captured.get(), "an empty feature extractor should be substituted for the absent full extractor");
+        assertTrue(
+                captured.get().extractAt(new InputSequence(List.of("token")), 0).isEmpty(),
+                "the substituted extractor yields no features"
+        );
     }
 
     @Test
@@ -187,6 +220,48 @@ class ResolvedServicesTest {
     }
 
     @Test
+    void resolve__keyFeatureExtractorFallsBackToFull() {
+        // ARRANGE //
+        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor).resolve();
+
+        // ACT & ASSERT //
+        assertSame(
+                fullFeatureExtractor,
+                resolvedServices.keyFeatureExtractor(),
+                "the key view should fall back to the full extractor when no key extractor is registered"
+        );
+    }
+
+    @Test
+    void resolve__keyFeatureExtractorOverridesFull() {
+        // ARRANGE //
+        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor<String> keyFeatureExtractor = (sequence, position) -> Set.of();
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor).keyFeatureExtractor(keyFeatureExtractor).resolve();
+
+        // ACT & ASSERT //
+        assertSame(keyFeatureExtractor, resolvedServices.keyFeatureExtractor(), "the explicit key extractor wins");
+        assertSame(fullFeatureExtractor, resolvedServices.fullFeatureExtractor(), "the full extractor is unchanged");
+    }
+
+    @Test
+    void resolve__keyFeatureExtractorWithoutFullStaysExplicit() {
+        // ARRANGE //
+        FeatureExtractor<String> keyFeatureExtractor = (sequence, position) -> Set.of();
+
+        // ACT //
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
+                .keyFeatureExtractor(keyFeatureExtractor).resolve();
+
+        // ASSERT //
+        assertSame(keyFeatureExtractor, resolvedServices.keyFeatureExtractor());
+        assertNull(resolvedServices.fullFeatureExtractor(), "full stays absent; only the key view is set");
+    }
+
+    @Test
     void resolve__missingTagProviderFailsFast() {
         // ACT //
         CrfStartupException exception = assertThrows(
@@ -208,7 +283,8 @@ class ResolvedServicesTest {
 
         // ASSERT //
         assertInstanceOf(WhitespaceTokenizer.class, resolvedServices.tokenizer());
-        assertNull(resolvedServices.featureExtractor());
+        assertNull(resolvedServices.fullFeatureExtractor());
+        assertNull(resolvedServices.keyFeatureExtractor());
         assertNull(resolvedServices.taggerLoader());
         assertSame(TAG_PROVIDER, resolvedServices.tagProvider());
     }

@@ -2,7 +2,7 @@
 
 The `crf` command-line tool: a [picocli](https://picocli.info) front end hosting
 the interactive `annotate` and `retokenize` flows. It ships no components of its
-own — it discovers your tag provider, tokenizer, feature extractor, and model
+own — it discovers your tag provider, tokenizer, feature extractors, and model
 loader through `ServiceLoader` and assembles the tool around them, so there is no
 `main` to write. Register your components as services and put this module on the
 classpath; the `crf` command then exposes them through its `annotate` and
@@ -35,15 +35,21 @@ module is only the command-line wiring.
 
 ## Registering your components
 
-`crf` resolves four slots through `ServiceLoader`, each as
+`crf` resolves five slots through `ServiceLoader`, each as
 `explicit > a single registered service > a built-in default`:
 
-| Slot              | Service interface                                           | Default                      | Needed when                |
-| ----------------- | ----------------------------------------------------------- | ---------------------------- | -------------------------- |
-| Tag provider      | `org.coordinatekit.crf.core.TagProvider`                    | none (required)              | always                     |
-| Tokenizer         | `org.coordinatekit.crf.core.preprocessing.Tokenizer`        | `WhitespaceTokenizer`        | always                     |
-| Feature extractor | `org.coordinatekit.crf.core.preprocessing.FeatureExtractor` | none (tags without features) | recommended with `--model` |
-| Model loader      | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`            | none                         | `--model`                  |
+| Slot                   | Service interface                                               | Default                          | Needed when                |
+| ---------------------- | --------------------------------------------------------------- | -------------------------------- | -------------------------- |
+| Tag provider           | `org.coordinatekit.crf.core.TagProvider`                        | none (required)                  | always                     |
+| Tokenizer              | `org.coordinatekit.crf.core.preprocessing.Tokenizer`            | `WhitespaceTokenizer`            | always                     |
+| Full feature extractor | `org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor` | none (tags without features)     | recommended with `--model` |
+| Key feature extractor  | `org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor`  | falls back to the full extractor | optional                   |
+| Model loader           | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`                | none                             | `--model`                  |
+
+The full feature extractor is the one your model was trained with: it drives the
+tagger and the verbose "all features" view. The key feature extractor backs the
+simpler "key features" view and falls back to the full extractor when you don't
+register one.
 
 Only the tag provider is required. Register one by adding a `META-INF/services`
 file that names your implementation:
@@ -53,22 +59,37 @@ file that names your implementation:
 com.example.MyTagProvider
 ```
 
-For model-assisted suggestions, register a feature extractor too and keep the
+For model-assisted suggestions, register a full feature extractor too and keep the
 `mallet` module on the classpath — it registers the `CrfTaggerLoader` that reads
 MALLET models:
 
 ```
-# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.FeatureExtractor
-com.example.MyFeatureExtractor
+# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor
+com.example.MyFullFeatureExtractor
 ```
+
+Optionally register a key feature extractor the same way to give the "key
+features" view a simpler, easier-to-read feature set; without one it falls back
+to the full extractor:
+
+```
+# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor
+com.example.MyKeyFeatureExtractor
+```
+
+The named class must implement the marker interface it is registered under:
+`FullFeatureExtractor<F>` for a full extractor, `KeyFeatureExtractor<F>` for a key
+one. Implementing only the base `FeatureExtractor<F>` is not enough. `ServiceLoader`
+matches on the exact interface and rejects a class that is not assignable to it with
+a `ServiceConfigurationError` at load time.
 
 With no tag provider on the classpath, the command fails fast with guidance
 rather than producing garbage. If any slot has more than one registered service
 it also fails, naming the conflict; leave exactly one or supply it explicitly.
 Passing `--model` without a registered model loader is the same kind of failure:
 it stops before the terminal opens and tells you to add `mallet`. A model loaded
-without a matching feature extractor still runs, but prints a warning — a model's
-suggestions are only meaningful with the extractor it was trained on.
+without a matching `FullFeatureExtractor` still runs, but prints a warning — a
+model's suggestions are only meaningful with the extractor it was trained on.
 
 ## Subcommands
 

@@ -27,32 +27,47 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
  * Tests {@link CrfServices}: the canonical defaults (the {@link WhitespaceTokenizer} tokenizer
- * default and the absent feature extractor, tagger loader, and tag provider) and that an explicit
- * override wins. The discovery path is covered by the command tests.
+ * default and the absent full and key feature extractors, tagger loader, and tag provider) and that
+ * an explicit override wins. The discovery path is covered by the command tests.
  */
 class CrfServicesTest {
     record EmptyParameters(String name, Supplier<Optional<?>> accessor) {}
 
-    @Test
-    void featureExtractor__explicitWins() {
+    record ExplicitWinsParameters(
+            String name,
+            Function<FeatureExtractor<String>, Optional<FeatureExtractor<String>>> resolver
+    ) {}
+
+    static Stream<ExplicitWinsParameters> explicitWins() {
+        return Stream.of(
+                new ExplicitWinsParameters("fullFeatureExtractor", CrfServices::fullFeatureExtractor),
+                new ExplicitWinsParameters("keyFeatureExtractor", CrfServices::keyFeatureExtractor)
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void explicitWins(ExplicitWinsParameters parameters) {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
 
         // ACT //
-        Optional<FeatureExtractor<String>> result = CrfServices.featureExtractor(featureExtractor);
+        Optional<FeatureExtractor<String>> result = parameters.resolver().apply(featureExtractor);
 
         // ASSERT //
-        assertSame(featureExtractor, result.orElseThrow());
+        assertSame(featureExtractor, result.orElseThrow(), parameters.name() + " explicit should win");
     }
 
     static Stream<EmptyParameters> isEmptyWhenNothingRegistered() {
         return Stream.of(
-                new EmptyParameters("featureExtractor", CrfServices::featureExtractor),
+                new EmptyParameters("fullFeatureExtractor", CrfServices::fullFeatureExtractor),
+                new EmptyParameters("keyFeatureExtractor", CrfServices::keyFeatureExtractor),
                 new EmptyParameters("tagProvider", CrfServices::tagProvider),
                 new EmptyParameters("taggerLoader", CrfServices::taggerLoader)
         );
