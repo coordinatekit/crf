@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -83,6 +84,25 @@ class MalletCrfTaggerTest {
         } finally {
             Files.deleteIfExists(tempFile);
         }
+    }
+
+    @Test
+    void probabilityOf__bestTaggingIsProbableAndDominatesWorstTagging() {
+        // ARRANGE //
+        TaggedTokenization<String, String> tagged = tagger.tag("They quickly opened the door");
+        // The model's per-token best tags, and the per-token worst tags (the lowest-marginal tag at each
+        // position), which together make an obviously-wrong tagging.
+        List<String> bestTags = tagged.taggedSequence().stream().map(TaggedPositionedToken::tag).toList();
+        List<String> worstTags = tagged.taggedSequence().stream().map(token -> token.tagScores().last().tag()).toList();
+
+        // ACT //
+        double best = tagged.probabilityOf(bestTags);
+        double worst = tagged.probabilityOf(worstTags);
+
+        // ASSERT //
+        assertTrue(best > 0.0 && best <= 1.0, "the best tagging's probability must lie in (0, 1], got: " + best);
+        assertTrue(worst >= 0.0 && worst <= 1.0, "the worst tagging's probability must lie in [0, 1], got: " + worst);
+        assertTrue(worst < best, "an obviously-wrong tagging must score strictly lower than the best, got: " + worst);
     }
 
     @Test

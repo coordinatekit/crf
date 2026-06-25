@@ -556,7 +556,7 @@ class RetokenizeReviewerTest {
             Tokenization tokenization = tokenizer.tokenize(input);
             List<String> tokens = tokenization.sequence().stream().map(PositionedToken::token).toList();
             List<Set<String>> features = tokens.stream().map(unused -> Set.<String>of()).toList();
-            return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScores), tokenization);
+            return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScores), tokenization, tags -> 0.0);
         }
     }
 

@@ -701,7 +701,7 @@ class AnnotatorTest {
             if (response == null) {
                 throw new AssertionError("FixedTagger has no scripted response for input: " + input);
             }
-            return TaggedTokenizations.of(response, tokenizer.tokenize(input));
+            return TaggedTokenizations.of(response, tokenizer.tokenize(input), tags -> 0.0);
         }
     }
 

@@ -238,7 +238,14 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
         List<Set<F>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
 
         AnnotatorSequence<F, T> displaySequence = tagged != null
-                ? annotatorSequence(sequenceNumber, totalSequences, tagged.taggedSequence(), features, verboseFeatures)
+                ? annotatorSequence(
+                        sequenceNumber,
+                        totalSequences,
+                        tagged.taggedSequence(),
+                        features,
+                        verboseFeatures,
+                        tagged::probabilityOf
+                )
                 : annotatorSequence(
                         sequenceNumber,
                         totalSequences,

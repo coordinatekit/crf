@@ -184,6 +184,27 @@ final class TaggingViewModels {
     }
 
     /**
+     * Formats {@code current}, appending {@code (was <original>)} when {@code showOriginal} is set.
+     * Used for both per-token confidence and the total likelihood so a changed value shows alongside
+     * the one the model originally produced. Both values are formatted with
+     * {@link #formatConfidence(Double)}, so either renders the
+     * {@value TerminalDisplay#NULL_VALUE_PLACEHOLDER} placeholder when null.
+     *
+     * @param current the current value, or null when none is available
+     * @param original the original value to show in parentheses, or null when none is available
+     * @param showOriginal whether to append the original value
+     * @return the formatted text
+     */
+    private static String formatWithOriginal(
+            @Nullable Double current,
+            @Nullable Double original,
+            boolean showOriginal
+    ) {
+        String text = formatConfidence(current);
+        return showOriginal ? text + " (was " + formatConfidence(original) + ")" : text;
+    }
+
+    /**
      * Builds the header line shown above both screens: the sequence's position within the batch
      * followed by its tokens joined with spaces.
      *
@@ -199,13 +220,30 @@ final class TaggingViewModels {
 
     /**
      * Builds the sequence-screen description: the header, one row per token, an optional feature
-     * section when {@code effectiveView} is not {@link FeatureView#NONE}, and the footer prompt.
+     * section when {@code effectiveView} is not {@link FeatureView#NONE}, an optional total-likelihood
+     * line, and the footer prompt.
+     *
+     * <p>
+     * Each token's confidence reflects its <em>currently selected</em> tag, looked up from the token's
+     * {@link AnnotatorToken#alternativeTagScores() alternative-tag scores} rather than the original
+     * best tag. Once a token's current tag diverges from its {@link AnnotatorToken#initialTag() initial
+     * tag}, the cell also shows the original value as {@code current (was original)}, and the
+     * low-confidence highlight follows the current value.
+     *
+     * <p>
+     * The total-likelihood line is {@code null} (omitted) when {@code currentTotal} is {@code null},
+     * the no-model case. Otherwise it shows the current total, appending {@code (was originalTotal)}
+     * when {@code currentTags} differs from the sequence's initial tags.
      *
      * @param sequence the sequence to present
      * @param currentTags the tag currently assigned to each token, in token order
      * @param effectiveView the feature view in effect for the sequence
      * @param tagProvider the tag provider used to render tags
      * @param threshold the confidence threshold below which a row is flagged low-confidence
+     * @param currentTotal the total likelihood of {@code currentTags}, or {@code null} when no scorer
+     *        is available (no model)
+     * @param originalTotal the total likelihood of the sequence's initial tags, or {@code null} when no
+     *        scorer is available (no model)
      * @param <F> the feature type
      * @param <T> the tag type
      * @return the sequence view model
@@ -215,20 +253,26 @@ final class TaggingViewModels {
             List<T> currentTags,
             FeatureView effectiveView,
             TagProvider<T> tagProvider,
-            double threshold
+            double threshold,
+            @Nullable Double currentTotal,
+            @Nullable Double originalTotal
     ) {
         List<AnnotatorToken<F, T>> tokens = sequence.tokens();
         List<TaggingViewModel.TokenRow> tokenRows = new ArrayList<>(tokens.size());
+        boolean tagsChanged = false;
         for (int index = 0; index < tokens.size(); index++) {
             AnnotatorToken<F, T> token = tokens.get(index);
-            Double confidence = token.initialConfidence();
-            boolean lowConfidence = confidence != null && confidence < threshold;
+            T currentTag = currentTags.get(index);
+            boolean changed = !currentTag.equals(token.initialTag());
+            tagsChanged |= changed;
+            Double current = token.alternativeTagScores().get(currentTag);
+            boolean lowConfidence = current != null && current < threshold;
             tokenRows.add(
                     new TaggingViewModel.TokenRow(
                             String.valueOf(index + 1),
                             token.token(),
-                            tagToString(tagProvider, currentTags.get(index)),
-                            formatConfidence(confidence),
+                            tagToString(tagProvider, currentTag),
+                            formatWithOriginal(current, token.initialConfidence(), changed),
                             lowConfidence
                     )
             );
@@ -249,10 +293,14 @@ final class TaggingViewModels {
             }
         }
 
+        String totalLikelihoodText = currentTotal == null ? null
+                : formatWithOriginal(currentTotal, originalTotal, tagsChanged);
+
         return new TaggingViewModel(
                 sequenceHeaderLine(sequence),
                 tokenRows,
                 featureRows,
+                totalLikelihoodText,
                 footerPrompt(sequence.featureAvailability(), effectiveView)
         );
     }

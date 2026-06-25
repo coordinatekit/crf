@@ -16,6 +16,8 @@
 package org.coordinatekit.crf.mallet.tag;
 
 import cc.mallet.fst.CRF;
+import cc.mallet.fst.SumLattice;
+import cc.mallet.types.ArraySequence;
 import cc.mallet.types.FeatureVector;
 import cc.mallet.types.FeatureVectorSequence;
 import org.coordinatekit.crf.core.Sequence;
@@ -40,7 +42,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.ToDoubleFunction;
 
 /**
  * A MALLET-based implementation of {@link CrfTagger} that uses a pre-trained CRF model to tag input
@@ -121,6 +125,7 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
         FeatureVectorSequence malletSequence = createMalletSequences(model, featureSequence);
 
         var lattice = model.getSumLatticeFactory().newSumLattice(model, malletSequence);
+        double logPartition = lattice.getTotalWeight();
 
         List<String> tokens = new ArrayList<>(featureSequence.size());
         List<Set<F>> features = new ArrayList<>(featureSequence.size());
@@ -135,6 +140,44 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
             tagScoresByToken.add(tagScores);
         }
 
-        return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScoresByToken), tokenization);
+        return TaggedTokenizations.of(
+                new TaggedSequence<>(tokens, features, tagScoresByToken),
+                tokenization,
+                probabilityFunction(malletSequence, logPartition)
+        );
+    }
+
+    /**
+     * Builds a function for the exact conditional probability {@code P(tags | input)} of an arbitrary
+     * tagging of {@code malletSequence}.
+     *
+     * <p>
+     * The function constrains a {@link SumLattice} to the requested tag sequence and divides the
+     * resulting log-partition by the unconstrained one: with both in log space,
+     * {@code P(y | x) = exp(constrained.getTotalWeight() − logPartition)}. The unconstrained
+     * {@code logPartition} is reused from the lattice the surrounding {@link #tag(String)} already
+     * built, so the only per-call work is the constrained forward pass. The constrained output is an
+     * {@link ArraySequence} of label names because MALLET's CRF transition iterator compares each
+     * position's constraint to a state's label as a {@code String}.
+     *
+     * @param malletSequence the feature-vector sequence the function is bound to
+     * @param logPartition the unconstrained log-partition {@code logZ} for that input
+     * @return a function over arbitrary taggings of the bound input
+     */
+    private ToDoubleFunction<List<T>> probabilityFunction(FeatureVectorSequence malletSequence, double logPartition) {
+        int length = malletSequence.size();
+        return tags -> {
+            String[] labelNames = new String[length];
+            for (int i = 0; i < length; i++) {
+                T tag = tags.get(i);
+                labelNames[i] = Objects.requireNonNull(
+                        tagProvider.encode(tag),
+                        () -> "tag must encode to a non-null label name: " + tag
+                );
+            }
+            SumLattice constrained = model.getSumLatticeFactory()
+                    .newSumLattice(model, malletSequence, new ArraySequence<>(labelNames));
+            return Math.exp(constrained.getTotalWeight() - logPartition);
+        };
     }
 }

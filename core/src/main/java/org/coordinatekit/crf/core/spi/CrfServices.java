@@ -27,10 +27,8 @@ import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.ServiceLoader;
 
 /**
  * Discovers the CRF domain SPIs, applying each slot's canonical default.
@@ -124,15 +122,10 @@ public final class CrfServices {
      */
     // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
     @SuppressWarnings("unchecked")
-    private static <F> Optional<FeatureExtractor<F>> resolveExtractor(
-            String name,
-            Class<? extends FeatureExtractor> serviceType,
-            @Nullable FeatureExtractor<F> explicit
-    ) {
-        List<FeatureExtractor<?>> discovered = new ArrayList<>();
-        ServiceLoader.load(serviceType).forEach(discovered::add); // raw -> wildcard capture
-        FeatureExtractor<?> resolved = ServiceResolution.resolve(name, explicit, discovered, null);
-        return Optional.ofNullable((FeatureExtractor<F>) resolved);
+    public static <F> Optional<FeatureExtractor<F>> featureExtractor(@Nullable FeatureExtractor<F> explicit) {
+        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) (List<?>) ServiceResolution
+                .discover(FeatureExtractor.class);
+        return Optional.ofNullable(ServiceResolution.resolve("FeatureExtractor", explicit, discovered, null));
     }
 
     /**
@@ -161,10 +154,9 @@ public final class CrfServices {
     // ServiceLoader erases the type; T is bound from explicit or assumed of the discovered provider
     @SuppressWarnings("unchecked")
     public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider(@Nullable TagProvider<T> explicit) {
-        List<TagProvider<?>> discovered = new ArrayList<>();
-        ServiceLoader.load(TagProvider.class).forEach(discovered::add); // raw -> wildcard capture
-        TagProvider<?> resolved = ServiceResolution.resolve("TagProvider", explicit, discovered, null);
-        return Optional.ofNullable((TagProvider<T>) resolved);
+        List<TagProvider<T>> discovered = (List<TagProvider<T>>) (List<?>) ServiceResolution
+                .discover(TagProvider.class);
+        return Optional.ofNullable(ServiceResolution.resolve("TagProvider", explicit, discovered, null));
     }
 
     /**

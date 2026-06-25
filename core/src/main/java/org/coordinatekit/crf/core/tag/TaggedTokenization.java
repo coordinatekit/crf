@@ -19,6 +19,8 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.jspecify.annotations.NullMarked;
 
+import java.util.List;
+
 /**
  * The full result of tagging an input string: the per-token tags paired with the authoritative
  * {@link Tokenization} the tagger computed.
@@ -41,6 +43,29 @@ import org.jspecify.annotations.NullMarked;
  */
 @NullMarked
 public interface TaggedTokenization<F, T extends Comparable<T>> {
+    /**
+     * Returns the conditional probability {@code P(tags | input)} the model assigns to the given tag
+     * sequence over this tagging's input.
+     *
+     * <p>
+     * Where {@link #taggedSequence()} carries the single best tagging, this answers how probable
+     * <em>any</em> chosen tagging is, which lets a user-interface recompute a total likelihood as the
+     * user revises tags. It is bound to this tagging's input and expects one tag per token of
+     * {@link #tokenization()}.
+     *
+     * <p>
+     * The result is the normalized probability of the whole tagging in {@code [0, 1]}: the joint of
+     * every token's tag under the model, not an aggregate of per-token marginals. A tagging the model
+     * deems impossible scores {@code 0}.
+     *
+     * @param tags the candidate tag for each token, in token order; must have exactly one entry per
+     *        token of this tagging's input
+     * @return the conditional probability of {@code tags} given the input, in {@code [0, 1]}
+     * @throws NullPointerException if {@code tags} is null
+     * @throws IllegalArgumentException if {@code tags} does not have one entry per token of the input
+     */
+    double probabilityOf(List<T> tags);
+
     /**
      * Returns the per-token tagging output: each token's features and ranked tag scores.
      *

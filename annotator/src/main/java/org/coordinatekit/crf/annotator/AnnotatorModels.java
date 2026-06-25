@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.function.ToDoubleFunction;
 
 /**
  * Factory for the public value types in the {@code ui} package.
@@ -96,21 +97,13 @@ public final class AnnotatorModels {
     }
 
     /**
-     * Creates an {@link AnnotatorSequence} from a tagger's output, with optional display features.
+     * Creates an {@link AnnotatorSequence} from a tagger's output, with optional display features and
+     * no probability function.
      *
      * <p>
-     * Each token's {@link TaggedPositionedToken#token() token}, top-scoring
-     * {@link TaggedPositionedToken#tag() tag} and corresponding score, and full
-     * {@link TaggedPositionedToken#tagScores() tag-score} set are projected onto a corresponding
-     * {@link AnnotatorToken}. The alternative-tag-score map preserves the score-descending order of
-     * {@code tagScores()}.
-     *
-     * <p>
-     * The {@code features} and {@code verboseFeatures} lists are index-aligned with the sequence's
-     * tokens and populate {@link AnnotatorToken#features() features} and
-     * {@link AnnotatorToken#verboseFeatures() verboseFeatures}; a {@code null} list means the
-     * corresponding feature source is not configured, and every token carries an empty set. Per-token
-     * sets are defensively copied.
+     * Equivalent to {@link #annotatorSequence(int, int, Sequence, List, List, ToDoubleFunction)
+     * annotatorSequence(sequenceNumber, totalSequences, taggedSequence, features, verboseFeatures,
+     * null)}.
      *
      * @param sequenceNumber the 1-based position of this sequence within the overall annotation batch
      * @param totalSequences the total number of sequences in the overall annotation batch
@@ -131,6 +124,55 @@ public final class AnnotatorModels {
             Sequence<TaggedPositionedToken<F, T>> taggedSequence,
             @Nullable List<Set<F>> features,
             @Nullable List<Set<F>> verboseFeatures
+    ) {
+        return annotatorSequence(sequenceNumber, totalSequences, taggedSequence, features, verboseFeatures, null);
+    }
+
+    /**
+     * Creates an {@link AnnotatorSequence} from a tagger's output, with optional display features and
+     * an optional probability function.
+     *
+     * <p>
+     * Each token's {@link TaggedPositionedToken#token() token}, top-scoring
+     * {@link TaggedPositionedToken#tag() tag} and corresponding score, and full
+     * {@link TaggedPositionedToken#tagScores() tag-score} set are projected onto a corresponding
+     * {@link AnnotatorToken}. The alternative-tag-score map preserves the score-descending order of
+     * {@code tagScores()}.
+     *
+     * <p>
+     * The {@code features} and {@code verboseFeatures} lists are index-aligned with the sequence's
+     * tokens and populate {@link AnnotatorToken#features() features} and
+     * {@link AnnotatorToken#verboseFeatures() verboseFeatures}; a {@code null} list means the
+     * corresponding feature source is not configured, and every token carries an empty set. Per-token
+     * sets are defensively copied.
+     *
+     * <p>
+     * The {@code probabilityFunction}, when non-null, is carried through to
+     * {@link AnnotatorSequence#probabilityOf(List)} so the user-interface can display a total
+     * likelihood that updates as tags are revised.
+     *
+     * @param sequenceNumber the 1-based position of this sequence within the overall annotation batch
+     * @param totalSequences the total number of sequences in the overall annotation batch
+     * @param taggedSequence the tagger's output for the sequence
+     * @param features the per-token key display features, or {@code null} when not configured
+     * @param verboseFeatures the per-token verbose display features, or {@code null} when not
+     *        configured
+     * @param probabilityFunction the function scoring arbitrary taggings of the sequence, or
+     *        {@code null} when no model backs the sequence
+     * @param <F> the feature type
+     * @param <T> the tag type
+     * @return a new annotator sequence
+     * @throws IllegalArgumentException if {@code sequenceNumber < 1},
+     *         {@code totalSequences < sequenceNumber}, or either list's size differs from the token
+     *         count
+     */
+    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+            int sequenceNumber,
+            int totalSequences,
+            Sequence<TaggedPositionedToken<F, T>> taggedSequence,
+            @Nullable List<Set<F>> features,
+            @Nullable List<Set<F>> verboseFeatures,
+            @Nullable ToDoubleFunction<List<T>> probabilityFunction
     ) {
         Objects.requireNonNull(taggedSequence, "taggedSequence must not be null");
         validateSequenceBounds(sequenceNumber, totalSequences);
@@ -160,7 +202,8 @@ public final class AnnotatorModels {
                 sequenceNumber,
                 totalSequences,
                 tokens,
-                FeatureAvailability.of(features != null, verboseFeatures != null)
+                FeatureAvailability.of(features != null, verboseFeatures != null),
+                probabilityFunction
         );
     }
 
@@ -236,7 +279,8 @@ public final class AnnotatorModels {
                 sequenceNumber,
                 totalSequences,
                 annotatorTokens,
-                FeatureAvailability.of(features != null, verboseFeatures != null)
+                FeatureAvailability.of(features != null, verboseFeatures != null),
+                null
         );
     }
 
@@ -310,10 +354,16 @@ public final class AnnotatorModels {
             int sequenceNumber,
             int totalSequences,
             List<AnnotatorToken<F, T>> tokens,
-            FeatureAvailability featureAvailability
+            FeatureAvailability featureAvailability,
+            @Nullable ToDoubleFunction<List<T>> probabilityFunction
     ) implements AnnotatorSequence<F, T> {
         private DefaultAnnotatorSequence {
             tokens = List.copyOf(tokens);
+        }
+
+        @Override
+        public @Nullable Double probabilityOf(List<T> tags) {
+            return probabilityFunction == null ? null : probabilityFunction.applyAsDouble(tags);
         }
     }
 
