@@ -16,6 +16,7 @@ logback = "1.5.22"
 errorprone = "2.36.0"
 
 # plugins
+dependency-license-report = "3.1.2"
 errorprone-plugin = "4.1.0"
 git-changelog = "2.2.0"
 sonatype-central-portal-publisher = "1.2.4"
@@ -35,6 +36,7 @@ picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [plugins]
+dependency-license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "dependency-license-report" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 git-changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "git-changelog" }
 sonatype-central-portal-publisher = { id = "net.thebugmc.gradle.sonatype-central-portal-publisher", version.ref = "sonatype-central-portal-publisher" }

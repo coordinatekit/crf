@@ -1,5 +1,10 @@
+import com.github.jk1.license.render.JsonReportRenderer
+import com.github.jk1.license.filter.LicenseBundleNormalizer
+import groovy.json.JsonSlurper
+
 plugins {
     id "application"
+    alias libs.plugins.dependency.license.report
 }
 
 dependencies {
@@ -12,6 +17,118 @@ dependencies {
 
 application {
     mainClass = "org.coordinatekit.crf.cli.CrfLauncher"
+    applicationName = "crf"            // -> bin/crf, bin/crf.bat, CRF_OPTS
+}
+
+distributions {
+    main {
+        distributionBaseName = "crf"   // -> crf-<version>.zip / .tar, build/install/crf
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Third-party license compliance.
+//
+// The dependency-license-report plugin (jk1) derives each runtime dependency's license from its POM.
+//   - checkLicense fails the build when a dependency's license is not allowed (allowed-licenses.json).
+//     Entries are keyed per module, so a relicensed dependency or a new runtime dependency forces a
+//     re-review instead of shipping silently.
+//   - generateThirdPartyLicenses renders the THIRD-PARTY-LICENSES.txt shipped in the distribution,
+//     reusing jk1's JSON inventory and the canonical license texts checked in under cli/licenses/.
+//
+// Jar-byte integrity is a separate, native concern: enable Gradle dependency verification with
+// `./gradlew --write-verification-metadata sha256` if you want resolved jars pinned.
+// ---------------------------------------------------------------------------------------------------
+
+// jk1's normalized display name -> the canonical license text file under cli/licenses/. An unmapped
+// name fails generateThirdPartyLicenses rather than shipping an incomplete attribution; keep this in
+// sync with allowed-licenses.json.
+ext.LICENSE_TEXT_FILE = [
+        'Apache License, Version 2.0': 'Apache-2.0.txt',
+        'The 3-Clause BSD License'   : 'BSD-3-Clause.txt',
+        'MIT License'                : 'MIT.txt',
+]
+
+def licensesDirectory = file('licenses')
+def jk1ReportFile = layout.buildDirectory.file('reports/dependency-license/third-party-report.json')
+def reportDirectory = layout.buildDirectory.dir('reports/third-party-licenses')
+
+licenseReport {
+    configurations = ['runtimeClasspath']            // == what the dist bundles
+    excludeGroups = ['org.coordinatekit.crf']        // omit our own modules (Apache 2.0, covered by LICENSE.txt)
+    filters = [new LicenseBundleNormalizer()]        // normalize license names to canonical display names
+    allowedLicensesFile = file('allowed-licenses.json')
+    renderers = [new JsonReportRenderer('third-party-report.json', false)]
+}
+
+tasks.named('check') { dependsOn 'checkLicense' }
+
+// Render the attribution file shipped in the distribution from jk1's inventory + cli/licenses/ texts.
+tasks.register('generateThirdPartyLicenses') {
+    group = 'documentation'
+    description = 'Render THIRD-PARTY-LICENSES.txt from the jk1 license report and cli/licenses/.'
+    dependsOn 'generateLicenseReport', 'checkLicense'
+    inputs.file(jk1ReportFile)
+    inputs.dir(licensesDirectory)
+    outputs.dir(reportDirectory)
+    doLast {
+        def report = new JsonSlurper().parse(jk1ReportFile.get().asFile)
+        def dependencies = report.dependencies
+                .collect { dependency ->
+                    [gav    : "${dependency.moduleName}:${dependency.moduleVersion}".toString(),
+                     license: (dependency.moduleLicenses ?: []).collect { it.moduleLicense }.find { it }]
+                }
+                .sort { it.gav }
+
+        def unmapped = dependencies.findAll { !LICENSE_TEXT_FILE[it.license] }
+        if (!unmapped.isEmpty()) {
+            throw new GradleException("No canonical license text mapped for: " +
+                    unmapped.collect { "${it.gav} (${it.license ?: 'no license'})" }.join(', ') +
+                    ". Add the SPDX text under cli/licenses/ and an entry to LICENSE_TEXT_FILE in cli/build.gradle.")
+        }
+
+        def builder = new StringBuilder()
+        builder << 'Third-party license attribution\n'
+        builder << '================================================================================\n\n'
+        builder << 'This distribution bundles the third-party dependencies listed below. Each is shown\n'
+        builder << 'with its license; the full license texts follow, one copy per distinct license.\n\n'
+        dependencies.each { builder << "${it.gav} — ${it.license}\n" }
+
+        builder << '\nFull license texts\n'
+        builder << '================================================================================\n'
+        dependencies.collect { it.license }.unique().sort().each { license ->
+            def text = new File(licensesDirectory, LICENSE_TEXT_FILE[license] as String).text
+            builder << "\n${license}\n\n" << text
+            if (!text.endsWith('\n')) builder << '\n'
+            builder << '--------------------------------------------------------------------------------\n'
+        }
+
+        def outputDirectory = reportDirectory.get().asFile
+        outputDirectory.mkdirs()
+        new File(outputDirectory, 'THIRD-PARTY-LICENSES.txt').text = builder.toString()
+    }
+}
+
+// Ship the project's own license and the generated third-party attribution at the archive root.
+applicationDistribution.from(rootProject.file("LICENSE.txt"))
+applicationDistribution.from(tasks.named("generateThirdPartyLicenses")) {
+    include "THIRD-PARTY-LICENSES.txt"
+}
+
+startScripts {
+    doLast {
+        def unixDone = false
+        unixScript.text = unixScript.text.replaceAll(~'(?m)^CLASSPATH=(.*)$') { match, cp ->
+            unixDone = true; 'CLASSPATH=' + cp + ':$APP_HOME/ext/*'
+        }
+        assert unixDone : "CLASSPATH= line not found in generated unix start script (Gradle template changed)"
+
+        def winDone = false
+        windowsScript.text = windowsScript.text.replaceAll(~'(?m)^set CLASSPATH=(.*)$') { match, cp ->
+            winDone = true; 'set CLASSPATH=' + cp + ';%APP_HOME%\\ext\\*'
+        }
+        assert winDone : "set CLASSPATH= line not found in generated windows start script (Gradle template changed)"
+    }
 }
 
 jar {
