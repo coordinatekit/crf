@@ -22,7 +22,8 @@
  *
  * <ul>
  * <li>{@link org.coordinatekit.crf.core.spi.CrfServices} - discovers the CRF domain SPIs
- * (tokenizer, feature extractor, tag provider, tagger loader), binding each to its built-in default
+ * (tokenizer, full and key feature extractors, tag provider, tagger loader), binding each to its
+ * built-in default
  * <li>{@link org.coordinatekit.crf.core.spi.AmbiguousServiceException} - thrown when more than one
  * provider of a service type is registered and none was supplied explicitly
  * </ul>

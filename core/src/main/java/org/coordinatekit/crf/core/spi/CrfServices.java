@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
@@ -51,31 +53,85 @@ public final class CrfServices {
     }
 
     /**
-     * Discovers the feature extractor by {@code single registered FeatureExtractor > none}.
+     * Discovers the full feature extractor by {@code single registered FullFeatureExtractor > none}.
+     *
+     * <p>
+     * The full extractor is the one used for training and tagging — the complete feature set the model
+     * sees — and it also feeds the annotator's verbose ("all features") view.
      *
      * @param <F> the feature type
-     * @return the resolved feature extractor, or empty if none is registered
-     * @throws AmbiguousServiceException if more than one feature extractor is registered
+     * @return the resolved full feature extractor, or empty if none is registered
+     * @throws AmbiguousServiceException if more than one full feature extractor is registered
      */
-    public static <F> Optional<FeatureExtractor<F>> featureExtractor() {
-        return featureExtractor(null);
+    public static <F> Optional<FeatureExtractor<F>> fullFeatureExtractor() {
+        return fullFeatureExtractor(null);
     }
 
     /**
-     * Resolves the feature extractor by {@code explicit > single registered FeatureExtractor > none}.
+     * Resolves the full feature extractor by
+     * {@code explicit > single registered FullFeatureExtractor > none}.
      *
-     * @param explicit the explicitly supplied feature extractor, or {@code null} if none was set
+     * @param explicit the explicitly supplied full feature extractor, or {@code null} if none was set
      * @param <F> the feature type
-     * @return the resolved feature extractor, or empty if none was supplied or registered
-     * @throws AmbiguousServiceException if more than one feature extractor is registered and none is
-     *         explicit
+     * @return the resolved full feature extractor, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one full feature extractor is registered and none
+     *         is explicit
+     */
+    public static <F> Optional<FeatureExtractor<F>> fullFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
+        return resolveExtractor("FullFeatureExtractor", FullFeatureExtractor.class, explicit);
+    }
+
+    /**
+     * Discovers the key feature extractor by {@code single registered KeyFeatureExtractor > none}.
+     *
+     * <p>
+     * The key extractor is the simpler pre-window extractor that feeds the annotator's key ("key
+     * features") view. When none is registered, callers fall the key view back to the full extractor.
+     *
+     * @param <F> the feature type
+     * @return the resolved key feature extractor, or empty if none is registered
+     * @throws AmbiguousServiceException if more than one key feature extractor is registered
+     */
+    public static <F> Optional<FeatureExtractor<F>> keyFeatureExtractor() {
+        return keyFeatureExtractor(null);
+    }
+
+    /**
+     * Resolves the key feature extractor by
+     * {@code explicit > single registered KeyFeatureExtractor > none}.
+     *
+     * @param explicit the explicitly supplied key feature extractor, or {@code null} if none was set
+     * @param <F> the feature type
+     * @return the resolved key feature extractor, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one key feature extractor is registered and none
+     *         is explicit
+     */
+    public static <F> Optional<FeatureExtractor<F>> keyFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
+        return resolveExtractor("KeyFeatureExtractor", KeyFeatureExtractor.class, explicit);
+    }
+
+    /**
+     * Resolves a feature extractor slot by {@code explicit > single registered provider > none}, shared
+     * by the full and key extractor overloads.
+     *
+     * @param name the service name used in {@link AmbiguousServiceException} messages
+     * @param serviceType the marker subinterface to discover ({@code FullFeatureExtractor} or
+     *        {@code KeyFeatureExtractor})
+     * @param explicit the explicitly supplied extractor, or {@code null} if none was set
+     * @param <F> the feature type
+     * @return the resolved extractor, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
      */
     // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
     @SuppressWarnings("unchecked")
-    public static <F> Optional<FeatureExtractor<F>> featureExtractor(@Nullable FeatureExtractor<F> explicit) {
+    private static <F> Optional<FeatureExtractor<F>> resolveExtractor(
+            String name,
+            Class<? extends FeatureExtractor> serviceType,
+            @Nullable FeatureExtractor<F> explicit
+    ) {
         List<FeatureExtractor<?>> discovered = new ArrayList<>();
-        ServiceLoader.load(FeatureExtractor.class).forEach(discovered::add); // raw -> wildcard capture
-        FeatureExtractor<?> resolved = ServiceResolution.resolve("FeatureExtractor", explicit, discovered, null);
+        ServiceLoader.load(serviceType).forEach(discovered::add); // raw -> wildcard capture
+        FeatureExtractor<?> resolved = ServiceResolution.resolve(name, explicit, discovered, null);
         return Optional.ofNullable((FeatureExtractor<F>) resolved);
     }
 

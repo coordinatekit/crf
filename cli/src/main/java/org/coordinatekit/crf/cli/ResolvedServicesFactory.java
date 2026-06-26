@@ -19,6 +19,7 @@ import org.coordinatekit.crf.annotator.Annotator;
 import org.coordinatekit.crf.annotator.AnnotatorRunner;
 import org.coordinatekit.crf.annotator.RetokenizeReviewer;
 import org.coordinatekit.crf.annotator.RetokenizeRunner;
+import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -41,15 +42,17 @@ import java.nio.file.Path;
  * <p>
  * The resolved services are untyped (see {@link ResolvedServices}); assembly therefore uses raw
  * builders and unchecked casts. There is no separate coherence check because none is needed: the
- * single resolved feature extractor and tag provider are shared into both the tagger and the
- * annotator/reviewer, so their feature and tag types agree by construction. The only residual risk
- * is a non-conformant {@link org.coordinatekit.crf.core.tag.CrfTaggerLoader} that ignores those
- * arguments instead of building the tagger over them.
+ * resolved full feature extractor and tag provider are shared into both the tagger and the
+ * annotator/reviewer's verbose view, so their feature and tag types agree by construction. The key
+ * feature extractor feeds the key view only, where its feature type is display-only — a mismatch
+ * could at worst mis-render features, never throw. The only residual risk is a non-conformant
+ * {@link org.coordinatekit.crf.core.tag.CrfTaggerLoader} that ignores those arguments instead of
+ * building the tagger over them.
  */
 @NullMarked
 final class ResolvedServicesFactory {
-    private static final String MISSING_FEATURE_EXTRACTOR_WARNING = "Warning: no FeatureExtractor is registered; the model will tag without features. Register a"
-            + " FeatureExtractor for real features — a loaded model's suggestions are only"
+    private static final String MISSING_FEATURE_EXTRACTOR_WARNING = "Warning: no FullFeatureExtractor is registered; the model will tag without features. Register a"
+            + " FullFeatureExtractor for real features — a loaded model's suggestions are only"
             + " meaningful if it was trained with the same extractor.";
 
     private ResolvedServicesFactory() {
@@ -58,8 +61,8 @@ final class ResolvedServicesFactory {
         );
     }
 
-    // The services are discovered independently, so their feature and tag types cannot be proven to
-    // agree at compile time; the builders are driven raw and the result is returned as Annotator<?, ?>.
+    // The production path: builds the terminal-bound tagging interface, then delegates the extractor
+    // routing to the package-private seam below.
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Annotator<?, ?> annotator(
             ResolvedServices resolvedServices,
@@ -71,9 +74,31 @@ final class ResolvedServicesFactory {
         TagProvider tagProvider = resolvedServices.tagProvider();
         TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
                 .terminal(terminal).threshold(threshold).build();
+        return annotator(resolvedServices, tagger, terminal, taggingInterface);
+    }
+
+    /**
+     * Assembles an annotator over a supplied tagging interface, routing the key feature extractor to
+     * the key view and the full feature extractor to the verbose view.
+     *
+     * <p>
+     * This is the wiring seam exercised by tests: the production overload builds a
+     * {@link TerminalTaggingInterface} and delegates here, while a test can supply a capturing
+     * interface to observe which extractor reaches which view.
+     */
+    // The services are discovered independently, so their feature and tag types cannot be proven to
+    // agree at compile time; the builders are driven raw and the result is returned as Annotator<?, ?>.
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static Annotator<?, ?> annotator(
+            ResolvedServices resolvedServices,
+            @Nullable CrfTagger<?, ?> tagger,
+            Terminal terminal,
+            TaggingInterface taggingInterface
+    ) {
+        TagProvider tagProvider = resolvedServices.tagProvider();
         return Annotator.builder().tagProvider(tagProvider).taggingInterface(taggingInterface).terminal(terminal)
-                .tokenizer(resolvedServices.tokenizer()).featureExtractor(resolvedServices.featureExtractor())
-                .tagger(tagger).build();
+                .tokenizer(resolvedServices.tokenizer()).featureExtractor(resolvedServices.keyFeatureExtractor())
+                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor()).tagger(tagger).build();
     }
 
     /**
@@ -95,8 +120,9 @@ final class ResolvedServicesFactory {
         return (configuration, terminal) -> annotator(resolvedServices, tagger, terminal, configuration.threshold());
     }
 
-    // See annotator(...): the same erasure gap applies to the reviewer's services.
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    // See annotator(...): the production path builds the tagging interface, then delegates the
+    // extractor routing to the package-private seam below.
+    @SuppressWarnings("rawtypes")
     private static RetokenizeReviewer<?, ?> reviewer(
             ResolvedServices resolvedServices,
             @Nullable CrfTagger<?, ?> tagger,
@@ -107,9 +133,31 @@ final class ResolvedServicesFactory {
         TagProvider tagProvider = resolvedServices.tagProvider();
         TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
                 .terminal(terminal).threshold(threshold).build();
+        return reviewer(resolvedServices, tagger, terminal, taggingInterface);
+    }
+
+    /**
+     * Assembles a reviewer over a supplied tagging interface, routing the key feature extractor to the
+     * key view and the full feature extractor to the verbose view.
+     *
+     * <p>
+     * The reviewer counterpart to
+     * {@link #annotator(ResolvedServices, CrfTagger, Terminal, TaggingInterface)}; the two seams stay
+     * symmetric so a wiring swap is caught on either path.
+     */
+    // See annotator(...): the same erasure gap applies to the reviewer's services.
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static RetokenizeReviewer<?, ?> reviewer(
+            ResolvedServices resolvedServices,
+            @Nullable CrfTagger<?, ?> tagger,
+            Terminal terminal,
+            TaggingInterface taggingInterface
+    ) {
+        TagProvider tagProvider = resolvedServices.tagProvider();
         return RetokenizeReviewer.builder().tagProvider(tagProvider).taggingInterface(taggingInterface)
                 .terminal(terminal).tokenizer(resolvedServices.tokenizer())
-                .featureExtractor(resolvedServices.featureExtractor()).tagger(tagger).build();
+                .featureExtractor(resolvedServices.keyFeatureExtractor())
+                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor()).tagger(tagger).build();
     }
 
     /**
@@ -133,11 +181,12 @@ final class ResolvedServicesFactory {
 
     /**
      * Writes a warning to {@code terminal} when a model was loaded but {@code resolvedServices}
-     * resolved without a feature extractor, and flushes it.
+     * resolved without a full feature extractor, and flushes it.
      *
      * <p>
      * The warning is model-centric — a missing extractor only undermines a loaded model's suggestions —
-     * so it stays silent when no model was loaded ({@code tagger == null}).
+     * so it stays silent when no model was loaded ({@code tagger == null}). It keys on the full
+     * extractor because that is the one the model is built over.
      *
      * @param resolvedServices the resolved set of services
      * @param tagger the loaded tagger, or {@code null} when no model was supplied
@@ -148,7 +197,7 @@ final class ResolvedServicesFactory {
             @Nullable CrfTagger<?, ?> tagger,
             Terminal terminal
     ) {
-        if (tagger != null && resolvedServices.featureExtractor() == null) {
+        if (tagger != null && resolvedServices.fullFeatureExtractor() == null) {
             terminal.writer().write(MISSING_FEATURE_EXTRACTOR_WARNING + System.lineSeparator());
             terminal.writer().flush();
         }

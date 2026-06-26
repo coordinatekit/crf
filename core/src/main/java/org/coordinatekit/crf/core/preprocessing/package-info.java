@@ -25,6 +25,11 @@
  * positioned tokens
  * <li>{@link org.coordinatekit.crf.core.preprocessing.FeatureExtractor} - Extracts features from
  * tokens within a sequence context
+ * <li>{@link org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor} - Marks the extractor
+ * used for training and tagging; feeds the model and the annotator's verbose ("all features") view
+ * <li>{@link org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor} - Marks the simpler
+ * pre-window extractor; feeds the annotator's key ("key features") view, falling back to the full
+ * extractor when unregistered
  * <li>{@link org.coordinatekit.crf.core.preprocessing.TrainingSequence} - A sequence with tagged
  * tokens for training
  * </ul>
