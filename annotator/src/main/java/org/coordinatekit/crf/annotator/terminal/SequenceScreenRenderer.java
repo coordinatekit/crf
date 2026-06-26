@@ -22,12 +22,14 @@ import static org.coordinatekit.crf.annotator.terminal.TerminalDisplay.CONFIDENC
 import static org.coordinatekit.crf.annotator.terminal.TerminalDisplay.FEATURE_SEPARATOR;
 import static org.coordinatekit.crf.annotator.terminal.TerminalDisplay.NUMBER_COLUMN;
 import static org.coordinatekit.crf.annotator.terminal.TerminalDisplay.TAG_COLUMN;
+import static org.coordinatekit.crf.annotator.terminal.TerminalDisplay.TOTAL_LIKELIHOOD_LABEL;
 
 /**
  * Lays out a {@link TaggingViewModel} into a JLine {@link AttributedStringBuilder}: the header, the
- * token table (low-confidence rows highlighted), an optional wrapping feature table, and the footer
- * prompt. This is the only place the sequence screen's styling and {@link TerminalTable} assembly
- * live; all the content it lays out is pre-derived on the view model.
+ * token table (low-confidence rows highlighted), an optional wrapping feature table, an optional
+ * total-likelihood line, and the footer prompt. This is the only place the sequence screen's
+ * styling and {@link TerminalTable} assembly live; all the content it lays out is pre-derived on
+ * the view model.
  */
 final class SequenceScreenRenderer {
     private static final String FEATURES_COLUMN = "Features";
@@ -74,6 +76,13 @@ final class SequenceScreenRenderer {
                 featuresTable.row(AttributedStyle.DEFAULT, row.number(), row.token(), row.featuresText());
             }
             featuresTable.build().appendTo(builder);
+        }
+
+        if (viewModel.totalLikelihoodText() != null) {
+            builder.append(System.lineSeparator());
+            builder.append(TOTAL_LIKELIHOOD_LABEL);
+            builder.append(viewModel.totalLikelihoodText());
+            builder.append(System.lineSeparator());
         }
 
         builder.append(viewModel.footerPrompt());

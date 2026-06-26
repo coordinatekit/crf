@@ -19,7 +19,9 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.jspecify.annotations.NullMarked;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.function.ToDoubleFunction;
 
 /**
  * Factory for {@link TaggedTokenization} instances.
@@ -36,7 +38,8 @@ public final class TaggedTokenizations {
     private TaggedTokenizations() {}
 
     /**
-     * Creates a tagged tokenization pairing a tagged sequence with the tokenization it came from.
+     * Creates a tagged tokenization pairing a tagged sequence with the tokenization it came from and a
+     * function that scores arbitrary taggings of the input.
      *
      * <p>
      * The token segments of {@code tokenization} must line up one-to-one with the entries of
@@ -45,25 +48,31 @@ public final class TaggedTokenizations {
      *
      * @param taggedSequence the per-token tagging output
      * @param tokenization the authoritative tokenization carrying tokens and excluded runs
+     * @param probabilityFunction the function computing {@code P(tags | input)} for an arbitrary
+     *        tagging
      * @param <F> the type of features associated with each token
      * @param <T> the type of tags assigned to tokens, must be comparable for ordering
      * @return a new tagged tokenization
-     * @throws NullPointerException if {@code taggedSequence} or {@code tokenization} is null
+     * @throws NullPointerException if {@code taggedSequence}, {@code tokenization}, or
+     *         {@code probabilityFunction} is null
      * @throws IllegalArgumentException if {@code taggedSequence} does not have exactly one entry per
      *         token segment of {@code tokenization}
      */
     public static <F, T extends Comparable<T>> TaggedTokenization<F, T> of(
             Sequence<TaggedPositionedToken<F, T>> taggedSequence,
-            Tokenization tokenization
+            Tokenization tokenization,
+            ToDoubleFunction<List<T>> probabilityFunction
     ) {
-        return new DefaultTaggedTokenization<>(taggedSequence, tokenization);
+        return new DefaultTaggedTokenization<>(probabilityFunction, taggedSequence, tokenization);
     }
 
     private record DefaultTaggedTokenization<F, T extends Comparable<T>> (
+            ToDoubleFunction<List<T>> probabilityFunction,
             Sequence<TaggedPositionedToken<F, T>> taggedSequence,
             Tokenization tokenization
     ) implements TaggedTokenization<F, T> {
         private DefaultTaggedTokenization {
+            Objects.requireNonNull(probabilityFunction, "probabilityFunction must not be null");
             Objects.requireNonNull(taggedSequence, "taggedSequence must not be null");
             Objects.requireNonNull(tokenization, "tokenization must not be null");
             int tokenCount = tokenization.sequence().size();
@@ -77,6 +86,18 @@ public final class TaggedTokenizations {
                         )
                 );
             }
+        }
+
+        @Override
+        public double probabilityOf(List<T> tags) {
+            Objects.requireNonNull(tags, "tags must not be null");
+            int tokenCount = taggedSequence.size();
+            if (tags.size() != tokenCount) {
+                throw new IllegalArgumentException(
+                        "tags must have one entry per token, got: tags=" + tags.size() + ", tokens=" + tokenCount
+                );
+            }
+            return probabilityFunction.applyAsDouble(tags);
         }
     }
 }

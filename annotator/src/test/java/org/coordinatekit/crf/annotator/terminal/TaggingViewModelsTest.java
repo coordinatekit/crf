@@ -19,6 +19,7 @@ import org.coordinatekit.crf.annotator.AnnotatorModels;
 import org.coordinatekit.crf.annotator.AnnotatorSequence;
 import org.coordinatekit.crf.annotator.FeatureAvailability;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -57,6 +58,14 @@ class TaggingViewModelsTest {
             String expectedPrompt
     ) {}
 
+    record TotalLikelihoodParameters(
+            String name,
+            List<String> currentTags,
+            @Nullable Double currentTotal,
+            @Nullable Double originalTotal,
+            @Nullable String expectedText
+    ) {}
+
     @MethodSource
     @ParameterizedTest
     void footerPrompt(FooterPromptParameters parameters) {
@@ -69,7 +78,9 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 parameters.effectiveView(),
                 TAG_PROVIDER,
-                0.80
+                0.80,
+                null,
+                null
         );
 
         // ASSERT //
@@ -143,7 +154,9 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 parameters.effectiveView(),
                 TAG_PROVIDER,
-                0.80
+                0.80,
+                null,
+                null
         );
 
         // ASSERT //
@@ -179,7 +192,9 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 FeatureView.KEY,
                 TAG_PROVIDER,
-                0.80
+                0.80,
+                null,
+                null
         );
 
         // ASSERT //
@@ -200,7 +215,9 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 FeatureView.NONE,
                 TAG_PROVIDER,
-                0.80
+                0.80,
+                null,
+                null
         );
 
         // ASSERT //
@@ -213,6 +230,71 @@ class TaggingViewModelsTest {
                 viewModel.tokenRows()
         );
         assertNull(viewModel.featureRows());
+    }
+
+    @Test
+    void sequenceViewModel__showsChosenTagConfidenceWithOriginalOnlyAfterEdit() {
+        // ARRANGE //
+        // Initial tags are the top-scoring tags: token 1 = DT (0.9), token 2 = NN (0.5). Editing
+        // token 1 to NN diverges from its initial tag; token 2 keeps its initial tag.
+        AnnotatorSequence<String, String> sequence = taggedSequence(null, null);
+
+        // ACT //
+        TaggingViewModel viewModel = sequenceViewModel(
+                sequence,
+                List.of("NN", "NN"),
+                FeatureView.NONE,
+                TAG_PROVIDER,
+                0.80,
+                null,
+                null
+        );
+
+        // ASSERT //
+        // The edited token shows its chosen tag's confidence and the original; the unedited one does not.
+        assertEquals("0.1000 (was 0.9000)", viewModel.tokenRows().get(0).confidenceText());
+        assertEquals("0.5000", viewModel.tokenRows().get(1).confidenceText());
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void sequenceViewModel__totalLikelihoodText(TotalLikelihoodParameters parameters) {
+        // ARRANGE //
+        AnnotatorSequence<String, String> sequence = taggedSequence(null, null);
+
+        // ACT //
+        TaggingViewModel viewModel = sequenceViewModel(
+                sequence,
+                parameters.currentTags(),
+                FeatureView.NONE,
+                TAG_PROVIDER,
+                0.80,
+                parameters.currentTotal(),
+                parameters.originalTotal()
+        );
+
+        // ASSERT //
+        assertEquals(parameters.expectedText(), viewModel.totalLikelihoodText());
+    }
+
+    static Stream<TotalLikelihoodParameters> sequenceViewModel__totalLikelihoodText() {
+        return Stream.of(
+                new TotalLikelihoodParameters(
+                        "shows_original_after_divergent_edit",
+                        List.of("NN", "NN"),
+                        0.6210,
+                        0.8804,
+                        "0.6210 (was 0.8804)"
+                ),
+                new TotalLikelihoodParameters(
+                        "omits_original_when_tags_unchanged",
+                        List.of("DT", "NN"),
+                        0.8804,
+                        0.8804,
+                        "0.8804"
+                ),
+                new TotalLikelihoodParameters("absent_without_scorer", List.of("DT", "NN"), null, null, null)
+        );
     }
 
     @Test

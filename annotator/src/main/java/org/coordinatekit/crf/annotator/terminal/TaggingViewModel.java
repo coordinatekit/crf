@@ -21,19 +21,22 @@ import java.util.List;
 
 /**
  * An immutable, terminal-free description of one sequence screen: the header line, one row per
- * token, an optional feature section, and the footer prompt. Cell contents are pre-formatted
- * strings, so a renderer only has to lay them out and a test can assert on them without scraping a
- * terminal.
+ * token, an optional feature section, an optional total-likelihood line, and the footer prompt.
+ * Cell contents are pre-formatted strings, so a renderer only has to lay them out and a test can
+ * assert on them without scraping a terminal.
  *
  * @param headerLine the sequence header shown above the table
  * @param tokenRows the per-token rows, in token order
  * @param featureRows the per-token feature rows, or {@code null} when no feature view is active
+ * @param totalLikelihoodText the formatted total-likelihood line shown between the table and the
+ *        footer, or {@code null} when no scorer is available (no model)
  * @param footerPrompt the action prompt shown below the table
  */
 record TaggingViewModel(
         String headerLine,
         List<TokenRow> tokenRows,
         @Nullable List<FeatureRow> featureRows,
+        @Nullable String totalLikelihoodText,
         String footerPrompt
 ) {
     TaggingViewModel {

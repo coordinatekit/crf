@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -60,6 +61,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 
 class TerminalTaggingInterfaceTest {
@@ -521,6 +523,30 @@ class TerminalTaggingInterfaceTest {
         }
     }
 
+    @Test
+    void present__totalLikelihoodTracksSessionAndOriginal() throws Exception {
+        // ARRANGE //
+        // A scorer that depends on its argument, so the original and current totals diverge after an edit.
+        ToDoubleFunction<List<PartOfSpeech>> probabilityFunction = tags -> 1.0
+                / (1.0 + tags.stream().mapToInt(PartOfSpeech::ordinal).sum());
+        var sequence = withModelScorerSequence(probabilityFunction);
+        List<PartOfSpeech> initialTags = initialTagsOf(sequence);
+        List<PartOfSpeech> editedTags = initialTagsWithSecondTokenSwapped(sequence);
+        String original = String.format(Locale.US, "%.4f", probabilityFunction.applyAsDouble(initialTags));
+        String current = String.format(Locale.US, "%.4f", probabilityFunction.applyAsDouble(editedTags));
+
+        // ACT //
+        var interaction = run("2\n2\nA\n", sequence);
+
+        // ASSERT //
+        // The leading value tracks the edited (session) tags while (was X) stays bound to the initial
+        // tags, proving originalTotal binds to the initial tagging and currentTotal follows the session.
+        assertTrue(
+                interaction.output().contains("Total likelihood: " + current + " (was " + original + ")"),
+                "expected the post-edit total-likelihood line to track the session total and the original"
+        );
+    }
+
     static Stream<ThresholdParameters> thresholdAffectsStyledRowCount() {
         return Stream.of(
                 new ThresholdParameters("zero_styles_none", 0.00),
@@ -749,6 +775,21 @@ class TerminalTaggingInterfaceTest {
     }
 
     private static AnnotatorSequence<String, PartOfSpeech> withModelAnnotatorSequence() {
+        return annotatorSequence(1, 1, withModelTaggedSequence());
+    }
+
+    /**
+     * The same fixture as {@link #withModelAnnotatorSequence()} but carrying
+     * {@code probabilityFunction}, so {@link AnnotatorSequence#probabilityOf(List)} drives the
+     * total-likelihood line.
+     */
+    private static AnnotatorSequence<String, PartOfSpeech> withModelScorerSequence(
+            ToDoubleFunction<List<PartOfSpeech>> probabilityFunction
+    ) {
+        return annotatorSequence(1, 1, withModelTaggedSequence(), null, null, probabilityFunction);
+    }
+
+    private static TaggedSequence<String, PartOfSpeech> withModelTaggedSequence() {
         List<String> tokens = List.of("The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", ".");
         List<PartOfSpeech> topTags = List.of(
                 PartOfSpeech.Determiner,
@@ -780,7 +821,6 @@ class TerminalTaggingInterfaceTest {
             }
             tagScores.add(map);
         }
-        var tagged = new TaggedSequence<>(tokens, features, tagScores);
-        return annotatorSequence(1, 1, tagged);
+        return new TaggedSequence<>(tokens, features, tagScores);
     }
 }

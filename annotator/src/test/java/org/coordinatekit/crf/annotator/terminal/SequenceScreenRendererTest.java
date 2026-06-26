@@ -34,17 +34,21 @@ class SequenceScreenRendererTest {
     record FeatureSectionParameters(
             String name,
             @Nullable List<TaggingViewModel.FeatureRow> featureRows,
-            boolean expectFeaturesHeading,
             @Nullable String expectedFeatureCell
+    ) {}
+
+    record TotalLikelihoodParameters(
+            String name,
+            @Nullable String totalLikelihoodText,
+            @Nullable String expectedText
     ) {}
 
     static Stream<FeatureSectionParameters> appendTo__featureSectionVisibility() {
         return Stream.of(
-                new FeatureSectionParameters("omits_section_when_feature_rows_null", null, false, null),
+                new FeatureSectionParameters("omits_section_when_feature_rows_null", null, null),
                 new FeatureSectionParameters(
                         "renders_section_when_present",
                         List.of(new TaggingViewModel.FeatureRow("1", "The", "CAP")),
-                        true,
                         "CAP"
                 )
         );
@@ -58,6 +62,7 @@ class SequenceScreenRendererTest {
                 "Sequence 1 of 1: The fox",
                 List.of(new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false)),
                 parameters.featureRows(),
+                null,
                 "PROMPT"
         );
 
@@ -66,7 +71,7 @@ class SequenceScreenRendererTest {
 
         // ASSERT //
         assertEquals(
-                parameters.expectFeaturesHeading(),
+                parameters.featureRows() != null,
                 output.contains("Features"),
                 "expected the feature-section heading presence to match"
         );
@@ -87,6 +92,7 @@ class SequenceScreenRendererTest {
                         new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false),
                         new TaggingViewModel.TokenRow("2", "fox", "NN", "0.5000", true)
                 ),
+                null,
                 null,
                 "Enter A to accept, the number to edit the token, S to skip, U to undo, or X to exit."
         );
@@ -113,6 +119,46 @@ class SequenceScreenRendererTest {
         );
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void appendTo__totalLikelihoodLine(TotalLikelihoodParameters parameters) {
+        // ARRANGE //
+        TaggingViewModel viewModel = new TaggingViewModel(
+                "Sequence 1 of 1: The fox",
+                List.of(new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false)),
+                null,
+                parameters.totalLikelihoodText(),
+                "PROMPT"
+        );
+
+        // ACT //
+        String output = render(viewModel);
+
+        // ASSERT //
+        assertEquals(
+                parameters.totalLikelihoodText() != null,
+                output.contains("Total likelihood:"),
+                "expected the total-likelihood line presence to match"
+        );
+        if (parameters.expectedText() != null) {
+            assertTrue(
+                    output.contains(parameters.expectedText()),
+                    "expected the total-likelihood text: " + parameters.expectedText()
+            );
+        }
+    }
+
+    static Stream<TotalLikelihoodParameters> appendTo__totalLikelihoodLine() {
+        return Stream.of(
+                new TotalLikelihoodParameters("omitted_when_null", null, null),
+                new TotalLikelihoodParameters(
+                        "rendered_when_present",
+                        "0.6210 (was 0.8804)",
+                        "Total likelihood: 0.6210 (was 0.8804)"
+                )
+        );
+    }
+
     @Test
     void appendTo__stylesLowConfidenceRowsOnly() {
         // ARRANGE //
@@ -122,6 +168,7 @@ class SequenceScreenRendererTest {
                         new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false),
                         new TaggingViewModel.TokenRow("2", "fox", "NN", "0.5000", true)
                 ),
+                null,
                 null,
                 "PROMPT"
         );

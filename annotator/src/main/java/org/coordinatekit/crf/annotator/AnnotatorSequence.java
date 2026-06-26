@@ -17,6 +17,7 @@ package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -57,6 +58,27 @@ public interface AnnotatorSequence<F, T extends Comparable<T>> {
      * @return the sequence number
      */
     int sequenceNumber();
+
+    /**
+     * Returns the conditional probability the model assigns to the given tagging of this sequence, or
+     * {@code null} when no model backs this sequence (the no-tagger path).
+     *
+     * <p>
+     * When non-null, it is bound to this sequence's input and expects one tag per {@link #tokens()
+     * token}; the terminal interface uses it to show a total likelihood that updates as the user
+     * revises tags.
+     *
+     * <p>
+     * This method does not guarantee that a wrong-sized {@code tags} list is rejected; how such a
+     * mismatch is handled is left to the backing scorer.
+     *
+     * @param tags the candidate tag for each token, in token order; must have one entry per
+     *        {@link #tokens() token}
+     * @return the conditional probability of {@code tags} given the input in {@code [0, 1]}, or
+     *         {@code null} when no model backs this sequence
+     */
+    @Nullable
+    Double probabilityOf(List<T> tags);
 
     /**
      * Returns the per-token entries for the sequence.

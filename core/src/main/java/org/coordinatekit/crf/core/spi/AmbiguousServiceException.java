@@ -19,7 +19,6 @@ import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Thrown when more than one provider of a service type is registered and none was supplied
@@ -33,15 +32,11 @@ import java.util.stream.Collectors;
 public final class AmbiguousServiceException extends UncheckedCrfException {
     /**
      * The fully qualified class names of the registered implementations, sorted.
-     *
-     * @serial
      */
     private final List<String> implementationNames;
 
     /**
      * The human-readable name of the ambiguous service.
-     *
-     * @serial
      */
     private final String serviceName;
 
@@ -52,15 +47,19 @@ public final class AmbiguousServiceException extends UncheckedCrfException {
      * @param implementations the discovered provider instances
      */
     public AmbiguousServiceException(String serviceName, List<?> implementations) {
-        super("multiple " + serviceName + " service implementations are registered: " + classNames(implementations));
-        this.implementationNames = implementations.stream().map(implementation -> implementation.getClass().getName())
-                .sorted().toList();
-        this.serviceName = serviceName;
+        this(
+                implementations.stream().map(implementation -> implementation.getClass().getName()).sorted().toList(),
+                serviceName
+        );
     }
 
-    private static String classNames(List<?> implementations) {
-        return implementations.stream().map(implementation -> implementation.getClass().getName()).sorted()
-                .collect(Collectors.joining(", "));
+    private AmbiguousServiceException(List<String> implementationNames, String serviceName) {
+        super(
+                "multiple " + serviceName + " service implementations are registered: "
+                        + String.join(", ", implementationNames)
+        );
+        this.implementationNames = implementationNames;
+        this.serviceName = serviceName;
     }
 
     /**

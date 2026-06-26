@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.annotator.terminal;
 
 import org.coordinatekit.crf.annotator.AnnotatorSequence;
+import org.coordinatekit.crf.annotator.AnnotatorToken;
 import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.TaggingResult;
@@ -102,13 +103,19 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
         Objects.requireNonNull(sequence, "sequence must not be null");
 
         TaggingSession<T> session = TaggingSession.startingFrom(sequence, featureViewState);
+        List<T> initialTags = sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
+        Double originalTotal = sequence.probabilityOf(initialTags);
         while (true) {
+            List<T> currentTags = session.currentTags();
+            Double currentTotal = sequence.probabilityOf(currentTags);
             TaggingViewModel viewModel = sequenceViewModel(
                     sequence,
-                    session.currentTags(),
+                    currentTags,
                     session.effectiveFeatureView(),
                     tagProvider,
-                    threshold
+                    threshold,
+                    currentTotal,
+                    originalTotal
             );
             screen.render(sequenceScreenRenderer, viewModel);
 

@@ -35,6 +35,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
@@ -347,6 +348,35 @@ class AnnotatorSequenceTest {
                 List.copyOf(annotatorToken.alternativeTagScores().keySet())
         );
         annotatorToken.alternativeTagScores().values().forEach(Assertions::assertNull);
+    }
+
+    @Test
+    void probabilityOf__carriedOnWithTaggerPathAndNullOtherwise() {
+        // ARRANGE //
+        ToDoubleFunction<List<TestTag>> probabilityFunction = tags -> tags.size();
+        List<TestTag> tags = List.of(TestTag.ALPHA);
+
+        // ACT //
+        AnnotatorSequence<String, TestTag> withScorer = annotatorSequence(
+                1,
+                1,
+                singleTokenTaggedSequence(),
+                null,
+                null,
+                probabilityFunction
+        );
+        AnnotatorSequence<String, TestTag> withoutScorer = annotatorSequence(1, 1, singleTokenTaggedSequence());
+        AnnotatorSequence<String, TestTag> noTagger = annotatorSequence(
+                1,
+                1,
+                List.of("a"),
+                new TestTagProvider(TestTag.values())
+        );
+
+        // ASSERT //
+        assertEquals(1.0, withScorer.probabilityOf(tags));
+        Assertions.assertNull(withoutScorer.probabilityOf(tags));
+        Assertions.assertNull(noTagger.probabilityOf(tags));
     }
 
     @Test

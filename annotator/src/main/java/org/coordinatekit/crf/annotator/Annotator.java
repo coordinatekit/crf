@@ -268,7 +268,8 @@ public final class Annotator<F, T extends Comparable<T>> {
                         state.totalSequences,
                         tagged.taggedSequence(),
                         features,
-                        verboseFeatures
+                        verboseFeatures,
+                        tagged::probabilityOf
                 )
                 : annotatorSequence(
                         currentPresentation,

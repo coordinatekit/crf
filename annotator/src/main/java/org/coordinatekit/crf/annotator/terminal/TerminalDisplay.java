@@ -27,6 +27,7 @@ final class TerminalDisplay {
     static final String NULL_VALUE_PLACEHOLDER = "—";
     static final String NUMBER_COLUMN = "##";
     static final String TAG_COLUMN = "Tag";
+    static final String TOTAL_LIKELIHOOD_LABEL = "Total likelihood: ";
 
     private TerminalDisplay() {}
 }
