@@ -3,9 +3,9 @@
 A terminal-based interactive annotator that walks a user through tagging
 sequences for CRF training. Reads plain-text sequences line-by-line, presents
 each one in a JLine-rendered table, accepts per-token edits, and appends
-confirmed sequences to an XML training-data file that is flushed on every
-acceptance — so a crash leaves a valid document with every confirmed sequence
-intact.
+confirmed sequences to an XML training-data file, flushing each one to disk as it
+is accepted. The closing tag is written when the file is closed on exit, so the
+document is completed on a clean exit, not on each acceptance.
 
 ## When to use this
 
