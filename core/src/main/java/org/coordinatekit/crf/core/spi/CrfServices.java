@@ -109,6 +109,30 @@ public final class CrfServices {
     }
 
     /**
+     * Resolves a marker-typed feature extractor slot by
+     * {@code explicit > single registered provider > none}, shared by the full and key overloads.
+     *
+     * @param name the service name used in {@link AmbiguousServiceException} messages
+     * @param serviceType the marker subinterface to discover ({@code FullFeatureExtractor} or
+     *        {@code KeyFeatureExtractor})
+     * @param explicit the explicitly supplied extractor, or {@code null} if none was set
+     * @param <F> the feature type
+     * @return the resolved extractor, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
+     */
+    // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
+    @SuppressWarnings("unchecked")
+    private static <F> Optional<FeatureExtractor<F>> resolveExtractor(
+            String name,
+            Class<?> serviceType,
+            @Nullable FeatureExtractor<F> explicit
+    ) {
+        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) (List<?>) ServiceResolution
+                .discover(serviceType);
+        return Optional.ofNullable(ServiceResolution.resolve(name, explicit, discovered, null));
+    }
+
+    /**
      * Resolves a feature extractor slot by {@code explicit > single registered provider > none}, shared
      * by the full and key extractor overloads.
      *
