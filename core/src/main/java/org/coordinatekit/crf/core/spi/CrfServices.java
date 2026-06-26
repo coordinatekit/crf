@@ -109,6 +109,23 @@ public final class CrfServices {
     }
 
     /**
+     * Resolves a feature extractor slot by {@code explicit > single registered provider > none}, shared
+     * by the full and key extractor overloads.
+     *
+     * @param explicit the explicitly supplied extractor, or {@code null} if none was set
+     * @param <F> the feature type
+     * @return the resolved extractor, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
+     */
+    // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
+    @SuppressWarnings("unchecked")
+    public static <F> Optional<FeatureExtractor<F>> featureExtractor(@Nullable FeatureExtractor<F> explicit) {
+        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) (List<?>) ServiceResolution
+                .discover(FeatureExtractor.class);
+        return Optional.ofNullable(ServiceResolution.resolve("FeatureExtractor", explicit, discovered, null));
+    }
+
+    /**
      * Resolves a marker-typed feature extractor slot by
      * {@code explicit > single registered provider > none}, shared by the full and key overloads.
      *
@@ -127,29 +144,8 @@ public final class CrfServices {
             Class<?> serviceType,
             @Nullable FeatureExtractor<F> explicit
     ) {
-        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) (List<?>) ServiceResolution
-                .discover(serviceType);
+        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) ServiceResolution.discover(serviceType);
         return Optional.ofNullable(ServiceResolution.resolve(name, explicit, discovered, null));
-    }
-
-    /**
-     * Resolves a feature extractor slot by {@code explicit > single registered provider > none}, shared
-     * by the full and key extractor overloads.
-     *
-     * @param name the service name used in {@link AmbiguousServiceException} messages
-     * @param serviceType the marker subinterface to discover ({@code FullFeatureExtractor} or
-     *        {@code KeyFeatureExtractor})
-     * @param explicit the explicitly supplied extractor, or {@code null} if none was set
-     * @param <F> the feature type
-     * @return the resolved extractor, or empty if none was supplied or registered
-     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
-     */
-    // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
-    @SuppressWarnings("unchecked")
-    public static <F> Optional<FeatureExtractor<F>> featureExtractor(@Nullable FeatureExtractor<F> explicit) {
-        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) (List<?>) ServiceResolution
-                .discover(FeatureExtractor.class);
-        return Optional.ofNullable(ServiceResolution.resolve("FeatureExtractor", explicit, discovered, null));
     }
 
     /**
