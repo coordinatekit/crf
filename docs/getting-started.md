@@ -253,12 +253,12 @@ Create a file called `training.xml`:
 
 ### Defining a tag provider
 
-A `TagProvider` translates raw string tags to a usable type. The `StringTagProvider` passes strings through directly. Provide the set of valid tags and a starting (default) tag:
+A `TagProvider` translates raw string tags to a usable type. The `StringTagProvider` passes strings through directly. Provide the set of valid tags and a starting (default) tag -- here `Unknown`, a neutral label for tokens nothing has tagged yet:
 
 ```java
 var tagProvider = new StringTagProvider(
-    Set.of("Adjective", "Determiner", "Noun", "Preposition", "Verb"),
-    "Noun"
+    Set.of("Adjective", "Determiner", "Noun", "Preposition", "Unknown", "Verb"),
+    "Unknown"
 );
 ```
 
