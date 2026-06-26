@@ -772,11 +772,12 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
          * @return a human-readable message, prefixed with line and column when the parser supplied them
          */
         private static String format(SAXParseException exception) {
+            String message = Objects.requireNonNullElse(exception.getMessage(), "unknown error");
             int line = exception.getLineNumber();
             if (line < 0) {
-                return exception.getMessage();
+                return message;
             }
-            return "line " + line + ", column " + exception.getColumnNumber() + ": " + exception.getMessage();
+            return "line " + line + ", column " + exception.getColumnNumber() + ": " + message;
         }
 
         /**
@@ -856,9 +857,8 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
-            TrainingSequence<T> result = next;
+            TrainingSequence<T> result = Objects.requireNonNull(next);
             next = null;
-            // noinspection DataFlowIssue
             return result;
         }
 

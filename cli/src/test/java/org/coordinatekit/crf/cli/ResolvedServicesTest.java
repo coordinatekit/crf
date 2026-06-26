@@ -32,7 +32,7 @@ import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.spi.AmbiguousServiceException;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
-import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -54,12 +54,11 @@ class ResolvedServicesTest {
     };
 
     private static CrfTaggerLoader loaderCapturing(
-            AtomicReference<FeatureExtractor<?>> captured,
+            AtomicReference<@Nullable FeatureExtractor<?>> captured,
             CrfTagger<?, ?> tagger
     ) {
         return new CrfTaggerLoader() {
             @SuppressWarnings("unchecked")
-            @NullMarked
             @Override
             public <F, T extends Comparable<T>> CrfTagger<F, T> load(
                     Path modelPath,
@@ -79,7 +78,6 @@ class ResolvedServicesTest {
 
     private static CrfTaggerLoader loaderThrowing(IOException cause) {
         return new CrfTaggerLoader() {
-            @NullMarked
             @Override
             public <F, T extends Comparable<T>> CrfTagger<F, T> load(
                     Path modelPath,
@@ -107,9 +105,11 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
-                exception.getMessage().contains("failed to load") && exception.getMessage().contains("model.bin"),
-                "message should report the failure and the path; was: " + exception.getMessage()
+                message.contains("failed to load") && message.contains("model.bin"),
+                "message should report the failure and the path; was: " + message
         );
     }
 
@@ -131,7 +131,7 @@ class ResolvedServicesTest {
     void loadTagger__modelUsesFullFeatureExtractor() {
         // ARRANGE //
         FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
-        AtomicReference<FeatureExtractor<?>> captured = new AtomicReference<>();
+        AtomicReference<@Nullable FeatureExtractor<?>> captured = new AtomicReference<>();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loaderCapturing(captured, UNUSED_TAGGER))
                 .resolve();
@@ -146,7 +146,7 @@ class ResolvedServicesTest {
     @Test
     void loadTagger__modelWithoutFeatureExtractorLoads() {
         // ARRANGE //
-        AtomicReference<FeatureExtractor<?>> captured = new AtomicReference<>();
+        AtomicReference<@Nullable FeatureExtractor<?>> captured = new AtomicReference<>();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .taggerLoader(loaderCapturing(captured, UNUSED_TAGGER)).resolve();
 
@@ -156,9 +156,10 @@ class ResolvedServicesTest {
         // ASSERT //
         assertSame(UNUSED_TAGGER, loaded);
         assertNull(resolvedServices.fullFeatureExtractor(), "no full feature extractor should be resolved");
-        assertNotNull(captured.get(), "an empty feature extractor should be substituted for the absent full extractor");
+        FeatureExtractor<?> substituted = captured.get();
+        assertNotNull(substituted, "an empty feature extractor should be substituted for the absent full extractor");
         assertTrue(
-                captured.get().extractAt(new InputSequence(List.of("token")), 0).isEmpty(),
+                substituted.extractAt(new InputSequence(List.of("token")), 0).isEmpty(),
                 "the substituted extractor yields no features"
         );
     }
@@ -175,10 +176,9 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
-        assertTrue(
-                exception.getMessage().contains("TaggerLoader"),
-                "message should name the missing slot; was: " + exception.getMessage()
-        );
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("TaggerLoader"), "message should name the missing slot; was: " + message);
     }
 
     @Test
@@ -270,9 +270,11 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
-                exception.getMessage().contains("TagProvider"),
-                "message should guide the user to register a TagProvider; was: " + exception.getMessage()
+                message.contains("TagProvider"),
+                "message should guide the user to register a TagProvider; was: " + message
         );
     }
 

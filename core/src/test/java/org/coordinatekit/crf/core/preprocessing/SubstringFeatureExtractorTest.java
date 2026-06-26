@@ -16,7 +16,6 @@
 package org.coordinatekit.crf.core.preprocessing;
 
 import org.coordinatekit.crf.core.InputSequence;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,7 +28,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@NullMarked
 class SubstringFeatureExtractorTest {
     record BuilderExceptionParameters(
             String name,

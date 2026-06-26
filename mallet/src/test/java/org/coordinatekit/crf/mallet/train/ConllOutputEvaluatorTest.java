@@ -24,7 +24,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.read.ListAppender;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@NullMarked
 class ConllOutputEvaluatorTest {
     private enum TestSequenceFixture {
         NONE, MULTIPLE, SINGLE_WITH_SPACES_IN_TOKENS

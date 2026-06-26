@@ -43,6 +43,7 @@ import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.lazySleepin
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -283,10 +284,12 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
-                exception.getMessage().contains(parameters.expectedElement()),
+                message.contains(parameters.expectedElement()),
                 "Expected the offending element '" + parameters.expectedElement() + "' in the message but was: "
-                        + exception.getMessage()
+                        + message
         );
     }
 
@@ -302,9 +305,11 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
-                exception.getMessage().contains("line "),
-                "A malformed document should report the parse location but was: " + exception.getMessage()
+                message.contains("line "),
+                "A malformed document should report the parse location but was: " + message
         );
     }
 
@@ -321,6 +326,7 @@ class XmlTrainingDataValidationTest {
 
         // ASSERT //
         String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
                 message.contains("Pronoun") && message.contains("Conjunction"),
                 "Both undeclared tags should be reported but was: " + message
@@ -339,9 +345,11 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
         assertTrue(
-                exception.getMessage().toLowerCase(Locale.ROOT).contains("doctype"),
-                "Rejection should cite the DOCTYPE restriction but was: " + exception.getMessage()
+                message.toLowerCase(Locale.ROOT).contains("doctype"),
+                "Rejection should cite the DOCTYPE restriction but was: " + message
         );
     }
 

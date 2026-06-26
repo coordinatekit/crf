@@ -31,7 +31,6 @@ import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.coordinatekit.crf.core.tag.TaggedTokenizations;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -686,7 +685,6 @@ class AnnotatorTest {
         return inputFile;
     }
 
-    @NullMarked
     private static final class FixedTagger implements CrfTagger<String, String> {
         private final Map<String, Sequence<TaggedPositionedToken<String, String>>> responses;
         private final Tokenizer tokenizer = new WhitespaceTokenizer();
@@ -705,7 +703,6 @@ class AnnotatorTest {
         }
     }
 
-    @NullMarked
     private static final class ScriptedTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
         final List<AnnotatorSequence<F, T>> presented = new ArrayList<>();
         final Deque<TaggingResult<T>> results = new ArrayDeque<>();

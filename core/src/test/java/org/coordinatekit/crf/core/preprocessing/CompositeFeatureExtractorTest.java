@@ -18,7 +18,6 @@ package org.coordinatekit.crf.core.preprocessing;
 import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -27,7 +26,6 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@NullMarked
 class CompositeFeatureExtractorTest {
     @Test
     void combinesMultipleExtractors() {

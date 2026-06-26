@@ -40,7 +40,6 @@ import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -83,7 +82,6 @@ class ResolvedServicesFactoryTest {
     };
     private static final CrfTaggerLoader TAGGER_LOADER = new CrfTaggerLoader() {
         @SuppressWarnings("unchecked")
-        @NullMarked
         @Override
         public <F, T extends Comparable<T>> CrfTagger<F, T> load(
                 Path modelPath,
@@ -280,7 +278,6 @@ class ResolvedServicesFactoryTest {
     }
 
     /** A tagging interface that records the presented sequence and exits to end the loop. */
-    @NullMarked
     private static final class CapturingTaggingInterface implements TaggingInterface<String, String> {
         private final List<AnnotatorSequence<String, String>> presented = new ArrayList<>();
 

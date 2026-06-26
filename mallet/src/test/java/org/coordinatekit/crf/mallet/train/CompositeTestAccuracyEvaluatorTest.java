@@ -26,7 +26,6 @@ import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.LabelAlphabet;
 import cc.mallet.types.LabelSequence;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@NullMarked
 class CompositeTestAccuracyEvaluatorTest {
     private static final String TEST_DESCRIPTION = "test";
 

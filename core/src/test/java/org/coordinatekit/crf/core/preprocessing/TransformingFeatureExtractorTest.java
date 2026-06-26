@@ -25,12 +25,10 @@ import java.util.stream.Stream;
 import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@NullMarked
 class TransformingFeatureExtractorTest {
 
     record ExtractAtParameters(

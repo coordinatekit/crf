@@ -21,7 +21,6 @@ import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
-import org.jspecify.annotations.NullMarked;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -39,7 +38,6 @@ import java.util.TreeSet;
  * parts-of-speech labels such as NOUN, VERB, ADJ, etc. It can be used to verify tagging
  * functionality without requiring a full production model.
  */
-@NullMarked
 public enum PartsOfSpeechModel {
     /** The singleton instance of the parts-of-speech model. */
     INSTANCE;

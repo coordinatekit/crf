@@ -59,6 +59,21 @@ subprojects {
         // Deprecated APIs are kept for one release as plain forwarding shims; we don't want them
         // rewritten into callers, so silence Error Prone's suggestion to annotate them with @InlineMe.
         options.errorprone.disable("InlineMeSuggester")
+
+        // Enforce JSpecify @NullMarked null-safety at build time.
+        options.errorprone.error("NullAway")
+        options.errorprone.option("NullAway:OnlyNullMarked", "true")
+        options.errorprone.option("NullAway:JSpecifyMode", "true")
+
+        // JSpecify mode needs type-use annotations in the symbol table; required on JDK < 22.
+        // https://github.com/uber/NullAway/wiki/JSpecify-Support#supported-jdk-versions
+        options.compilerArgs += ["-XDaddTypeAnnotationsToSymbol=true"]
+    }
+
+    tasks.named("compileTestJava") {
+        // @TempDir fields are injected by reflection, so exclude them from initialization checking.
+        options.errorprone.option("NullAway:ExcludedFieldAnnotations", "org.junit.jupiter.api.io.TempDir")
+        options.errorprone.option("NullAway:HandleTestAssertionLibraries", "true")
     }
 
     centralPortal {
@@ -119,6 +134,7 @@ subprojects {
 
     dependencies {
         errorprone libs.errorprone.core
+        errorprone libs.nullaway
 
         api libs.jspecify
         implementation libs.slf4j.api

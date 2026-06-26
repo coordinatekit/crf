@@ -45,7 +45,7 @@ class XmlTrainingDataConfigurationTest {
             String expectedMessage
     ) {}
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<RootElementNameExceptionParameters> rootElementName__exception() {
         return Stream.of(
                 new RootElementNameExceptionParameters(

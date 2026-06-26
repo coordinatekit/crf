@@ -14,6 +14,7 @@ logback = "1.5.22"
 
 # build — keep current
 errorprone = "2.36.0"
+nullaway = "0.13.7"
 
 # plugins
 dependency-license-report = "3.1.2"
@@ -32,6 +33,7 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 mallet = { module = "cc.mallet:mallet", version.ref = "mallet" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 

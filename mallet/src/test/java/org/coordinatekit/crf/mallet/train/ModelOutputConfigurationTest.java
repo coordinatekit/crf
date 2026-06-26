@@ -15,17 +15,16 @@
  */
 package org.coordinatekit.crf.mallet.train;
 
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@NullMarked
 class ModelOutputConfigurationTest {
 
     private static final Path TEST_OUTPUT_DIR = Path.of("test/output");
@@ -74,7 +73,7 @@ class ModelOutputConfigurationTest {
         assertEquals("my_prefix", config.filePrefix());
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Test
     void builder_filePrefix_rejectsNull() {
         var builder = ModelOutputConfiguration.builder();
@@ -93,7 +92,7 @@ class ModelOutputConfigurationTest {
         assertEquals("bin", config.fileSuffix());
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Test
     void builder_fileSuffix_rejectsNull() {
         var builder = ModelOutputConfiguration.builder();
@@ -121,8 +120,10 @@ class ModelOutputConfigurationTest {
                 () -> builder.iterationInterval(0)
         );
 
-        assertTrue(exception.getMessage().contains("iterationInterval"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("iterationInterval"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -134,8 +135,10 @@ class ModelOutputConfigurationTest {
                 () -> builder.iterationInterval(-5)
         );
 
-        assertTrue(exception.getMessage().contains("iterationInterval"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("iterationInterval"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -145,7 +148,7 @@ class ModelOutputConfigurationTest {
         assertEquals(TEST_OUTPUT_DIR, config.outputDirectory());
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Test
     void builder_outputDirectory_rejectsNull() {
         var builder = ModelOutputConfiguration.builder();

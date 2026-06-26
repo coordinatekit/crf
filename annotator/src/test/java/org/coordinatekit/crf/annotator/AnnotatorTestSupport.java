@@ -33,7 +33,6 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
-import org.jspecify.annotations.NullMarked;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -230,7 +229,6 @@ public final class AnnotatorTestSupport {
      * {@code '.'} characters into separate single-character tokens, and rejects any surface containing
      * {@code '?'}. Surfaces tokenized whole under the old data therefore misalign here.
      */
-    @NullMarked
     public static final class PunctuationTokenizer implements Tokenizer {
         @Override
         public Tokenization tokenize(String input) {

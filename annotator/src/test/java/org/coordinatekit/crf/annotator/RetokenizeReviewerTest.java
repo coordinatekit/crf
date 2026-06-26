@@ -27,7 +27,6 @@ import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.coordinatekit.crf.core.tag.TaggedTokenizations;
 import org.jline.terminal.Terminal;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
@@ -62,6 +61,7 @@ import static org.coordinatekit.crf.annotator.TaggingAction.ACCEPT;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.coordinatekit.crf.annotator.TaggingAction.SKIP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -336,9 +336,11 @@ class RetokenizeReviewerTest {
                     ReviewPreconditionException.class,
                     () -> reviewer.review(inputFile, outputFile)
             );
+            String message = exception.getMessage();
+            assertNotNull(message);
             assertTrue(
-                    exception.getMessage().contains(parameters.expectedSubstring()),
-                    "message should explain the violated precondition: " + exception.getMessage()
+                    message.contains(parameters.expectedSubstring()),
+                    "message should explain the violated precondition: " + message
             );
         }
     }
@@ -446,9 +448,11 @@ class RetokenizeReviewerTest {
                     IllegalArgumentException.class,
                     () -> reviewer.review(inputFile, outputFile)
             );
+            String message = exception.getMessage();
+            assertNotNull(message);
             assertTrue(
-                    exception.getMessage().contains("one tag per token segment"),
-                    "the authority tokenization's token count must drive persistence: " + exception.getMessage()
+                    message.contains("one tag per token segment"),
+                    "the authority tokenization's token count must drive persistence: " + message
             );
         }
     }
@@ -533,7 +537,6 @@ class RetokenizeReviewerTest {
      * A tagger with canned per-token tag scores keyed by surface, tokenized by
      * {@link PunctuationTokenizer}.
      */
-    @NullMarked
     private static final class FixedTagger implements CrfTagger<String, String> {
         private final Map<String, List<Map<String, Double>>> tagScoresBySurface;
         private final Tokenizer tokenizer;
@@ -560,7 +563,6 @@ class RetokenizeReviewerTest {
         }
     }
 
-    @NullMarked
     private static final class ScriptedTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
         final List<AnnotatorSequence<F, T>> presented = new ArrayList<>();
         final Deque<TaggingResult<T>> results = new ArrayDeque<>();
