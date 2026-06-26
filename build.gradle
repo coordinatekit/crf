@@ -28,8 +28,8 @@ gitChangelog {
 def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && !it.name.endsWith("ToMavenLocal") } }
 
 signing {
-    def signingKey = findProperty("signingKey")
-    def signingPassword = findProperty("signingPassword")
+    String signingKey = findProperty("signingKey")
+    String signingPassword = findProperty("signingPassword")
     if (signingKey) {
         useInMemoryPgpKeys(signingKey, signingPassword)
     } else {
@@ -96,8 +96,8 @@ subprojects {
     }
 
     signing {
-        def signingKey = findProperty("signingKey")
-        def signingPassword = findProperty("signingPassword")
+        String signingKey = findProperty("signingKey")
+        String signingPassword = findProperty("signingPassword")
         if (signingKey) {
             useInMemoryPgpKeys(signingKey, signingPassword)
         } else {
