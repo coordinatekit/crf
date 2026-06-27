@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertMessageContains;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.brownFoxWithExcluded;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.emptyTagProviderMessage;
@@ -284,13 +285,7 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(
-                message.contains(parameters.expectedElement()),
-                "Expected the offending element '" + parameters.expectedElement() + "' in the message but was: "
-                        + message
-        );
+        assertMessageContains(exception, parameters.expectedElement());
     }
 
     @Test
@@ -305,12 +300,7 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(
-                message.contains("line "),
-                "A malformed document should report the parse location but was: " + message
-        );
+        assertMessageContains(exception, "line ");
     }
 
     @Test
@@ -325,12 +315,7 @@ class XmlTrainingDataValidationTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(
-                message.contains("Pronoun") && message.contains("Conjunction"),
-                "Both undeclared tags should be reported but was: " + message
-        );
+        assertMessageContains(exception, "Pronoun", "Conjunction");
     }
 
     @Test

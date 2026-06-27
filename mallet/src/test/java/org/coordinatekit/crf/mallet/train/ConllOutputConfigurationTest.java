@@ -15,19 +15,42 @@
  */
 package org.coordinatekit.crf.mallet.train;
 
+import org.coordinatekit.crf.mallet.train.OutputConfigurationTestSupport.BuilderExceptionParameters;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 
+import static org.coordinatekit.crf.mallet.train.OutputConfigurationTestSupport.outputBuilderExceptionCases;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConllOutputConfigurationTest {
 
     private static final Path TEST_OUTPUT_DIR = Path.of("test/output");
+
+    static Stream<BuilderExceptionParameters> builder__exception() {
+        return outputBuilderExceptionCases(
+                ConllOutputConfiguration::builder,
+                ConllOutputConfiguration.Builder::filePrefix,
+                ConllOutputConfiguration.Builder::fileSuffix,
+                ConllOutputConfiguration.Builder::iterationInterval,
+                ConllOutputConfiguration.Builder::outputDirectory
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void builder__exception(BuilderExceptionParameters parameters) {
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
 
     @Test
     void builder_withRequiredFieldsOnly_usesDefaults() {
@@ -73,34 +96,12 @@ class ConllOutputConfigurationTest {
         assertEquals("my_prefix", config.filePrefix());
     }
 
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    @Test
-    void builder_filePrefix_rejectsNull() {
-        var builder = ConllOutputConfiguration.builder();
-
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> builder.filePrefix(null));
-
-        assertTrue(exception.getMessage().contains("filePrefix"));
-        assertTrue(exception.getMessage().contains("null"));
-    }
-
     @Test
     void builder_fileSuffix_acceptsValidValues() {
         ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
                 .fileSuffix("txt").build();
 
         assertEquals("txt", config.fileSuffix());
-    }
-
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    @Test
-    void builder_fileSuffix_rejectsNull() {
-        var builder = ConllOutputConfiguration.builder();
-
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> builder.fileSuffix(null));
-
-        assertTrue(exception.getMessage().contains("fileSuffix"));
-        assertTrue(exception.getMessage().contains("null"));
     }
 
     @Test
@@ -112,50 +113,9 @@ class ConllOutputConfigurationTest {
     }
 
     @Test
-    void builder_iterationInterval_rejectsZero() {
-        var builder = ConllOutputConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.iterationInterval(0)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("iterationInterval"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
-    void builder_iterationInterval_rejectsNegative() {
-        var builder = ConllOutputConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.iterationInterval(-5)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("iterationInterval"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
-    void builder_iterationInterval_acceptsPath() {
+    void builder_outputDirectory_acceptsPath() {
         ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR).build();
 
         assertEquals(TEST_OUTPUT_DIR, config.outputDirectory());
-    }
-
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    @Test
-    void builder_outputDirectory_rejectsNull() {
-        var builder = ConllOutputConfiguration.builder();
-
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> builder.outputDirectory(null));
-
-        assertTrue(exception.getMessage().contains("outputDirectory"));
-        assertTrue(exception.getMessage().contains("null"));
     }
 }

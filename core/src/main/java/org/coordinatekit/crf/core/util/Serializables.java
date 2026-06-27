@@ -17,8 +17,10 @@ package org.coordinatekit.crf.core.util;
 
 import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.file.Files;
@@ -51,22 +53,65 @@ public class Serializables {
     private Serializables() {}
 
     /**
-     * Deserializes an object from a file.
+     * Deserializes an object from a file without an {@link ObjectInputFilter}.
+     *
+     * <p>
+     * No deserialization allowlist is applied beyond any JVM-wide filter configured through
+     * {@code -Djdk.serialFilter}. Prefer {@link #deserialize(Class, Path, ObjectInputFilter)} when the
+     * file may originate from an untrusted source.
      *
      * @param <T> the type of the object to deserialize
      * @param clazz the class of the object to deserialize
      * @param file the path to the file containing the serialized object
      * @return the deserialized object
      * @throws IOException if an I/O error occurs while reading from the file
-     * @throws UncheckedCrfException if the class of the serialized object cannot be found
+     * @throws UncheckedCrfException if the class of the serialized object cannot be found, or if the
+     *         deserialized object is not assignable to {@code clazz}
      */
-    @SuppressWarnings({"unchecked", "unused"})
     public static <T> T deserialize(Class<T> clazz, Path file) throws IOException {
+        return read(clazz, file, null);
+    }
+
+    /**
+     * Deserializes an object from a file, applying the supplied JEP-290 {@link ObjectInputFilter}.
+     *
+     * <p>
+     * The filter is installed on the stream before any object is read, so a rejected class fails fast
+     * with an {@link java.io.InvalidClassException} (a subtype of {@link IOException}) before its
+     * deserialization side effects run. The filter is required so the hardened path cannot silently
+     * degrade to an unfiltered read.
+     *
+     * @param <T> the type of the object to deserialize
+     * @param clazz the class of the object to deserialize
+     * @param file the path to the file containing the serialized object
+     * @param filter the deserialization allowlist to apply to the stream
+     * @return the deserialized object
+     * @throws IOException if an I/O error occurs while reading from the file, or if the stream contains
+     *         a class rejected by {@code filter}
+     * @throws UncheckedCrfException if the class of the serialized object cannot be found, or if the
+     *         deserialized object is not assignable to {@code clazz}
+     */
+    public static <T> T deserialize(Class<T> clazz, Path file, ObjectInputFilter filter) throws IOException {
+        Objects.requireNonNull(filter, "The filter parameter may not be null.");
+        return read(clazz, file, filter);
+    }
+
+    private static <T> T read(Class<T> clazz, Path file, @Nullable ObjectInputFilter filter) throws IOException {
         Objects.requireNonNull(clazz, "The clazz parameter may not be null.");
         Objects.requireNonNull(file, "The file parameter may not be null.");
 
         try (ObjectInputStream s = new ObjectInputStream(Files.newInputStream(file))) {
-            return (T) s.readObject();
+            if (filter != null) {
+                s.setObjectInputFilter(filter);
+            }
+            Object object = s.readObject();
+            if (object != null && !clazz.isInstance(object)) {
+                throw new UncheckedCrfException(
+                        "Deserialized object of type " + object.getClass().getName() + " is not assignable to "
+                                + clazz.getName() + "."
+                );
+            }
+            return clazz.cast(object);
         } catch (ClassNotFoundException e) {
             throw new UncheckedCrfException(e);
         }

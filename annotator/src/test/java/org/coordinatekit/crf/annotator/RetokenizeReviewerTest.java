@@ -48,6 +48,7 @@ import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.TAG_PROVIDER;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.assertMessageContains;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.capturingTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.initialTagsOf;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
@@ -61,7 +62,6 @@ import static org.coordinatekit.crf.annotator.TaggingAction.ACCEPT;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.coordinatekit.crf.annotator.TaggingAction.SKIP;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -336,12 +336,7 @@ class RetokenizeReviewerTest {
                     ReviewPreconditionException.class,
                     () -> reviewer.review(inputFile, outputFile)
             );
-            String message = exception.getMessage();
-            assertNotNull(message);
-            assertTrue(
-                    message.contains(parameters.expectedSubstring()),
-                    "message should explain the violated precondition: " + message
-            );
+            assertMessageContains(exception, parameters.expectedSubstring());
         }
     }
 
@@ -448,12 +443,7 @@ class RetokenizeReviewerTest {
                     IllegalArgumentException.class,
                     () -> reviewer.review(inputFile, outputFile)
             );
-            String message = exception.getMessage();
-            assertNotNull(message);
-            assertTrue(
-                    message.contains("one tag per token segment"),
-                    "the authority tokenization's token count must drive persistence: " + message
-            );
+            assertMessageContains(exception, "one tag per token segment");
         }
     }
 

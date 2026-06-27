@@ -16,14 +16,101 @@
 package org.coordinatekit.crf.mallet.train;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MalletCrfTrainerConfigurationTest {
+
+    record BuilderExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
+    @SuppressWarnings({"DataFlowIssue", "NullAway"}) // null literals passed to non-null setters
+    static Stream<BuilderExceptionParameters> builder__exception() {
+        return Stream.of(
+                new BuilderExceptionParameters(
+                        "gaussianVariance_negative",
+                        () -> MalletCrfTrainerConfiguration.builder().gaussianVariance(-1.0),
+                        IllegalArgumentException.class,
+                        "gaussianVariance must be positive, got: -1.0"
+                ),
+                new BuilderExceptionParameters(
+                        "gaussianVariance_zero",
+                        () -> MalletCrfTrainerConfiguration.builder().gaussianVariance(0),
+                        IllegalArgumentException.class,
+                        "gaussianVariance must be positive, got: 0.0"
+                ),
+                new BuilderExceptionParameters(
+                        "iterations_negative",
+                        () -> MalletCrfTrainerConfiguration.builder().iterations(-10),
+                        IllegalArgumentException.class,
+                        "iterations must be positive, got: -10"
+                ),
+                new BuilderExceptionParameters(
+                        "iterations_zero",
+                        () -> MalletCrfTrainerConfiguration.builder().iterations(0),
+                        IllegalArgumentException.class,
+                        "iterations must be positive, got: 0"
+                ),
+                new BuilderExceptionParameters(
+                        "threads_negative",
+                        () -> MalletCrfTrainerConfiguration.builder().threads(-4),
+                        IllegalArgumentException.class,
+                        "threads must be positive, got: -4"
+                ),
+                new BuilderExceptionParameters(
+                        "threads_zero",
+                        () -> MalletCrfTrainerConfiguration.builder().threads(0),
+                        IllegalArgumentException.class,
+                        "threads must be positive, got: 0"
+                ),
+                new BuilderExceptionParameters(
+                        "trainingFraction_greaterThanOne",
+                        () -> MalletCrfTrainerConfiguration.builder().trainingFraction(1.01),
+                        IllegalArgumentException.class,
+                        "trainingFraction must be in (0.0, 1.0], got: 1.01"
+                ),
+                new BuilderExceptionParameters(
+                        "trainingFraction_negative",
+                        () -> MalletCrfTrainerConfiguration.builder().trainingFraction(-0.5),
+                        IllegalArgumentException.class,
+                        "trainingFraction must be in (0.0, 1.0], got: -0.5"
+                ),
+                new BuilderExceptionParameters(
+                        "trainingFraction_zero",
+                        () -> MalletCrfTrainerConfiguration.builder().trainingFraction(0.0),
+                        IllegalArgumentException.class,
+                        "trainingFraction must be in (0.0, 1.0], got: 0.0"
+                ),
+                new BuilderExceptionParameters(
+                        "weightsType_null",
+                        () -> MalletCrfTrainerConfiguration.builder().weightsType(null),
+                        NullPointerException.class,
+                        "weightsType must not be null"
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void builder__exception(BuilderExceptionParameters parameters) {
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
 
     @Test
     void builder_canBeReused() {
@@ -49,36 +136,6 @@ class MalletCrfTrainerConfigurationTest {
     }
 
     @Test
-    void builder_gaussianVariance_rejectsNegative() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.gaussianVariance(-1.0)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("gaussianVariance"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
-    void builder_gaussianVariance_rejectsZero() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.gaussianVariance(0)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("gaussianVariance"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
     void builder_iterations_acceptsPositive() {
         MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().iterations(1).build();
 
@@ -86,61 +143,10 @@ class MalletCrfTrainerConfigurationTest {
     }
 
     @Test
-    void builder_iterations_rejectsNegative() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.iterations(-10)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("iterations"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
-    void builder_iterations_rejectsZero() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.iterations(0));
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("iterations"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
     void builder_threads_acceptsPositive() {
         MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().threads(1).build();
 
         assertEquals(1, config.threads());
-    }
-
-    @Test
-    void builder_threads_rejectsNegative() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.threads(-4));
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("threads"));
-        assertTrue(message.contains("positive"));
-    }
-
-    @Test
-    void builder_threads_rejectsZero() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.threads(0));
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("threads"));
-        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -166,66 +172,12 @@ class MalletCrfTrainerConfigurationTest {
     }
 
     @Test
-    void builder_trainingFraction_rejectsGreaterThanOne() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.trainingFraction(1.01)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("trainingFraction"));
-    }
-
-    @Test
-    void builder_trainingFraction_rejectsNegative() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.trainingFraction(-0.5)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("trainingFraction"));
-    }
-
-    @Test
-    void builder_trainingFraction_rejectsZero() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> builder.trainingFraction(0.0)
-        );
-
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("trainingFraction"));
-        assertTrue(message.contains("(0.0, 1.0]"));
-    }
-
-    @Test
     void builder_weightsType_acceptsAllEnumValues() {
         for (WeightsType type : WeightsType.values()) {
             MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().weightsType(type).build();
 
             assertEquals(type, config.weightsType());
         }
-    }
-
-    @SuppressWarnings({"DataFlowIssue", "NullAway"})
-    @Test
-    void builder_weightsType_rejectsNull() {
-        var builder = MalletCrfTrainerConfiguration.builder();
-
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> builder.weightsType(null));
-
-        assertTrue(exception.getMessage().contains("weightsType"));
-        assertTrue(exception.getMessage().contains("null"));
     }
 
     @Test

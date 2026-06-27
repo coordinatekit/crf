@@ -17,6 +17,7 @@ package org.coordinatekit.crf.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,14 @@ abstract class CommandExecutionTestSupport {
     record ExitTwoParameters(String name, List<String> arguments, List<String> expectedErrorSubstrings) {}
 
     private record Execution(int exitCode, String out, String err) {}
+
+    static void assertMessageContains(Throwable exception, String... fragments) {
+        String message = exception.getMessage();
+        assertNotNull(message, "expected a detail message");
+        for (String fragment : fragments) {
+            assertTrue(message.contains(fragment), "expected message to contain \"" + fragment + "\"; was: " + message);
+        }
+    }
 
     private Execution execute(String... arguments) {
         CommandLine commandLine = new CommandLine(newCommand(ResolvedServices.builder()));
