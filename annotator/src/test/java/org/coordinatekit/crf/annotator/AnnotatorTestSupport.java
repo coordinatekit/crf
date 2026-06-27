@@ -52,6 +52,13 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
 /** Shared fixtures and helpers for the annotator unit and integration tests. */
 public final class AnnotatorTestSupport {
+    /**
+     * Malformed XML whose unterminated {@code xmlns:crf="unclosed} attribute makes parsing fail with an
+     * {@code XMLStreamException} regardless of the root element name, for exercising the parse-failure
+     * path.
+     */
+    public static final String MALFORMED_XML = "<crf:Collection xmlns:crf=\"unclosed";
+
     public static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
 
     private AnnotatorTestSupport() {}

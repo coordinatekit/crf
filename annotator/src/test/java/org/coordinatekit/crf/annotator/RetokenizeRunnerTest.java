@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.MALFORMED_XML;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.interactiveTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.nonInteractiveTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
@@ -34,6 +35,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -90,6 +93,30 @@ class RetokenizeRunnerTest {
         assertEquals(1, written.size());
         assertEquals(List.of("Smith", ",", "Jones"), tokensOf(written.getFirst()), "accepted sequence re-tokenized");
         assertEquals("Smith, Jones", written.getFirst().surface(), "the re-tokenized surface round-trips");
+    }
+
+    @Test
+    void run__malformedInputReturnsExitCodeOne(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path inputFile = tempDirectory.resolve("in.xml");
+        Files.writeString(inputFile, MALFORMED_XML, StandardCharsets.UTF_8);
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(inputFile)
+                .output(tempDirectory.resolve("out.xml")).build();
+
+        // ACT //
+        int exitCode;
+        try (Terminal terminal = quietTerminal()) {
+            exitCode = RetokenizeRunner.run(configuration, reviewerFactory(), terminal);
+        }
+
+        // ASSERT //
+        assertEquals(1, exitCode);
+        String stderr = streams.err();
+        assertTrue(stderr.contains("Retokenize failed:"), "expected stderr to report the failure; was: " + stderr);
+        assertTrue(
+                stderr.contains("XMLStreamException"),
+                "expected stderr to identify the parse-failure path, not the precondition path; was: " + stderr
+        );
     }
 
     @Test

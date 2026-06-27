@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
@@ -34,12 +35,15 @@ import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * Tests {@link ResolvedServices}: the per-slot resolution precedence
@@ -76,7 +80,7 @@ class ResolvedServicesTest {
         return loaderCapturing(new AtomicReference<>(), tagger);
     }
 
-    private static CrfTaggerLoader loaderThrowing(IOException cause) {
+    private static CrfTaggerLoader loaderThrowing(Exception cause) {
         return new CrfTaggerLoader() {
             @Override
             public <F, T extends Comparable<T>> CrfTagger<F, T> load(
@@ -85,18 +89,37 @@ class ResolvedServicesTest {
                     TagProvider<T> tagProvider,
                     Tokenizer tokenizer
             ) throws IOException {
-                throw cause;
+                if (cause instanceof IOException ioException) {
+                    throw ioException;
+                }
+                throw (RuntimeException) cause;
             }
         };
     }
 
-    @Test
-    void loadTagger__ioExceptionWrappedAsStartupException() {
+    record LoadFailureParameters(String name, Exception thrown) {}
+
+    static Stream<LoadFailureParameters> loadTagger__loadFailuresWrappedAsStartupException() {
+        return Stream.of(
+                new LoadFailureParameters("io_exception", new IOException("disk gone")),
+                new LoadFailureParameters(
+                        "class_not_found_unchecked",
+                        new UncheckedCrfException(new ClassNotFoundException("cc.mallet.fst.CRF"))
+                ),
+                new LoadFailureParameters(
+                        "wrong_type_class_cast",
+                        new ClassCastException("class java.lang.String cannot be cast to class cc.mallet.fst.CRF")
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void loadTagger__loadFailuresWrappedAsStartupException(LoadFailureParameters parameters) {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderThrowing(new IOException("disk gone")))
-                .resolve();
+                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderThrowing(parameters.thrown())).resolve();
 
         // ACT //
         CrfStartupException exception = assertThrows(
@@ -111,6 +134,7 @@ class ResolvedServicesTest {
                 message.contains("failed to load") && message.contains("model.bin"),
                 "message should report the failure and the path; was: " + message
         );
+        assertSame(parameters.thrown(), exception.getCause(), "the boundary should preserve the cause");
     }
 
     @Test

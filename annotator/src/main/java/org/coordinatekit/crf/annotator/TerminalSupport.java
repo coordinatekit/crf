@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.NullMarked;
 
@@ -58,8 +59,8 @@ final class TerminalSupport {
      * @param supplier supplies the JLine terminal to run against
      * @param err the writer for diagnostic output
      * @param action the work to run inside the opened terminal
-     * @return {@code 0} on success, {@code 1} on an open failure, a rejected terminal, or a thrown
-     *         {@link IOException}
+     * @return {@code 0} on success, {@code 1} on an open failure, a rejected terminal, a thrown
+     *         {@link IOException}, or a lazy parse failure ({@link UncheckedCrfException})
      */
     static int runInteractive(
             String commandLabel,
@@ -92,15 +93,16 @@ final class TerminalSupport {
      * <p>
      * JLine "dumb" terminal types are rejected with
      * {@code commandLabel + " requires an interactive terminal; got terminal type: …"} and exit
-     * {@code 1}. An {@link IOException} thrown by {@code action} maps to exit {@code 1} with
-     * {@code failureLabel + " failed: …"}.
+     * {@code 1}. An {@link IOException} or a lazy parse failure ({@link UncheckedCrfException}) thrown
+     * by {@code action} maps to exit {@code 1} with {@code failureLabel + " failed: …"}.
      *
      * @param commandLabel the command name used in the interactive-terminal precondition message
      * @param failureLabel the label prefixing a run-failure message
      * @param terminal the already-open JLine terminal to run against
      * @param err the writer for diagnostic output
      * @param action the work to run inside the terminal
-     * @return {@code 0} on success, {@code 1} on a rejected terminal or a thrown {@link IOException}
+     * @return {@code 0} on success, {@code 1} on a rejected terminal, a thrown {@link IOException}, or
+     *         a lazy parse failure ({@link UncheckedCrfException})
      */
     static int runInTerminal(
             String commandLabel,
@@ -116,7 +118,7 @@ final class TerminalSupport {
         }
         try {
             return action.run(terminal);
-        } catch (IOException exception) {
+        } catch (IOException | UncheckedCrfException exception) {
             err.println(failureLabel + " failed: " + exception.getMessage());
             return 1;
         }
