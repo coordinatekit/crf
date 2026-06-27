@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.cli;
 
+import static org.coordinatekit.crf.cli.CommandExecutionTestSupport.assertMessageContains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -128,12 +129,7 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(
-                message.contains("failed to load") && message.contains("model.bin"),
-                "message should report the failure and the path; was: " + message
-        );
+        assertMessageContains(exception, "failed to load", "model.bin");
         assertSame(parameters.thrown(), exception.getCause(), "the boundary should preserve the cause");
     }
 
@@ -200,9 +196,7 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(message.contains("TaggerLoader"), "message should name the missing slot; was: " + message);
+        assertMessageContains(exception, "TaggerLoader");
     }
 
     @Test
@@ -294,12 +288,7 @@ class ResolvedServicesTest {
         );
 
         // ASSERT //
-        String message = exception.getMessage();
-        assertNotNull(message);
-        assertTrue(
-                message.contains("TagProvider"),
-                "message should guide the user to register a TagProvider; was: " + message
-        );
+        assertMessageContains(exception, "TagProvider");
     }
 
     @Test

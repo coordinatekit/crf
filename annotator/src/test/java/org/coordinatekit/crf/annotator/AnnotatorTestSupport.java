@@ -49,6 +49,8 @@ import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Shared fixtures and helpers for the annotator unit and integration tests. */
 public final class AnnotatorTestSupport {
@@ -71,6 +73,18 @@ public final class AnnotatorTestSupport {
             return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
                     .terminal(sharedTerminal).tokenizer(new WhitespaceTokenizer()).build();
         };
+    }
+
+    /**
+     * Asserts that {@code exception} carries a non-null detail message containing every given member of
+     * {@code fragments}, failing with the actual message when it does not.
+     */
+    public static void assertMessageContains(Throwable exception, String... fragments) {
+        String message = exception.getMessage();
+        assertNotNull(message, "expected a detail message");
+        for (String fragment : fragments) {
+            assertTrue(message.contains(fragment), "expected message to contain \"" + fragment + "\"; was: " + message);
+        }
     }
 
     /** Returns the ANSI escape prefix emitted for a bold-yellow style, for asserting styled rows. */

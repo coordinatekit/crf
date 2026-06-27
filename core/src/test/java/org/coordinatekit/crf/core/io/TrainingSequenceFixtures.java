@@ -24,6 +24,8 @@ import java.util.List;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class TrainingSequenceFixtures {
     // A document carrying a DOCTYPE declaration; with DTDs disabled both the read and
@@ -64,6 +66,14 @@ final class TrainingSequenceFixtures {
         assertEquals("Sleeping", sequence.get(1).token());
         assertEquals("Noun", sequence.get(2).tag());
         assertEquals("Dog", sequence.get(2).token());
+    }
+
+    static void assertMessageContains(Throwable exception, String... fragments) {
+        String message = exception.getMessage();
+        assertNotNull(message, "expected a detail message");
+        for (String fragment : fragments) {
+            assertTrue(message.contains(fragment), "expected message to contain \"" + fragment + "\"; was: " + message);
+        }
     }
 
     static TrainingSequence<String> brownFox() {

@@ -20,11 +20,13 @@ import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedTokenization;
+import org.coordinatekit.crf.core.util.Serializables;
 import org.coordinatekit.crf.mallet.model.PartsOfSpeechModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -47,6 +49,28 @@ class MalletCrfTaggerTest {
                 PartsOfSpeechModel.INSTANCE.tagProvider(),
                 new WhitespaceTokenizer()
         );
+    }
+
+    @Test
+    void constructorRejectsDisallowedClassInModelFile() throws IOException {
+        // A serialized object whose class lives in a package outside the model deserialization allowlist
+        // (cc.mallet.**;gnu.trove.**;java.**) must be rejected before its graph is materialized.
+        Path maliciousPath = Files.createTempFile("malicious_model", ".crf");
+        try {
+            Serializables.serialize(new DisallowedPayload(), maliciousPath);
+
+            assertThrows(
+                    IOException.class,
+                    () -> new MalletCrfTagger<>(
+                            PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                            maliciousPath,
+                            PartsOfSpeechModel.INSTANCE.tagProvider(),
+                            new WhitespaceTokenizer()
+                    )
+            );
+        } finally {
+            Files.deleteIfExists(maliciousPath);
+        }
     }
 
     @Test
@@ -183,4 +207,6 @@ class MalletCrfTaggerTest {
                 actual.get(0).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
         );
     }
+
+    static class DisallowedPayload implements Serializable {}
 }

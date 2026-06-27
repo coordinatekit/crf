@@ -9,15 +9,15 @@ mallet = "2.0.8"
 slf4j = "2.0.17"
 
 # test — always latest
-junit = "6.0.1"
+junit = "6.1.0"
 logback = "1.5.37"
 
 # build — keep current
-errorprone = "2.36.0"
+errorprone = "2.50.0"
 nullaway = "0.13.7"
 
 # plugins
-dependency-license-report = "3.1.2"
+dependency-license-report = "3.1.4"
 errorprone-plugin = "4.1.0"
 git-changelog = "2.2.0"
 sonatype-central-portal-publisher = "1.2.4"

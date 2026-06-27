@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,6 +64,9 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
     @SuppressWarnings("unused")
     private static final Logger logger = LoggerFactory.getLogger(MalletCrfTagger.class);
 
+    private static final ObjectInputFilter MODEL_DESERIALIZATION_FILTER = ObjectInputFilter.Config
+            .createFilter("cc.mallet.**;gnu.trove.**;java.**;!*");
+
     private final FeatureExtractor<F> featureExtractor;
     private final CRF model;
     private final TagProvider<T> tagProvider;
@@ -85,7 +89,7 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
             Tokenizer tokenizer
     ) throws IOException {
         this.featureExtractor = featureExtractor;
-        this.model = Serializables.deserialize(CRF.class, modelPath);
+        this.model = Serializables.deserialize(CRF.class, modelPath, MODEL_DESERIALIZATION_FILTER);
         this.tagProvider = tagProvider;
         this.tokenizer = tokenizer;
     }
