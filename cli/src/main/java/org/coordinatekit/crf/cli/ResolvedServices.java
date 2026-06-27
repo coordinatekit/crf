@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.cli;
 
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
@@ -145,7 +146,7 @@ final class ResolvedServices {
      * @param modelPath the serialized model to load, or {@code null} to run without tag suggestions
      * @return the loaded tagger, or {@code null} if {@code modelPath} is {@code null}
      * @throws CrfStartupException if a model was supplied but no {@link CrfTaggerLoader} is available,
-     *         or the model cannot be read
+     *         or the model cannot be read or is not a valid model
      */
     @Nullable
     CrfTagger<?, ?> loadTagger(@Nullable Path modelPath) {
@@ -163,7 +164,7 @@ final class ResolvedServices {
                 : emptyFeatureExtractor();
         try {
             return taggerLoader.load(modelPath, resolvedFeatureExtractor, tagProvider, tokenizer);
-        } catch (IOException exception) {
+        } catch (IOException | UncheckedCrfException | ClassCastException exception) {
             throw new CrfStartupException(
                     "failed to load the model from " + modelPath + ": " + exception.getMessage(),
                     exception

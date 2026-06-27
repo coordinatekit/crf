@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.MALFORMED_XML;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.annotatorFactory;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.interactiveTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.nonInteractiveTerminal;
@@ -108,5 +109,31 @@ class AnnotatorRunnerTest {
         String stderr = streams.err();
         assertTrue(stderr.contains("Annotation failed:"), "expected stderr to report the failure; was: " + stderr);
         assertTrue(stderr.contains(missingInput.toString()), "expected stderr to include the underlying message");
+    }
+
+    @Test
+    void run__malformedResumeOutputReturnsExitCodeOne(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path inputFile = tempDirectory.resolve("in.txt");
+        Path outputFile = tempDirectory.resolve("out.xml");
+        Files.writeString(inputFile, "the quick brown\n", StandardCharsets.UTF_8);
+        Files.writeString(outputFile, MALFORMED_XML, StandardCharsets.UTF_8);
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(inputFile).output(outputFile)
+                .build();
+
+        // ACT //
+        int exitCode;
+        try (Terminal terminal = quietTerminal()) {
+            exitCode = AnnotatorRunner.run(configuration, annotatorFactory(), terminal);
+        }
+
+        // ASSERT //
+        assertEquals(1, exitCode);
+        String stderr = streams.err();
+        assertTrue(stderr.contains("Annotation failed:"), "expected stderr to report the failure; was: " + stderr);
+        assertTrue(
+                stderr.contains("XMLStreamException"),
+                "expected stderr to identify the parse-failure path, not the precondition path; was: " + stderr
+        );
     }
 }

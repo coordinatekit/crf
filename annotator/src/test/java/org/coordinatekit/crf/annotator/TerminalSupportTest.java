@@ -20,12 +20,16 @@ import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.jline.terminal.Terminal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.stream.Stream;
 
 /**
  * Direct tests for the parser-free terminal glue {@link TerminalSupport} shared by
@@ -71,8 +75,24 @@ class TerminalSupportTest {
         );
     }
 
-    @Test
-    void runInTerminal__actionIOExceptionReturnsOne() throws IOException {
+    static Stream<ActionFailureParameters> runInTerminal__actionFailureReturnsOne() {
+        return Stream.of(
+                new ActionFailureParameters(
+                        "io_exception",
+                        new IOException("disk full"),
+                        "Retokenize failed: disk full"
+                ),
+                new ActionFailureParameters(
+                        "unchecked_parse_failure",
+                        new UncheckedCrfException("malformed XML"),
+                        "Retokenize failed: malformed XML"
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void runInTerminal__actionFailureReturnsOne(ActionFailureParameters parameters) throws IOException {
         // ARRANGE //
         StringWriter sink = new StringWriter();
         PrintWriter err = new PrintWriter(sink);
@@ -81,7 +101,10 @@ class TerminalSupportTest {
         int exitCode;
         try (Terminal terminal = quietTerminal()) {
             exitCode = TerminalSupport.runInTerminal("retokenize", "Retokenize", terminal, err, ignored -> {
-                throw new IOException("disk full");
+                if (parameters.thrown()instanceof IOException ioException) {
+                    throw ioException;
+                }
+                throw (UncheckedCrfException) parameters.thrown();
             });
         }
         err.flush();
@@ -89,7 +112,7 @@ class TerminalSupportTest {
         // ASSERT //
         assertEquals(1, exitCode);
         assertTrue(
-                sink.toString().contains("Retokenize failed: disk full"),
+                sink.toString().contains(parameters.expectedMessage()),
                 "stderr should report the action failure: " + sink
         );
     }
@@ -134,4 +157,6 @@ class TerminalSupportTest {
         assertEquals(0, exitCode);
         assertEquals("", sink.toString(), "no diagnostics on success: " + sink);
     }
+
+    record ActionFailureParameters(String name, Exception thrown, String expectedMessage) {}
 }
