@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.core.io;
 
 import org.coordinatekit.crf.core.StringTagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.preprocessing.SegmentKind;
 import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
@@ -41,6 +42,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.DOCTYPE_DOCUMENT;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.emptyTagProviderMessage;
@@ -48,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -172,6 +175,29 @@ class XmlTrainingDataTest {
                     <Noun>Fox</Noun>
                     <crf:Excluded>!</crf:Excluded>
                 </crf:Sequence>
+            </crf:Collection>
+            """;
+    // A classic "billion laughs" document: nested internal entity definitions inside a DOCTYPE.
+    // With DTDs disabled the parser must reject it (via the DOCTYPE guard) rather than expand.
+    // language=XML
+    private static final String READ__BILLION_LAUGHS = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE crf:Collection [
+                <!ENTITY lol "lol">
+                <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">
+                <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;">
+            ]>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+                <crf:Sequence><Noun>&lol3;</Noun></crf:Sequence>
+            </crf:Collection>
+            """;
+    // An undeclared general entity with no DOCTYPE: with DTDs/external entities disabled it must
+    // fail as undeclared rather than expand or resolve (probes the SUPPORT_DTD=false posture
+    // directly, surviving a narrowing of the explicit DOCTYPE guard).
+    // language=XML
+    private static final String READ__UNDECLARED_ENTITY = """
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+                <crf:Sequence><Noun>&xxe;</Noun></crf:Sequence>
             </crf:Collection>
             """;
 
@@ -372,6 +398,36 @@ class XmlTrainingDataTest {
             assertEquals(parameters.expectedKinds(), sequence.segments().stream().map(TrainingSegment::kind).toList());
             assertEquals(parameters.expectedTexts(), sequence.segments().stream().map(TrainingSegment::text).toList());
         }
+    }
+
+    record ReadRejectsParameters(String name, String xml, String expectedMessageSubstring) {}
+
+    static Stream<ReadRejectsParameters> read__rejects() {
+        return Stream.of(
+                new ReadRejectsParameters("doctype", DOCTYPE_DOCUMENT, "DOCTYPE"),
+                new ReadRejectsParameters("billionLaughs", READ__BILLION_LAUGHS, "DOCTYPE"),
+                new ReadRejectsParameters("undeclaredEntity", READ__UNDECLARED_ENTITY, "xxe")
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void read__rejects(ReadRejectsParameters parameters) {
+        // ACT //
+        UncheckedCrfException exception = assertThrows(UncheckedCrfException.class, () -> {
+            try (var sequences = DATA
+                    .read(new ByteArrayInputStream(parameters.xml().getBytes(StandardCharsets.UTF_8)))) {
+                sequences.toList();
+            }
+        });
+
+        // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(
+                message.contains(parameters.expectedMessageSubstring()),
+                "Expected message to contain '" + parameters.expectedMessageSubstring() + "' but was: " + message
+        );
     }
 
     @ParameterizedTest

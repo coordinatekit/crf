@@ -39,6 +39,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
+import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.DOCTYPE_DOCUMENT;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertBrownFox;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertContainsBrownFoxThenLazyDog;
 import static org.coordinatekit.crf.core.io.TrainingSequenceFixtures.assertLazySleepingDog;
@@ -159,6 +160,7 @@ class XmlTrainingDataWriterTest {
 
     static Stream<AppendingWriterExceptionParameters> appendingWriter__exception() {
         return Stream.of(
+                new AppendingWriterExceptionParameters("doctype", DOCTYPE_DOCUMENT, "DOCTYPE"),
                 new AppendingWriterExceptionParameters("malformedXml", MALFORMED_XML, "malformed XML"),
                 new AppendingWriterExceptionParameters("wrongRootLocalName", NON_COLLECTION_ROOT, "expected root"),
                 new AppendingWriterExceptionParameters("wrongNamespace", WRONG_NAMESPACE_ROOT, "expected root")
