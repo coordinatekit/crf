@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.core.spi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,10 +53,9 @@ class ServiceResolutionTest {
 
         // ASSERT //
         assertEquals("Slot", exception.serviceName());
-        assertTrue(
-                exception.getMessage().contains("multiple Slot"),
-                "message should report the conflicting service; was: " + exception.getMessage()
-        );
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("multiple Slot"), "message should report the conflicting service; was: " + message);
     }
 
     @Test

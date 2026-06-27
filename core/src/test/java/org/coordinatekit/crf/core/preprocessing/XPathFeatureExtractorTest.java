@@ -16,7 +16,6 @@
 package org.coordinatekit.crf.core.preprocessing;
 
 import org.coordinatekit.crf.core.InputSequence;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,7 +34,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@NullMarked
 class XPathFeatureExtractorTest {
     static final String EMPTY_TEXT_XML = """
             <root>

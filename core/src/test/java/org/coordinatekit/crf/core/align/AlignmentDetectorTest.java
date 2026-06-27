@@ -167,7 +167,7 @@ class AlignmentDetectorTest {
                 );
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> constructor__exception() {
         return Stream.of(
                 new ExceptionCase(

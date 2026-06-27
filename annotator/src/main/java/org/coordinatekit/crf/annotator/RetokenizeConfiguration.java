@@ -19,6 +19,7 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Parser-free inputs for {@link RetokenizeRunner}.
@@ -67,11 +68,10 @@ public final class RetokenizeConfiguration {
     private final Path output;
     private final double threshold;
 
-    @SuppressWarnings("DataFlowIssue")
     private RetokenizeConfiguration(Builder builder) {
-        this.input = builder.input;
+        this.input = Objects.requireNonNull(builder.input);
         this.model = builder.model;
-        this.output = builder.output;
+        this.output = Objects.requireNonNull(builder.output);
         this.threshold = builder.threshold;
     }
 

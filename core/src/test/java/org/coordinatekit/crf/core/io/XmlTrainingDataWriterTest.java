@@ -19,7 +19,6 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.TrainingSegment;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingConsumer;
@@ -82,7 +81,6 @@ class XmlTrainingDataWriterTest {
             String expectedMessage
     ) {}
 
-    @SuppressWarnings("DataFlowIssue")
     static Stream<AfterCloseExceptionParameters> afterClose__exception() {
         return Stream.of(
                 new AfterCloseExceptionParameters("flush", TrainingSequenceWriter::flush, "Cannot flush after close."),
@@ -208,7 +206,6 @@ class XmlTrainingDataWriterTest {
 
     record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
 
-    @SuppressWarnings("DataFlowIssue")
     static Stream<AppendHappyPathParameters> appendingWriter__happyPath() {
         return Stream.of(new AppendHappyPathParameters("cleanCloseTag", file -> {
             try (var writer = DATA.appendingWriter(file)) {
@@ -571,7 +568,6 @@ class XmlTrainingDataWriterTest {
         );
     }
 
-    @NullMarked
     private record NullEncodingTagProvider(String nullTag) implements TagProvider<String> {
         @Override
         public String decode(@Nullable String tag) {

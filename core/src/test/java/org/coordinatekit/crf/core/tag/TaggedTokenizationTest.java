@@ -71,7 +71,7 @@ class TaggedTokenizationTest {
         assertSame(tokenization, result.tokenization());
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> of__exception() {
         return Stream.of(
                 new ExceptionParameters(
@@ -140,7 +140,7 @@ class TaggedTokenizationTest {
         assertEquals(1.0, result.probabilityOf(List.of("DET", "NOUN")), "probabilityOf delegates to the function");
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> probabilityOf__exception() {
         return Stream.of(
                 new ExceptionParameters(

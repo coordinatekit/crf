@@ -36,7 +36,7 @@ import java.util.stream.Stream;
 class MaterializedAlignmentReportTest {
     private final AlignmentDetector<String> detector = defaultDetector();
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> constructor__exception() {
         return Stream.of(
                 new ExceptionCase(

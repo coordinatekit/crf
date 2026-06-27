@@ -17,7 +17,6 @@ package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,6 @@ class AnnotatorSequenceTest {
         ALPHA, BETA, GAMMA
     }
 
-    @NullMarked
     static final class TestTagProvider implements TagProvider<TestTag> {
         private final SortedSet<TestTag> tags;
 
@@ -152,7 +150,7 @@ class AnnotatorSequenceTest {
         assertEquals(Set.of("v1"), sequence.tokens().getFirst().verboseFeatures());
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> annotatorSequence__exception() {
         TestTagProvider provider = new TestTagProvider(TestTag.values());
         return Stream.of(
@@ -394,7 +392,7 @@ class AnnotatorSequenceTest {
         assertThrowsExactly(UnsupportedOperationException.class, () -> result.finalTags().add(TestTag.GAMMA));
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> taggingResult__exception() {
         return Stream.of(
                 new ExceptionParameters(

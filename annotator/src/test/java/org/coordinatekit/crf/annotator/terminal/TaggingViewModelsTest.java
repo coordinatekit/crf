@@ -321,7 +321,10 @@ class TaggingViewModelsTest {
         assertEquals(List.of("DT", "NN", "VB"), editScreen.candidateTags());
     }
 
-    private static AnnotatorSequence<String, String> taggedSequence(List<Set<String>> key, List<Set<String>> verbose) {
+    private static AnnotatorSequence<String, String> taggedSequence(
+            @Nullable List<Set<String>> key,
+            @Nullable List<Set<String>> verbose
+    ) {
         Map<String, Double> firstScores = scoreMap("DT", 0.9, "NN", 0.1);
         Map<String, Double> secondScores = scoreMap("NN", 0.5, "VB", 0.5);
         TaggedSequence<String, String> tagged = new TaggedSequence<>(

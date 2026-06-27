@@ -15,7 +15,6 @@
  */
 package org.coordinatekit.crf.cli;
 
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -44,7 +43,6 @@ import java.nio.charset.StandardCharsets;
  * This is a copy of {@code org.coordinatekit.crf.annotator.CapturedStandardStreams}; the two are
  * kept identical. Until a shared test-fixtures module exists, change both together.
  */
-@NullMarked
 final class CapturedStandardStreams implements BeforeEachCallback, AfterEachCallback {
     private final ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
     private final ByteArrayOutputStream capturedOut = new ByteArrayOutputStream();

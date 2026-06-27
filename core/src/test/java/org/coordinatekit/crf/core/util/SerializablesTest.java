@@ -16,7 +16,6 @@
 package org.coordinatekit.crf.core.util;
 
 import org.coordinatekit.crf.core.UncheckedCrfException;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@NullMarked
 class SerializablesTest {
     private static final byte[] CLASS_NOT_FOUND_SERIALIZATION = {(byte) 0xAC, (byte) 0xED, // STREAM_MAGIC
                     0x00, 0x05, // STREAM_VERSION
@@ -99,7 +97,7 @@ class SerializablesTest {
     void deserialize_exception(DeserializeExceptionParameters parameters) {
         var file = parameters.file() != null ? temporaryDirectory.resolve(parameters.file()) : null;
 
-        @SuppressWarnings("DataFlowIssue")
+        @SuppressWarnings({"DataFlowIssue", "NullAway"})
         Exception exception = assertThrows(
                 parameters.expectedClass(),
                 () -> Serializables.deserialize(parameters.clazz(), file)
@@ -145,7 +143,7 @@ class SerializablesTest {
     void serialize_exception(SerializeExceptionParameters parameters) {
         var file = parameters.file() != null ? temporaryDirectory.resolve(parameters.file()) : null;
 
-        @SuppressWarnings("DataFlowIssue")
+        @SuppressWarnings({"DataFlowIssue", "NullAway"})
         Exception exception = assertThrows(
                 parameters.expectedClass(),
                 () -> Serializables.serialize(parameters.object(), file)

@@ -15,15 +15,14 @@
  */
 package org.coordinatekit.crf.mallet.train;
 
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@NullMarked
 class MalletCrfTrainerConfigurationTest {
 
     @Test
@@ -58,8 +57,10 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.gaussianVariance(-1.0)
         );
 
-        assertTrue(exception.getMessage().contains("gaussianVariance"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("gaussianVariance"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -71,8 +72,10 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.gaussianVariance(0)
         );
 
-        assertTrue(exception.getMessage().contains("gaussianVariance"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("gaussianVariance"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -91,8 +94,10 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.iterations(-10)
         );
 
-        assertTrue(exception.getMessage().contains("iterations"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("iterations"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -101,8 +106,10 @@ class MalletCrfTrainerConfigurationTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.iterations(0));
 
-        assertTrue(exception.getMessage().contains("iterations"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("iterations"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -118,8 +125,10 @@ class MalletCrfTrainerConfigurationTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.threads(-4));
 
-        assertTrue(exception.getMessage().contains("threads"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("threads"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -128,8 +137,10 @@ class MalletCrfTrainerConfigurationTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> builder.threads(0));
 
-        assertTrue(exception.getMessage().contains("threads"));
-        assertTrue(exception.getMessage().contains("positive"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("threads"));
+        assertTrue(message.contains("positive"));
     }
 
     @Test
@@ -163,7 +174,9 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.trainingFraction(1.01)
         );
 
-        assertTrue(exception.getMessage().contains("trainingFraction"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("trainingFraction"));
     }
 
     @Test
@@ -175,7 +188,9 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.trainingFraction(-0.5)
         );
 
-        assertTrue(exception.getMessage().contains("trainingFraction"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("trainingFraction"));
     }
 
     @Test
@@ -187,8 +202,10 @@ class MalletCrfTrainerConfigurationTest {
                 () -> builder.trainingFraction(0.0)
         );
 
-        assertTrue(exception.getMessage().contains("trainingFraction"));
-        assertTrue(exception.getMessage().contains("(0.0, 1.0]"));
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("trainingFraction"));
+        assertTrue(message.contains("(0.0, 1.0]"));
     }
 
     @Test
@@ -200,7 +217,7 @@ class MalletCrfTrainerConfigurationTest {
         }
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     @Test
     void builder_weightsType_rejectsNull() {
         var builder = MalletCrfTrainerConfiguration.builder();

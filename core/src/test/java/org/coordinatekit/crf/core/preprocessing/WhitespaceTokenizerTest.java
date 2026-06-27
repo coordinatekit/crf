@@ -110,6 +110,7 @@ class WhitespaceTokenizerTest {
             String expectedMessage
     ) {}
 
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<TokenizeExceptionParameters> tokenize_exception() {
         return Stream.of(
                 new TokenizeExceptionParameters(null, NullPointerException.class, "The input string may not be null."),

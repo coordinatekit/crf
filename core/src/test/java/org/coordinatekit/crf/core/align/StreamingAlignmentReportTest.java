@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 // The streaming behavior itself — sequences(), summary(), materialize() — is exercised through the
 // public entry point in AlignmentDetectorTest; this class covers constructor validation only.
 class StreamingAlignmentReportTest {
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> constructor__exception() {
         AlignmentDetector<String> detector = defaultDetector();
         return Stream.of(

@@ -85,7 +85,7 @@ class AlignmentModelsTest {
         );
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> sequenceAlignment__exception() {
         return Stream.of(
                 new ExceptionCase(
@@ -247,7 +247,7 @@ class AlignmentModelsTest {
         );
     }
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> tokenDifference__exception() {
         return Stream.of(
                 new ExceptionCase(

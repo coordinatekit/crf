@@ -37,7 +37,7 @@ class TrainingSegmentsTest {
             String expectedMessage
     ) {}
 
-    @SuppressWarnings("DataFlowIssue")
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> factory__exception() {
         return Stream.of(
                 new ExceptionParameters(

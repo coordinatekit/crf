@@ -16,7 +16,6 @@
 package org.coordinatekit.crf.core.preprocessing;
 
 import org.coordinatekit.crf.core.InputSequence;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +28,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@NullMarked
 class WindowFeatureExtractorTest {
     private static final FeatureExtractor<String> TOKEN_EXTRACTOR = (seq, pos) -> Set
             .of("TOKEN=" + seq.get(pos).token());

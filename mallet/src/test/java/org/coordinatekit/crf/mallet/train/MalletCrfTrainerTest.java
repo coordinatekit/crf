@@ -26,7 +26,6 @@ import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.util.Serializables;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,7 +43,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@NullMarked
 class MalletCrfTrainerTest {
     private static final FeatureExtractor<String> SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();

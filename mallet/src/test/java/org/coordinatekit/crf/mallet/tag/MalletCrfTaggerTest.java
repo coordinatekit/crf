@@ -21,7 +21,6 @@ import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.coordinatekit.crf.mallet.model.PartsOfSpeechModel;
-import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@NullMarked
 class MalletCrfTaggerTest {
     private MalletCrfTagger<String, String> tagger;
 

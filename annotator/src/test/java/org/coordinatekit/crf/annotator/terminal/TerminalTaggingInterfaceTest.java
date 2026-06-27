@@ -28,6 +28,7 @@ import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.VERBOSE_FE
 import static org.coordinatekit.crf.annotator.terminal.TaggingPrompts.VERBOSE_ONLY_VIEW_PROMPT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +40,6 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -69,7 +69,6 @@ class TerminalTaggingInterfaceTest {
         Adjective, Adverb, Determiner, Noun, Preposition, Verb
     }
 
-    @NullMarked
     static final class PartOfSpeechTagProvider implements TagProvider<PartOfSpeech> {
         @Override
         public PartOfSpeech decode(@Nullable String tag) {
@@ -638,7 +637,6 @@ class TerminalTaggingInterfaceTest {
         return output.substring(start, end + EDIT_PROMPT.length());
     }
 
-    @NullMarked
     private static TagProvider<PartOfSpeech> emptyTagProvider() {
         return new TagProvider<>() {
             @Override
@@ -753,6 +751,7 @@ class TerminalTaggingInterfaceTest {
                 result = ui.present(sequence);
             }
             terminal.flush();
+            assertNotNull(result, "runSequences requires at least one sequence");
             return new InteractionResult(result, out.toString(StandardCharsets.UTF_8));
         }
     }
