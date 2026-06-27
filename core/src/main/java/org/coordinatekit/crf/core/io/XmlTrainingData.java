@@ -519,6 +519,34 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
     }
 
     /**
+     * Creates an {@link XMLInputFactory} hardened against DTD-based XXE and entity-expansion attacks.
+     *
+     * <p>
+     * The reference StAX factory enables {@link XMLInputFactory#SUPPORT_DTD} and
+     * {@link XMLInputFactory#IS_SUPPORTING_EXTERNAL_ENTITIES} by default, which lets a
+     * {@code <!DOCTYPE>} with nested internal entities expand ("billion laughs") and external entities
+     * resolve (XXE) while parsing untrusted training data. Setting {@code SUPPORT_DTD} to {@code false}
+     * stops the parser from processing internal entity declarations — an entity reference then fails as
+     * undeclared rather than expanding — and disabling external entities blocks XXE.
+     *
+     * <p>
+     * The exact handling of a {@code <!DOCTYPE>} under {@code SUPPORT_DTD=false} is implementation-
+     * specific: stricter StAX implementations reject it at reader creation, while the JDK reference
+     * implementation surfaces it as a {@link XMLStreamConstants#DTD} event. To match the
+     * {@code disallow-doctype-decl} posture {@link #hardenedSource(InputStream)} applies on the
+     * validation path — rejecting <em>any</em> document carrying a DOCTYPE outright, regardless of
+     * implementation — callers reject the {@code DTD} event explicitly while reading.
+     *
+     * @return a hardened StAX input factory
+     */
+    private static XMLInputFactory newHardenedInputFactory() {
+        XMLInputFactory factory = XMLInputFactory.newInstance();
+        factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+        return factory;
+    }
+
+    /**
      * Compiles the structural grammar and the generated tag vocabulary into a single validating schema.
      *
      * <p>
@@ -586,9 +614,17 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * The document is parsed with DTDs and external entities disabled, so a {@code <!DOCTYPE>}
+     * declaration is rejected and DTD-based XXE and entity expansion ("billion laughs") attacks in
+     * untrusted input cannot resolve.
+     */
     @Override
     public Stream<TrainingSequence<T>> read(InputStream input) {
-        XMLInputFactory factory = XMLInputFactory.newInstance();
+        XMLInputFactory factory = newHardenedInputFactory();
 
         try {
             XMLStreamReader reader = factory.createXMLStreamReader(input);
@@ -648,13 +684,17 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * — for example, a previous session that crashed before writing the root close tag — is accepted so
      * the writer can resume appending.
      *
+     * <p>
+     * The file is parsed with DTDs and external entities disabled, so a {@code <!DOCTYPE>} declaration
+     * is rejected before any DTD-based XXE or entity-expansion ("billion laughs") attack can resolve.
+     *
      * @param path the file path to validate, also used in error messages
      * @param rootElementName the expected root element local name
-     * @throws IOException if the file is malformed before reaching a start element, contains no start
-     *         element, or has an unexpected root element
+     * @throws IOException if the file is malformed before reaching a start element, carries a DOCTYPE
+     *         declaration, contains no start element, or has an unexpected root element
      */
     private static void validateAppendable(Path path, String rootElementName) throws IOException {
-        XMLInputFactory factory = XMLInputFactory.newInstance();
+        XMLInputFactory factory = newHardenedInputFactory();
         try (InputStream input = Files.newInputStream(path)) {
             XMLStreamReader reader;
             try {
@@ -665,6 +705,9 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             try {
                 while (reader.hasNext()) {
                     int event = reader.next();
+                    if (event == XMLStreamConstants.DTD) {
+                        throw new IOException("Cannot append to '" + path + "': DOCTYPE declarations are not allowed.");
+                    }
                     if (event == XMLStreamConstants.START_ELEMENT) {
                         String namespace = reader.getNamespaceURI();
                         String localName = reader.getLocalName();
@@ -963,6 +1006,12 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             try {
                 while (reader.hasNext()) {
                     int event = reader.next();
+                    if (event == XMLStreamConstants.DTD) {
+                        throw new UncheckedCrfException(
+                                "Training data must not contain a DOCTYPE declaration; DTDs are disabled to "
+                                        + "prevent XXE and entity-expansion attacks."
+                        );
+                    }
                     if (event == XMLStreamConstants.START_ELEMENT
                             && SEQUENCE_ELEMENT_NAME.equals(reader.getLocalName())) {
                         return parseSequence();

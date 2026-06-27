@@ -26,6 +26,17 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class TrainingSequenceFixtures {
+    // A document carrying a DOCTYPE declaration; with DTDs disabled both the read and
+    // validateAppendable paths must reject it.
+    // language=XML
+    static final String DOCTYPE_DOCUMENT = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE crf:Collection>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+                <crf:Sequence><Noun>Fox</Noun></crf:Sequence>
+            </crf:Collection>
+            """;
+
     private TrainingSequenceFixtures() {}
 
     static void assertBrownFox(TrainingSequence<String> sequence) {
