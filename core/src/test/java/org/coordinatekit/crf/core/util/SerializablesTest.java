@@ -24,6 +24,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.io.InvalidClassException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -88,7 +90,18 @@ class SerializablesTest {
                         UncheckedCrfException.class,
                         null
                 ),
-                new DeserializeExceptionParameters(Object.class, Path.of("file.txt"), ObjectStreamException.class, null)
+                new DeserializeExceptionParameters(
+                        Object.class,
+                        Path.of("file.txt"),
+                        ObjectStreamException.class,
+                        null
+                ),
+                new DeserializeExceptionParameters(
+                        String.class,
+                        Path.of("testObject.ser"),
+                        UncheckedCrfException.class,
+                        null
+                )
         );
     }
 
@@ -106,6 +119,39 @@ class SerializablesTest {
         if (parameters.expectedMessage() != null) {
             assertEquals(parameters.expectedMessage(), exception.getMessage());
         }
+    }
+
+    @Test
+    void deserialize_nullFilter() {
+        var file = temporaryDirectory.resolve("testObject.ser");
+
+        @SuppressWarnings({"DataFlowIssue", "NullAway"})
+        Exception exception = assertThrows(
+                NullPointerException.class,
+                () -> Serializables.deserialize(TestObject.class, file, null)
+        );
+
+        assertEquals("The filter parameter may not be null.", exception.getMessage());
+    }
+
+    @Test
+    void deserialize_rejectAllFilter() {
+        var file = temporaryDirectory.resolve("testObject.ser");
+        ObjectInputFilter rejectAll = ObjectInputFilter.Config.createFilter("!*");
+
+        assertThrows(InvalidClassException.class, () -> Serializables.deserialize(TestObject.class, file, rejectAll));
+    }
+
+    @Test
+    void deserialize_roundTripWithFilter() throws Exception {
+        var original = new TestObject("hello", 42);
+        var file = temporaryDirectory.resolve("filtered.ser");
+        ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("org.coordinatekit.**;java.**;!*");
+
+        Serializables.serialize(original, file);
+        var restored = Serializables.deserialize(TestObject.class, file, filter);
+
+        assertEquals(original, restored);
     }
 
     record SerializeExceptionParameters(
