@@ -20,7 +20,6 @@ import org.jspecify.annotations.NullMarked;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
@@ -66,13 +65,6 @@ public interface TrainingDataSequencer<T extends Comparable<T>> {
      * @throws IOException if an error occurs while reading the file
      */
     default Stream<TrainingSequence<T>> read(Path path) throws IOException {
-        InputStream input = Files.newInputStream(path);
-        return read(input).onClose(() -> {
-            try {
-                input.close();
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        });
+        return ManagedSequenceStreams.readManaged(Files.newInputStream(path), this);
     }
 }
