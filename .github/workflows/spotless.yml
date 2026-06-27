@@ -28,7 +28,7 @@ jobs:
           distribution: "temurin"
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Apply Spotless
         if: github.event.pull_request.head.repo.full_name == github.repository
