@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+    ignore:
+      - dependency-name: "org.jspecify:jspecify"
+        update-types:
+          ["version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "info.picocli:picocli"
+        update-types:
+          ["version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
