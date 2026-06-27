@@ -17,7 +17,7 @@ errorprone = "2.50.0"
 nullaway = "0.13.7"
 
 # plugins
-dependency-license-report = "3.1.2"
+dependency-license-report = "3.1.4"
 errorprone-plugin = "4.1.0"
 git-changelog = "2.2.0"
 sonatype-central-portal-publisher = "1.2.4"
