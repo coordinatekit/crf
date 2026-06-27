@@ -6,6 +6,8 @@ on:
     paths:
       - "**/src/main/**"
       - "**/*.gradle"
+      - "gradle/**"
+      - "gradlew*"
       - ".github/workflows/javadoc.yml"
 
 permissions:

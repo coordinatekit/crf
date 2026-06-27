@@ -6,6 +6,8 @@ on:
     paths:
       - "**/*.java"
       - "**/*.gradle"
+      - "gradle/**"
+      - "gradlew*"
       - ".github/workflows/spotless.yml"
 
 permissions:
