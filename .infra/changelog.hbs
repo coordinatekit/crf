@@ -5,15 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 {{#tags}}
+{{#ifReleaseTag}}
 
-## [{{name}}]{{#ifReleaseTag}} - {{tagTime}}{{/ifReleaseTag}}
+## [{{subString name 1}}] - {{tagTime}}
 {{#ifContainsType commits type="feat"}}
 
 ### Features
 
 {{#commits}}
 {{#ifCommitType . type="feat"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -23,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="fix"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -33,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="perf"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -43,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="refactor"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -53,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="docs"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -63,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="build"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -73,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="ci"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
@@ -83,10 +84,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 {{#commits}}
 {{#ifCommitType . type="test"}}
-- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
 {{/ifCommitType}}
 {{/commits}}
 {{/ifContainsType}}
+
+[{{subString name 1}}]: https://github.com/coordinatekit/crf/releases/tag/{{name}}
+{{/ifReleaseTag}}
 {{/tags}}
 
 {{>changelog_initial_release}}
