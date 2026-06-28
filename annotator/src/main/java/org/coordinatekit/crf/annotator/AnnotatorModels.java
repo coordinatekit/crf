@@ -305,7 +305,7 @@ public final class AnnotatorModels {
         List<Map.Entry<T, @Nullable Double>> entries = new ArrayList<>(scores.entrySet());
         entries.sort(
                 Comparator.<Map.Entry<T, @Nullable Double>, Boolean>comparing(entry -> entry.getValue() == null)
-                        .thenComparing(entry -> entry.getValue() == null ? 0.0 : -entry.getValue())
+                        .thenComparingDouble(entry -> entry.getValue() == null ? 0.0 : -entry.getValue())
                         .thenComparing(Map.Entry::getKey)
         );
         Map<T, @Nullable Double> ordered = new LinkedHashMap<>();

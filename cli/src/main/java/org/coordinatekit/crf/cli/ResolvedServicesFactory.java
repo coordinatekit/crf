@@ -122,7 +122,7 @@ final class ResolvedServicesFactory {
 
     // See annotator(...): the production path builds the tagging interface, then delegates the
     // extractor routing to the package-private seam below.
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private static RetokenizeReviewer<?, ?> reviewer(
             ResolvedServices resolvedServices,
             @Nullable CrfTagger<?, ?> tagger,
