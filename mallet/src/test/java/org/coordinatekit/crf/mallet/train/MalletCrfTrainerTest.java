@@ -35,6 +35,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -295,6 +296,10 @@ class MalletCrfTrainerTest {
         return transitions;
     }
 
+    private static Path resourcePath(String name) throws URISyntaxException {
+        return Path.of(Objects.requireNonNull(MalletCrfTrainerTest.class.getResource(name)).toURI());
+    }
+
     record SplitTrainingDataParameters(
             @Nullable MalletCrfTrainerConfiguration configuration,
             int expectedTrainingSize,
@@ -328,7 +333,7 @@ class MalletCrfTrainerTest {
 
     @MethodSource
     @ParameterizedTest
-    void splitTrainingData(SplitTrainingDataParameters parameters) throws IOException {
+    void splitTrainingData(SplitTrainingDataParameters parameters) throws IOException, URISyntaxException {
         var trainer = createMalletCrfTrainer(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
@@ -336,7 +341,7 @@ class MalletCrfTrainerTest {
                 parameters.configuration()
         );
 
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         var split = trainer.splitTrainingData(Collections.singleton(trainingPath));
 
         assertNotNull(split);
@@ -418,9 +423,9 @@ class MalletCrfTrainerTest {
 
     @MethodSource
     @ParameterizedTest
-    void train(TrainParameters parameters, @TempDir Path temporaryDirectory) throws IOException {
+    void train(TrainParameters parameters, @TempDir Path temporaryDirectory) throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
 
         MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
@@ -453,9 +458,10 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_withConllOutputEnabled_createsConllFiles(@TempDir Path temporaryDirectory) throws IOException {
+    void train_withConllOutputEnabled_createsConllFiles(@TempDir Path temporaryDirectory)
+            throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
         Path conllOutputDir = temporaryDirectory.resolve("conll");
 
@@ -481,9 +487,10 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_withModelOutputEnabled_createsModelCheckpoints(@TempDir Path temporaryDirectory) throws IOException {
+    void train_withModelOutputEnabled_createsModelCheckpoints(@TempDir Path temporaryDirectory)
+            throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
         Path modelOutputDir = temporaryDirectory.resolve("checkpoints");
 
@@ -509,9 +516,9 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException {
+    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
 
         MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder().iterations(5)
@@ -549,9 +556,9 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_withDifferentRandomSeeds_producesDifferentSplits() throws IOException {
+    void train_withDifferentRandomSeeds_producesDifferentSplits() throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
 
         MalletCrfTrainerConfiguration config1 = MalletCrfTrainerConfiguration.builder().iterations(1)
                 .trainingFraction(0.6).randomSeed(42).conllOutputEnabled(false).modelOutputEnabled(false).build();
@@ -583,9 +590,9 @@ class MalletCrfTrainerTest {
     }
 
     @Test
-    void train_withSameRandomSeed_producesSameSplits() throws IOException {
+    void train_withSameRandomSeed_producesSameSplits() throws IOException, URISyntaxException {
         // ARRANGE
-        var trainingPath = Path.of(Objects.requireNonNull(getClass().getResource(TRAINING_DATA_RESOURCE)).getPath());
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
 
         MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().iterations(1)
                 .trainingFraction(0.6).randomSeed(42).conllOutputEnabled(false).modelOutputEnabled(false).build();
