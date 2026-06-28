@@ -20,9 +20,12 @@ allprojects {
 }
 
 gitChangelog {
-    templateBaseDir = project.file(".infra").absolutePath
-    templateSuffix = ".hbs"
-    file = project.file("CHANGELOG.md")
+    templateContent.set(project.file(".infra/changelog.hbs").text)
+    templateBaseDir.set(project.file(".infra").absolutePath)
+    templateSuffix.set(".hbs")
+    dateFormat.set("yyyy-MM-dd")
+    fromRevision.set("v0.1.0")
+    file.set(project.file("CHANGELOG.md"))
 }
 
 def isPublishing = { gradle.taskGraph.allTasks.any { it.name.startsWith("publish") && !it.name.endsWith("ToMavenLocal") } }

@@ -1,1 +1,3 @@
-.infra/changelog.hbs
+# Prettier's glimmer parser reflows .hbs text nodes and destroys the
+# changelog templates' line breaks. Leave all handlebars templates alone.
+.infra/*.hbs

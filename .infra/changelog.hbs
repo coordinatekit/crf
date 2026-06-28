@@ -1,71 +1,92 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 {{#tags}}
 
-## {{name}}
+## [{{name}}]{{#ifReleaseTag}} - {{tagTime}}{{/ifReleaseTag}}
 {{#ifContainsType commits type="feat"}}
 
 ### Features
 
-{{#commitsByType commits type="feat"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="feat"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="fix"}}
 
 ### Bug Fixes
 
-{{#commitsByType commits type="fix"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="fix"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="perf"}}
 
 ### Performance
 
-{{#commitsByType commits type="perf"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="perf"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="refactor"}}
 
 ### Refactoring
 
-{{#commitsByType commits type="refactor"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="refactor"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="docs"}}
 
 ### Documentation
 
-{{#commitsByType commits type="docs"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="docs"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="build"}}
 
 ### Build
 
-{{#commitsByType commits type="build"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="build"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="ci"}}
 
 ### CI
 
-{{#commitsByType commits type="ci"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="ci"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{#ifContainsType commits type="test"}}
 
 ### Tests
 
-{{#commitsByType commits type="test"}}
-- {{commitDescription .}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
-{{/commitsByType}}
+{{#commits}}
+{{#ifCommitType . type="test"}}
+- {{{commitDescription .}}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}}))
+{{/ifCommitType}}
+{{/commits}}
 {{/ifContainsType}}
 {{/tags}}
+
+{{>changelog_initial_release}}
