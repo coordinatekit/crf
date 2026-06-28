@@ -163,8 +163,8 @@ public final class AnnotatorModels {
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1},
-     *         {@code totalSequences < sequenceNumber}, or either list's size differs from the token
-     *         count
+     *         {@code totalSequences < sequenceNumber}, {@code taggedSequence} is empty, or either
+     *         list's size differs from the token count
      */
     public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
             int sequenceNumber,
@@ -176,6 +176,9 @@ public final class AnnotatorModels {
     ) {
         Objects.requireNonNull(taggedSequence, "taggedSequence must not be null");
         validateSequenceBounds(sequenceNumber, totalSequences);
+        if (taggedSequence.size() == 0) {
+            throw new IllegalArgumentException("taggedSequence must not be empty");
+        }
         validateDisplayFeatures(features, verboseFeatures, taggedSequence.size());
 
         List<AnnotatorToken<F, T>> tokens = new ArrayList<>(taggedSequence.size());

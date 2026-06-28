@@ -55,6 +55,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.assertUntokenizableWarning;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
 import static org.coordinatekit.crf.annotator.TaggingAction.ACCEPT;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
@@ -582,6 +583,98 @@ class AnnotatorTest {
         assertEquals(List.of("the", "quick", "brown"), tokensOf(written.getFirst()));
         assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.getFirst()));
         assertEquals("the quick brown", written.getFirst().surface(), "captured excluded runs reproduce the surface");
+    }
+
+    @Test
+    void untokenizable__lineSkippedWithWarningWhileSessionContinues(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(tempDirectory, List.of("the quick brown", "bad ? line", "one more line"));
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+        tagging.results.add(accept("DT", "NN", "NN"));
+        ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        // ACT //
+        try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
+            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
+                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
+            terminal.flush();
+        }
+
+        // ASSERT //
+        assertEquals(2, tagging.presented.size(), "only the two tokenizable lines are presented");
+        assertEquals(List.of("the", "quick", "brown"), tokensOf(tagging.presented.get(0)));
+        assertEquals(List.of("one", "more", "line"), tokensOf(tagging.presented.get(1)));
+        assertEquals(1, tagging.presented.get(0).sequenceNumber(), "first survivor is 1 of 3");
+        assertEquals(
+                3,
+                tagging.presented.get(1).sequenceNumber(),
+                "the surviving sequence numbers stay gap-free against the untokenizable line: 3 of 3"
+        );
+        assertEquals(3, tagging.presented.get(0).totalSequences(), "M counts the untokenizable line too");
+
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(
+                List.of(List.of("the", "quick", "brown"), List.of("one", "more", "line")),
+                written.stream().map(AnnotatorTest::tokensOf).toList(),
+                "only the two tokenizable lines are written"
+        );
+
+        String captured = out.toString(StandardCharsets.UTF_8);
+        assertUntokenizableWarning(
+                captured,
+                2,
+                "was skipped",
+                "The input string contains an unsupported '?' character"
+        );
+    }
+
+    @Test
+    void untokenizable__numberingStaysGapFreeAcrossAutoSkipAndUntokenizable(@TempDir Path tempDirectory)
+            throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(tempDirectory, List.of("the quick brown", "bad ? line", "one more line"));
+        Path outputFile = tempDirectory.resolve("output.xml");
+        // Line 1 auto-skips (its tokenization is already present); line 2 is untokenizable; line 3 is
+        // presented.
+        prepopulateOutput(
+                outputFile,
+                TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN"))
+        );
+        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+        ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        // ACT //
+        try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
+            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
+                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
+            terminal.flush();
+        }
+
+        // ASSERT //
+        assertEquals(1, tagging.presented.size(), "only the surviving third line is presented");
+        assertEquals(List.of("one", "more", "line"), tokensOf(tagging.presented.getFirst()));
+        assertEquals(
+                3,
+                tagging.presented.getFirst().sequenceNumber(),
+                "the survivor's number includes the auto-skipped and untokenizable lines: 3 of 3"
+        );
+        assertEquals(3, tagging.presented.getFirst().totalSequences(), "M counts all three non-blank input lines");
+
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(2, written.size(), "the prepopulated line plus the accepted survivor are written");
+
+        String captured = out.toString(StandardCharsets.UTF_8);
+        assertUntokenizableWarning(
+                captured,
+                2,
+                "was skipped",
+                "The input string contains an unsupported '?' character"
+        );
     }
 
     private static TaggingResult<String> accept(String... tags) {
