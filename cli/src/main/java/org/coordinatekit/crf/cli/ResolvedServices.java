@@ -178,15 +178,6 @@ final class ResolvedServices {
     }
 
     /**
-     * Returns the resolved tag provider, which defines the label space.
-     *
-     * @return the tag provider
-     */
-    TagProvider<?> tagProvider() {
-        return tagProvider;
-    }
-
-    /**
      * Returns the resolved model loader, or {@code null} if none was supplied or discovered.
      *
      * @return the tagger loader, or {@code null}
@@ -194,6 +185,15 @@ final class ResolvedServices {
     @Nullable
     CrfTaggerLoader taggerLoader() {
         return taggerLoader;
+    }
+
+    /**
+     * Returns the resolved tag provider, which defines the label space.
+     *
+     * @return the tag provider
+     */
+    TagProvider<?> tagProvider() {
+        return tagProvider;
     }
 
     /**

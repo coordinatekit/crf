@@ -98,6 +98,11 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
     }
 
     @Override
+    public Iterator<FeatureTrainingPositionedToken<F, T>> iterator() {
+        return tokens.iterator();
+    }
+
+    @Override
     public int size() {
         return tokens.size();
     }
@@ -105,10 +110,5 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
     @Override
     public Stream<FeatureTrainingPositionedToken<F, T>> stream() {
         return tokens.stream();
-    }
-
-    @Override
-    public Iterator<FeatureTrainingPositionedToken<F, T>> iterator() {
-        return tokens.iterator();
     }
 }

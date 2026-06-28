@@ -235,6 +235,22 @@ class XmlTrainingDataTest {
             </crf:Collection>
             """;
 
+    // The XSD models tag elements as text-only, but a hand-authored document may nest an element
+    // inside one. Such a token run is skipped (logged, not aborted) and the remaining tokens still
+    // parse, mirroring the crf:Excluded skip-and-log behavior.
+    // language=XML
+    private static final String SINGLE_RECORD_SCHEMA_XML__TOKEN_WITH_CHILD = """
+            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+                <crf:Sequence>
+                    <Verb>Jumped<Adverb>quickly</Adverb></Verb>
+                    <Adjective>Brown</Adjective>
+                    <crf:Excluded> </crf:Excluded>
+                    <Noun>Fox</Noun>
+                    <crf:Excluded>!</crf:Excluded>
+                </crf:Sequence>
+            </crf:Collection>
+            """;
+
     @TempDir
     Path temporaryDirectory;
 
@@ -380,6 +396,15 @@ class XmlTrainingDataTest {
                 new ReadSegmentsParameters(
                         "deep_excluded_ignored_but_tokens_captured",
                         SINGLE_RECORD_SCHEMA_XML__DEEP_EXCLUDED,
+                        brownFoxKinds,
+                        brownFoxTexts,
+                        "Brown Fox!"
+                ),
+                // A token element containing a nested child element is skipped (not aborted); the
+                // remaining tokens and excluded runs still parse, so the brown-fox shape is preserved.
+                new ReadSegmentsParameters(
+                        "token_with_child_skipped_but_rest_captured",
+                        SINGLE_RECORD_SCHEMA_XML__TOKEN_WITH_CHILD,
                         brownFoxKinds,
                         brownFoxTexts,
                         "Brown Fox!"

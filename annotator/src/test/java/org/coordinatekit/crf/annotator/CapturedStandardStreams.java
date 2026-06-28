@@ -30,19 +30,16 @@ import java.nio.charset.StandardCharsets;
  * field so tests can read what was captured:
  *
  * <pre>
- * {
- *     &#64;code
- *     &#64;RegisterExtension
- *     final CapturedStandardStreams streams = new CapturedStandardStreams();
- * }
+ * &#64;RegisterExtension
+ * final CapturedStandardStreams streams = new CapturedStandardStreams();
  * </pre>
  *
  * Then assert on {@link #out()} / {@link #err()}. This replaces the per-class redirect-and-restore
- * lifecycle the CLI and runner tests would otherwise each carry.
+ * lifecycle the tests would otherwise each carry.
  *
  * <p>
- * This is copied as {@code org.coordinatekit.crf.cli.CapturedStandardStreams}; the two are kept
- * identical. Until a shared test-fixtures module exists, change both together.
+ * This fixture is duplicated in the {@code annotator} and {@code cli} test source sets; the copies
+ * are kept identical until a shared test-fixtures source set exists, so change both together.
  */
 final class CapturedStandardStreams implements BeforeEachCallback, AfterEachCallback {
     private final ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
