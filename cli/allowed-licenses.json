@@ -1,18 +1,54 @@
 {
-  "_comment": "Drives :cli:checkLicense (jk1 dependency-license-report). Entries are keyed per module, so a version bump that relicenses a dependency — or any new runtime dependency — fails the build until re-reviewed. License names are jk1's normalized display names; keep them in sync with LICENSE_TEXT_FILE in cli/build.gradle.",
+  "_comment": "Drives :cli:checkLicense (jk1 dependency-license-report). Entries are keyed per module, so a version bump that relicenses a dependency — or any new runtime dependency — fails the build until re-reviewed. License names are the normalized display names produced by license-normalizer-bundle.json; keep them in sync with LICENSE_TEXT_FILE in cli/build.gradle. The mallet module pulls in the cc.mallet tree (CPL/LGPL/BSD); separate jars in the distribution preserve the LGPL relink right.",
   "allowedLicenses": [
+    {
+      "moduleName": "cc.mallet:mallet",
+      "moduleLicense": "Common Public License, Version 1.0"
+    },
+    {
+      "moduleName": "com.googlecode.matrix-toolkits-java:mtj",
+      "moduleLicense": "GNU Lesser General Public License, Version 3.0"
+    },
+    {
+      "moduleName": "com.googlecode.netlib-java:netlib-java",
+      "moduleLicense": "The 2-Clause BSD License"
+    },
+    {
+      "moduleName": "commons-logging:commons-logging",
+      "moduleLicense": "Apache License, Version 2.0"
+    },
     {
       "moduleName": "info.picocli:picocli",
       "moduleLicense": "Apache License, Version 2.0"
     },
     {
-      "moduleName": "org.jspecify:jspecify",
-      "moduleLicense": "Apache License, Version 2.0"
+      "moduleName": "jgrapht:jgrapht",
+      "moduleLicense": "GNU Lesser General Public License, Version 2.1"
     },
-    { "moduleName": "org.slf4j:slf4j-api", "moduleLicense": "MIT License" },
+    {
+      "moduleName": "net.sf.jwordnet:jwnl",
+      "moduleLicense": "The 3-Clause BSD License"
+    },
+    {
+      "moduleName": "net.sf.trove4j:trove4j",
+      "moduleLicense": "GNU Lesser General Public License, Version 2.1"
+    },
+    {
+      "moduleName": "net.sourceforge.f2j:arpack_combined_all",
+      "moduleLicense": "The 2-Clause BSD License"
+    },
+    {
+      "moduleName": "org.beanshell:bsh",
+      "moduleLicense": "GNU Lesser General Public License, Version 3.0"
+    },
     {
       "moduleName": "org.jline:jline",
       "moduleLicense": "The 3-Clause BSD License"
-    }
+    },
+    {
+      "moduleName": "org.jspecify:jspecify",
+      "moduleLicense": "Apache License, Version 2.0"
+    },
+    { "moduleName": "org.slf4j:slf4j-api", "moduleLicense": "MIT License" }
   ]
 }

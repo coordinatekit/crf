@@ -50,18 +50,15 @@ tasks.withType(Sign).configureEach {
     onlyIf isPublishing
 }
 
+// cli exists only to assemble the distribution; it is not published to Maven Central. Everything
+// else is a published library.
+def publishedProjects = subprojects.findAll { it.name != "cli" }
+
 subprojects {
     apply plugin: "com.diffplug.spotless"
     apply plugin: "jacoco"
     apply plugin: "java-library"
     apply plugin: "net.ltgt.errorprone"
-    apply plugin: "net.thebugmc.gradle.sonatype-central-portal-publisher"
-    apply plugin: "signing"
-
-    java {
-        withJavadocJar()
-        withSourcesJar()
-    }
 
     tasks.withType(JavaCompile).configureEach {
         // Deprecated APIs are kept for one release as plain forwarding shims; we don't want them
@@ -82,56 +79,6 @@ subprojects {
         // @TempDir fields are injected by reflection, so exclude them from initialization checking.
         options.errorprone.option("NullAway:ExcludedFieldAnnotations", "org.junit.jupiter.api.io.TempDir")
         options.errorprone.option("NullAway:HandleTestAssertionLibraries", "true")
-    }
-
-    centralPortal {
-        username = findProperty("centralPortalUsername")
-        password = findProperty("centralPortalPassword")
-        publishingType = PublishingType.AUTOMATIC
-        name = project.name
-
-        pom {
-            name = "CoordinateKit CRF ${project.name}"
-            description = "Conditional Random Fields library - ${project.name} module"
-            url = "https://crf.coordinatekit.org"
-
-            licenses {
-                license {
-                    name = "The Apache License, Version 2.0"
-                    url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
-                }
-            }
-
-            developers {
-                developer {
-                    id = "andymarek"
-                    name = "Andy Marek"
-                    email = "andy@andymarek.com"
-                }
-            }
-
-            scm {
-                connection = "scm:git:git://github.com/coordinatekit/crf.git"
-                developerConnection = "scm:git:ssh://github.com/coordinatekit/crf.git"
-                url = "https://github.com/coordinatekit/crf"
-            }
-        }
-    }
-
-    signing {
-        String signingKey = findProperty("signingKey")
-        String signingPassword = findProperty("signingPassword")
-        if (signingKey) {
-            useInMemoryPgpKeys(signingKey, signingPassword)
-        } else {
-            useGpgCmd()
-        }
-        sign publishing.publications.centralPortal
-        required = isPublishing
-    }
-
-    tasks.withType(Sign).configureEach {
-        onlyIf isPublishing
     }
 
     javadoc {
@@ -184,6 +131,68 @@ subprojects {
                 }
             }
         }
+    }
+}
+
+// Publishing and signing apply to the published libraries only. cli builds a distribution but
+// creates no Maven publication, so it neither generates javadoc/sources jars nor gets signed.
+configure(publishedProjects) {
+    apply plugin: "net.thebugmc.gradle.sonatype-central-portal-publisher"
+    apply plugin: "signing"
+
+    java {
+        withJavadocJar()
+        withSourcesJar()
+    }
+
+    centralPortal {
+        username = findProperty("centralPortalUsername")
+        password = findProperty("centralPortalPassword")
+        publishingType = PublishingType.AUTOMATIC
+        name = project.name
+
+        pom {
+            name = "CoordinateKit CRF ${project.name}"
+            description = "Conditional Random Fields library - ${project.name} module"
+            url = "https://crf.coordinatekit.org"
+
+            licenses {
+                license {
+                    name = "The Apache License, Version 2.0"
+                    url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                }
+            }
+
+            developers {
+                developer {
+                    id = "andymarek"
+                    name = "Andy Marek"
+                    email = "andy@andymarek.com"
+                }
+            }
+
+            scm {
+                connection = "scm:git:git://github.com/coordinatekit/crf.git"
+                developerConnection = "scm:git:ssh://github.com/coordinatekit/crf.git"
+                url = "https://github.com/coordinatekit/crf"
+            }
+        }
+    }
+
+    signing {
+        String signingKey = findProperty("signingKey")
+        String signingPassword = findProperty("signingPassword")
+        if (signingKey) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        } else {
+            useGpgCmd()
+        }
+        sign publishing.publications.centralPortal
+        required = isPublishing
+    }
+
+    tasks.withType(Sign).configureEach {
+        onlyIf isPublishing
     }
 }
 

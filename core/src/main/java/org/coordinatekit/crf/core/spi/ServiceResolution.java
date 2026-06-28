@@ -57,13 +57,13 @@ final class ServiceResolution {
      * @throws AmbiguousServiceException if more than one provider is discovered and none is explicit
      */
     static <X> @Nullable X resolve(Class<X> serviceType, @Nullable X explicit, @Nullable X fallback) {
-        return resolve(serviceType.getSimpleName(), explicit, discover(serviceType), fallback);
+        return resolve(serviceType, explicit, discover(serviceType), fallback);
     }
 
     /**
      * List-based form, kept separate for unit testing with synthetic providers.
      *
-     * @param serviceName the human-readable service name, used in the ambiguity error
+     * @param serviceType the service type, used to identify the slot in the ambiguity error
      * @param explicit the explicitly supplied provider, or {@code null} if none was set
      * @param discovered the providers discovered through {@link ServiceLoader}
      * @param fallback the built-in default, or {@code null} if the slot has none
@@ -72,12 +72,17 @@ final class ServiceResolution {
      *         provider, and no fallback
      * @throws AmbiguousServiceException if more than one provider is discovered and none is explicit
      */
-    static <X> @Nullable X resolve(String serviceName, @Nullable X explicit, List<X> discovered, @Nullable X fallback) {
+    static <X> @Nullable X resolve(
+            Class<?> serviceType,
+            @Nullable X explicit,
+            List<X> discovered,
+            @Nullable X fallback
+    ) {
         if (explicit != null) {
             return explicit;
         }
         if (discovered.size() > 1) {
-            throw new AmbiguousServiceException(serviceName, discovered);
+            throw new AmbiguousServiceException(serviceType, discovered);
         }
         if (!discovered.isEmpty()) {
             return discovered.getFirst();

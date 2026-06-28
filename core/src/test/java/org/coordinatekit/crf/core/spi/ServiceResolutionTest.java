@@ -34,13 +34,16 @@ class ServiceResolutionTest {
     @Test
     void resolve__explicitWins() {
         // ACT & ASSERT //
-        assertEquals("explicit", ServiceResolution.resolve("Slot", "explicit", List.of("candidate"), "fallback"));
+        assertEquals(
+                "explicit",
+                ServiceResolution.resolve(CharSequence.class, "explicit", List.of("candidate"), "fallback")
+        );
     }
 
     @Test
     void resolve__fallbackWhenEmpty() {
         // ACT & ASSERT //
-        assertEquals("fallback", ServiceResolution.resolve("Slot", null, List.of(), "fallback"));
+        assertEquals("fallback", ServiceResolution.resolve(CharSequence.class, null, List.of(), "fallback"));
     }
 
     @Test
@@ -48,25 +51,32 @@ class ServiceResolutionTest {
         // ACT //
         AmbiguousServiceException exception = assertThrows(
                 AmbiguousServiceException.class,
-                () -> ServiceResolution.resolve("Slot", null, List.of("first", "second"), "fallback")
+                () -> ServiceResolution.resolve(CharSequence.class, null, List.of("first", "second"), "fallback")
         );
 
         // ASSERT //
-        assertEquals("Slot", exception.serviceName());
+        assertEquals(CharSequence.class, exception.serviceType());
+        assertEquals("CharSequence", exception.serviceName());
         String message = exception.getMessage();
         assertNotNull(message);
-        assertTrue(message.contains("multiple Slot"), "message should report the conflicting service; was: " + message);
+        assertTrue(
+                message.contains("multiple CharSequence"),
+                "message should report the conflicting service; was: " + message
+        );
     }
 
     @Test
     void resolve__nullWhenEmptyAndNoFallback() {
         // ACT & ASSERT //
-        assertNull(ServiceResolution.resolve("Slot", null, List.of(), null));
+        assertNull(ServiceResolution.resolve(CharSequence.class, null, List.of(), null));
     }
 
     @Test
     void resolve__singleProviderWins() {
         // ACT & ASSERT //
-        assertEquals("candidate", ServiceResolution.resolve("Slot", null, List.of("candidate"), "fallback"));
+        assertEquals(
+                "candidate",
+                ServiceResolution.resolve(CharSequence.class, null, List.of("candidate"), "fallback")
+        );
     }
 }

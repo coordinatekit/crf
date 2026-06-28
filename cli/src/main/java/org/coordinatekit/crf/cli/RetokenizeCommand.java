@@ -77,6 +77,11 @@ final class RetokenizeCommand implements Callable<Integer> {
     @Nullable
     CommandSpec spec;
 
+    @Option(names = "--tagger-loader", description = "Name of the model loader to select when more than one is on "
+            + "the classpath (for example \"mallet\"). Optional; a single registered loader is selected automatically.")
+    @Nullable
+    String taggerLoader;
+
     @Option(names = {"-t",
                     "--threshold"}, defaultValue = RetokenizeConfiguration.DEFAULT_THRESHOLD_TEXT, description = "Confidence below which tokens are highlighted (in [0.0, 1.0]; "
                             + "default ${DEFAULT-VALUE}).")
@@ -91,6 +96,7 @@ final class RetokenizeCommand implements Callable<Integer> {
         RetokenizeConfiguration configuration = configuration();
         RetokenizeRunner.ReviewerFactory factory;
         try {
+            servicesBuilder.taggerLoaderName(taggerLoader);
             factory = ResolvedServicesFactory.reviewerFactory(servicesBuilder, model);
         } catch (CrfStartupException exception) {
             commandLine().getErr().println(exception.getMessage());

@@ -53,4 +53,9 @@ public final class MalletCrfTaggerLoader implements CrfTaggerLoader {
     ) throws IOException {
         return new MalletCrfTagger<>(featureExtractor, modelPath, tagProvider, tokenizer);
     }
+
+    @Override
+    public String name() {
+        return "mallet";
+    }
 }
