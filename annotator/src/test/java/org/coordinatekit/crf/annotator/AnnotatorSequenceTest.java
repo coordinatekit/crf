@@ -15,7 +15,9 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -27,6 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -209,6 +212,12 @@ class AnnotatorSequenceTest {
                         "verboseFeatures must have one entry per token, got: verboseFeatures=2, tokens=1"
                 ),
                 new ExceptionParameters(
+                        "withTagger_emptyTaggedSequence",
+                        () -> annotatorSequence(1, 1, emptyTaggedSequence()),
+                        IllegalArgumentException.class,
+                        "taggedSequence must not be empty"
+                ),
+                new ExceptionParameters(
                         "withoutTagger_sequenceNumberZero",
                         () -> AnnotatorModels.<String, TestTag>annotatorSequence(0, 1, List.of("a"), provider),
                         IllegalArgumentException.class,
@@ -351,7 +360,7 @@ class AnnotatorSequenceTest {
     @Test
     void probabilityOf__carriedOnWithTaggerPathAndNullOtherwise() {
         // ARRANGE //
-        ToDoubleFunction<List<TestTag>> probabilityFunction = tags -> tags.size();
+        ToDoubleFunction<List<TestTag>> probabilityFunction = List::size;
         List<TestTag> tags = List.of(TestTag.ALPHA);
 
         // ACT //
@@ -618,6 +627,30 @@ class AnnotatorSequenceTest {
         assertEquals(expectedConfidence, token.initialConfidence());
         assertEquals(expectedKeyOrder, List.copyOf(token.alternativeTagScores().keySet()));
         assertEquals(expectedTopScore, token.alternativeTagScores().get(expectedTag));
+    }
+
+    private static Sequence<TaggedPositionedToken<String, TestTag>> emptyTaggedSequence() {
+        return new Sequence<>() {
+            @Override
+            public TaggedPositionedToken<String, TestTag> get(int position) {
+                throw new IndexOutOfBoundsException(position);
+            }
+
+            @Override
+            public Iterator<TaggedPositionedToken<String, TestTag>> iterator() {
+                return Collections.emptyIterator();
+            }
+
+            @Override
+            public int size() {
+                return 0;
+            }
+
+            @Override
+            public Stream<TaggedPositionedToken<String, TestTag>> stream() {
+                return Stream.empty();
+            }
+        };
     }
 
     private static AnnotatorSequence<String, TestTag> immutableFeaturedSequence() {

@@ -25,6 +25,7 @@ import org.coordinatekit.crf.core.align.SequenceAlignment;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -197,14 +198,14 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
      * Writes a warning that an untokenizable sequence was copied through unchanged, and flushes it.
      *
      * @param sequenceIndex the zero-based index of the untokenizable sequence
-     * @param failureReason the tokenizer-supplied reason, or {@code null} when none was given
+     * @param failureReason the tokenizer-supplied reason
      */
-    private void emitUntokenizableWarning(int sequenceIndex, @Nullable String failureReason) {
+    private void emitUntokenizableWarning(int sequenceIndex, String failureReason) {
         String message = String.format(
                 Locale.getDefault(),
                 "Warning: sequence %,d is untokenizable and was copied through unchanged: %s",
                 sequenceIndex + 1,
-                failureReason == null ? "no reason given" : failureReason
+                failureReason
         );
         terminal.writer().write(message + System.lineSeparator());
         terminal.writer().flush();
@@ -305,12 +306,32 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
                         summary.aligned++;
                     }
                     case UNTOKENIZABLE -> {
-                        emitUntokenizableWarning(index, alignment.failureReason());
+                        emitUntokenizableWarning(
+                                index,
+                                Objects.requireNonNull(
+                                        alignment.failureReason(),
+                                        "an untokenizable alignment carries a failure reason"
+                                )
+                        );
                         writeThrough(writer, sequence);
                         summary.untokenizable++;
                     }
                     case MISALIGNED -> {
-                        Presentation<T> presentation = present(sequence, index + 1, summary.total);
+                        Presentation<T> presentation;
+                        try {
+                            presentation = present(sequence, index + 1, summary.total);
+                        } catch (InvalidInputException exception) {
+                            emitUntokenizableWarning(
+                                    index,
+                                    Objects.requireNonNull(
+                                            exception.getMessage(),
+                                            "an untokenizable input carries a failure reason"
+                                    )
+                            );
+                            writeThrough(writer, sequence);
+                            summary.untokenizable++;
+                            continue; // advances index via the for-update; copies the sequence through unchanged
+                        }
                         switch (presentation.result().action()) {
                             case ACCEPT -> {
                                 writeAccepted(writer, presentation);

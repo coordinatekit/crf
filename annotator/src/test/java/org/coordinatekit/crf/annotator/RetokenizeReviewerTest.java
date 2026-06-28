@@ -18,6 +18,7 @@ package org.coordinatekit.crf.annotator;
 import org.coordinatekit.crf.annotator.AnnotatorTestSupport.PunctuationTokenizer;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.StringTagProvider;
+import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Segments;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -49,6 +50,7 @@ import java.util.stream.Stream;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.TAG_PROVIDER;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.assertMessageContains;
+import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.assertUntokenizableWarning;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.capturingTerminal;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.initialTagsOf;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
@@ -448,6 +450,69 @@ class RetokenizeReviewerTest {
     }
 
     @Test
+    void tagger__untokenizableSurfaceCopiedThroughWithWarning(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        // Both sequences misalign under the authority PunctuationTokenizer. The tagger's own tokenizer
+        // rejects the comma surface the authority accepts, so present()'s tag(surface) throws an
+        // InvalidInputException; the sequence must be copied through with a warning rather than crash the
+        // pass. The comma-free second sequence proves review continues.
+        Path inputFile = writeInput(
+                tempDirectory,
+                words(List.of("Smith,", "Jones"), List.of("NN", "NN")), // tagger tokenizer rejects the comma
+                words(List.of("Young.", "Diaz"), List.of("NN", "NN")) // comma-free; presented and re-tagged
+        );
+        Path outputFile = tempDirectory.resolve("output.xml");
+        FixedTagger tagger = new FixedTagger(
+                Map.of(
+                        "Smith, Jones",
+                        List.of(Map.of("NN", 1.0)),
+                        "Young. Diaz",
+                        List.of(Map.of("NN", 1.0), Map.of("VB", 1.0), Map.of("DT", 1.0))
+                ),
+                commaRejectingTokenizer()
+        );
+        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+
+        // ACT //
+        try (Terminal terminal = capturingTerminal(captured)) {
+            RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).tagger(tagger)
+                    .taggingInterface(tagging).terminal(terminal).tokenizer(new PunctuationTokenizer()).build()
+                    .review(inputFile, outputFile);
+            terminal.flush();
+        }
+
+        // ASSERT //
+        assertEquals(1, tagging.presented.size(), "only the comma-free sequence reaches presentation");
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(2, written.size(), "every input sequence is written exactly once");
+        assertEquals(
+                List.of("Smith,", "Jones"),
+                tokensOf(written.get(0)),
+                "the sequence the tagger could not tokenize is copied through unchanged"
+        );
+        assertEquals(
+                List.of("Young", ".", "Diaz"),
+                tokensOf(written.get(1)),
+                "the following sequence is still re-tokenized and re-tagged"
+        );
+        assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.get(1)));
+
+        String output = captured.toString(StandardCharsets.UTF_8);
+        assertTrue(
+                output.contains("1 untokenizable"),
+                "the summary must count the sequence as untokenizable: " + output
+        );
+        assertUntokenizableWarning(
+                output,
+                1,
+                "was copied through unchanged",
+                "the tagger tokenizer rejected an unsupported ',' character"
+        );
+    }
+
+    @Test
     void untokenizable__copiedThroughWithWarning(@TempDir Path tempDirectory) throws Exception {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("what?"), List.of("NN")));
@@ -468,11 +533,31 @@ class RetokenizeReviewerTest {
         assertEquals(List.of("what?"), tokensOf(written.getFirst()), "untokenizable sequence copied through unchanged");
 
         String output = captured.toString(StandardCharsets.UTF_8);
-        assertTrue(output.contains("untokenizable"), "a warning must be emitted: " + output);
+        assertUntokenizableWarning(
+                output,
+                1,
+                "was copied through unchanged",
+                "The input string contains an unsupported '?' character"
+        );
     }
 
     private static TaggingResult<String> accept(String... tags) {
         return taggingResult(ACCEPT, List.of(tags));
+    }
+
+    /**
+     * A tokenizer that rejects any surface containing a comma and otherwise tokenizes like
+     * {@link PunctuationTokenizer}, for driving a tagger that rejects a surface the alignment authority
+     * accepts.
+     */
+    private static Tokenizer commaRejectingTokenizer() {
+        PunctuationTokenizer delegate = new PunctuationTokenizer();
+        return input -> {
+            if (input.indexOf(',') >= 0) {
+                throw new InvalidInputException(input, "the tagger tokenizer rejected an unsupported ',' character");
+            }
+            return delegate.tokenize(input);
+        };
     }
 
     private static TaggingResult<String> exit() {

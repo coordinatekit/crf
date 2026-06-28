@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,6 +86,25 @@ public final class AnnotatorTestSupport {
         for (String fragment : fragments) {
             assertTrue(message.contains(fragment), "expected message to contain \"" + fragment + "\"; was: " + message);
         }
+    }
+
+    /**
+     * Asserts that {@code output} carries exactly one untokenizable warning for {@code sequenceNumber},
+     * with the flow-specific {@code verbPhrase} ("was skipped" for annotate, "was copied through
+     * unchanged" for review) and the tokenizer's {@code reasonFragment}.
+     */
+    public static void assertUntokenizableWarning(
+            String output,
+            int sequenceNumber,
+            String verbPhrase,
+            String reasonFragment
+    ) {
+        String warning = "sequence " + sequenceNumber + " is untokenizable and " + verbPhrase + ":";
+        assertTrue(output.contains(warning), "expected warning \"" + warning + "\"; was: " + output);
+        assertTrue(output.contains(reasonFragment), "expected reason \"" + reasonFragment + "\"; was: " + output);
+        String marker = "is untokenizable";
+        int occurrences = (output.length() - output.replace(marker, "").length()) / marker.length();
+        assertEquals(1, occurrences, "expected exactly one untokenizable warning; was: " + output);
     }
 
     /** Returns the ANSI escape prefix emitted for a bold-yellow style, for asserting styled rows. */

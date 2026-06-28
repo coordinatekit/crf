@@ -21,6 +21,7 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
@@ -201,6 +202,25 @@ public final class Annotator<F, T extends Comparable<T>> {
     }
 
     /**
+     * Writes a warning that a non-blank input line could not be tokenized and was skipped, and flushes
+     * it. The annotate flow does not write the line, so the session continues to the next line and the
+     * skipped line will be re-presented on the next run.
+     *
+     * @param sequenceNumber the 1-based ordinal of the untokenizable line within the non-blank input
+     * @param failureReason the tokenizer-supplied reason
+     */
+    private void emitUntokenizableWarning(int sequenceNumber, String failureReason) {
+        String message = String.format(
+                Locale.getDefault(),
+                "Warning: sequence %,d is untokenizable and was skipped: %s",
+                sequenceNumber,
+                failureReason
+        );
+        terminal.writer().write(message + System.lineSeparator());
+        terminal.writer().flush();
+    }
+
+    /**
      * Computes a 64-bit content fingerprint of a token list for content-match resume. Tokens are
      * encoded as UTF-8 with a NUL byte separator and fed through SHA-256; the leading 8 bytes of the
      * digest are returned as a {@code long}.
@@ -239,9 +259,20 @@ public final class Annotator<F, T extends Comparable<T>> {
             return true;
         }
 
-        TaggedTokenization<F, T> tagged = tagger != null ? tagger.tag(line) : null;
-        Tokenization tokenized = tagged != null ? tagged.tokenization()
-                : Objects.requireNonNull(tokenizer, "tokenizer must be set when tagger is null").tokenize(line);
+        TaggedTokenization<F, T> tagged;
+        Tokenization tokenized;
+        try {
+            tagged = tagger != null ? tagger.tag(line) : null;
+            tokenized = tagged != null ? tagged.tokenization()
+                    : Objects.requireNonNull(tokenizer, "tokenizer must be set when tagger is null").tokenize(line);
+        } catch (InvalidInputException exception) {
+            ++state.untokenizable;
+            emitUntokenizableWarning(
+                    state.skipped + state.untokenizable + state.presentationNumber,
+                    Objects.requireNonNull(exception.getMessage(), "an untokenizable input carries a failure reason")
+            );
+            return true; // skip this line, continue the session
+        }
         List<String> tokens = tokenized.sequence().stream().map(PositionedToken::token).toList();
 
         long tokenHash = hashTokens(tokens);
@@ -261,7 +292,7 @@ public final class Annotator<F, T extends Comparable<T>> {
         List<Set<F>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
 
         ++state.presentationNumber;
-        int currentPresentation = state.skipped + state.presentationNumber;
+        int currentPresentation = state.skipped + state.untokenizable + state.presentationNumber;
         AnnotatorSequence<F, T> displaySequence = tagged != null
                 ? annotatorSequence(
                         currentPresentation,
@@ -323,6 +354,7 @@ public final class Annotator<F, T extends Comparable<T>> {
         int skipped;
         boolean startupMessageEmitted;
         final int totalSequences;
+        int untokenizable;
         final TrainingSequenceWriter<T> writer;
 
         AnnotationState(TrainingSequenceWriter<T> writer, Set<Long> seenHashes, int totalSequences) {
