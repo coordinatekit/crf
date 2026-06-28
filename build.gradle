@@ -147,6 +147,24 @@ subprojects {
             }
         }
 
+        // publishToCentralPortal is release-only, so publish snapshots by pointing a plain maven-publish
+        // repository at the Central Portal snapshots endpoint, reusing the plugin's `centralPortal`
+        // publication. Snapshots upload unsigned: the isPublishingToCentral onlyIf below skips signing.
+        if (version.endsWith("-SNAPSHOT")) {
+            publishing {
+                repositories {
+                    maven {
+                        name = "CentralSnapshots"
+                        url = "https://central.sonatype.com/repository/maven-snapshots/"
+                        credentials {
+                            username = findProperty("centralPortalUsername")
+                            password = findProperty("centralPortalPassword")
+                        }
+                    }
+                }
+            }
+        }
+
         signing {
             String signingKey = findProperty("signingKey")
             String signingPassword = findProperty("signingPassword")
