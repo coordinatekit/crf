@@ -68,4 +68,18 @@ public interface CrfTaggerLoader {
             TagProvider<T> tagProvider,
             Tokenizer tokenizer
     ) throws IOException;
+
+    /**
+     * Returns this loader's short, stable identifier, unique among the loaders on the classpath (for
+     * example {@code "mallet"}).
+     *
+     * <p>
+     * The name is the disambiguator a launcher exposes when more than one loader is registered: a user
+     * picks a loader by its name rather than by its implementation class. Implementations return a
+     * lowercase ASCII identifier that does not change between releases, since users and scripts come to
+     * depend on it.
+     *
+     * @return the loader's stable lowercase identifier
+     */
+    String name();
 }

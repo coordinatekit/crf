@@ -206,8 +206,15 @@ a downstream registers `META-INF/services` files instead of writing a `main` or 
 
 - `CrfServices`: Discovers the domain SPIs and binds each slot to its built-in default
 - `AmbiguousServiceException`: Thrown when more than one provider of a service type is registered and none was supplied explicitly
+- `UnknownServiceException`: Thrown when a service is requested by name but no registered provider carries that name
 
 A slot resolves by the precedence `explicit > single discovered provider > fallback`. The generic discovery kernel is package-private and reached through `CrfServices`.
+
+`CrfTaggerLoader` additionally supports selection by name: each loader returns a stable `name()` (the
+`mallet` loader returns `"mallet"`), and `CrfServices.taggerLoader(explicit, name)` picks the loader whose
+name matches. The CLI exposes this as `--tagger-loader <name>`, the disambiguator when more than one loader
+is on the classpath. Name selection is strict — a name that matches nothing throws `UnknownServiceException`
+rather than falling back to a lone registered loader.
 
 ### Training Data Format
 

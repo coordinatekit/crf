@@ -32,9 +32,11 @@ import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.spi.AmbiguousServiceException;
+import org.coordinatekit.crf.core.spi.CrfServices;
+import org.coordinatekit.crf.core.spi.UnknownServiceException;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
-import org.jspecify.annotations.Nullable;
+import org.coordinatekit.crf.mallet.tag.MalletCrfTaggerLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -43,7 +45,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
@@ -58,44 +59,21 @@ class ResolvedServicesTest {
         throw new UnsupportedOperationException("not used");
     };
 
-    private static CrfTaggerLoader loaderCapturing(
-            AtomicReference<@Nullable FeatureExtractor<?>> captured,
-            CrfTagger<?, ?> tagger
-    ) {
-        return new CrfTaggerLoader() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public <F, T extends Comparable<T>> CrfTagger<F, T> load(
-                    Path modelPath,
-                    FeatureExtractor<F> featureExtractor,
-                    TagProvider<T> tagProvider,
-                    Tokenizer tokenizer
-            ) {
-                captured.set(featureExtractor);
-                return (CrfTagger<F, T>) tagger;
-            }
-        };
-    }
+    @Test
+    void loadTagger__bundledLoaderReportsUnreadableModel() {
+        // ARRANGE //
+        // mallet is bundled on the CLI classpath, so resolve() discovers MalletCrfTaggerLoader and the
+        // no-loader branch is unreachable here; a missing model now fails at load time instead.
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).resolve();
 
-    private static CrfTaggerLoader loaderReturning(CrfTagger<?, ?> tagger) {
-        return loaderCapturing(new AtomicReference<>(), tagger);
-    }
+        // ACT //
+        CrfStartupException exception = assertThrows(
+                CrfStartupException.class,
+                () -> resolvedServices.loadTagger(Path.of("does-not-exist.crf"))
+        );
 
-    private static CrfTaggerLoader loaderThrowing(Exception cause) {
-        return new CrfTaggerLoader() {
-            @Override
-            public <F, T extends Comparable<T>> CrfTagger<F, T> load(
-                    Path modelPath,
-                    FeatureExtractor<F> featureExtractor,
-                    TagProvider<T> tagProvider,
-                    Tokenizer tokenizer
-            ) throws IOException {
-                if (cause instanceof IOException ioException) {
-                    throw ioException;
-                }
-                throw (RuntimeException) cause;
-            }
-        };
+        // ASSERT //
+        assertMessageContains(exception, "failed to load", "does-not-exist.crf");
     }
 
     record LoadFailureParameters(String name, Exception thrown) {}
@@ -120,7 +98,8 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderThrowing(parameters.thrown())).resolve();
+                .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.throwing(parameters.thrown()))
+                .resolve();
 
         // ACT //
         CrfStartupException exception = assertThrows(
@@ -138,7 +117,8 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(featureExtractor).taggerLoader(loaderReturning(UNUSED_TAGGER)).resolve();
+                .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.returning(UNUSED_TAGGER))
+                .resolve();
 
         // ACT //
         CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
@@ -151,24 +131,27 @@ class ResolvedServicesTest {
     void loadTagger__modelUsesFullFeatureExtractor() {
         // ARRANGE //
         FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
-        AtomicReference<@Nullable FeatureExtractor<?>> captured = new AtomicReference<>();
+        TestCrfTaggerLoader loader = TestCrfTaggerLoader.returning(UNUSED_TAGGER);
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loaderCapturing(captured, UNUSED_TAGGER))
-                .resolve();
+                .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loader).resolve();
 
         // ACT //
         resolvedServices.loadTagger(Path.of("model.bin"));
 
         // ASSERT //
-        assertSame(fullFeatureExtractor, captured.get(), "the loader should receive the full feature extractor");
+        assertSame(
+                fullFeatureExtractor,
+                loader.capturedFeatureExtractor(),
+                "the loader should receive the full feature extractor"
+        );
     }
 
     @Test
     void loadTagger__modelWithoutFeatureExtractorLoads() {
         // ARRANGE //
-        AtomicReference<@Nullable FeatureExtractor<?>> captured = new AtomicReference<>();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .taggerLoader(loaderCapturing(captured, UNUSED_TAGGER)).resolve();
+        TestCrfTaggerLoader loader = TestCrfTaggerLoader.returning(UNUSED_TAGGER);
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).taggerLoader(loader)
+                .resolve();
 
         // ACT //
         CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
@@ -176,27 +159,12 @@ class ResolvedServicesTest {
         // ASSERT //
         assertSame(UNUSED_TAGGER, loaded);
         assertNull(resolvedServices.fullFeatureExtractor(), "no full feature extractor should be resolved");
-        FeatureExtractor<?> substituted = captured.get();
+        FeatureExtractor<?> substituted = loader.capturedFeatureExtractor();
         assertNotNull(substituted, "an empty feature extractor should be substituted for the absent full extractor");
         assertTrue(
                 substituted.extractAt(new InputSequence(List.of("token")), 0).isEmpty(),
                 "the substituted extractor yields no features"
         );
-    }
-
-    @Test
-    void loadTagger__modelWithoutLoaderFailsFast() {
-        // ARRANGE //
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).resolve();
-
-        // ACT //
-        CrfStartupException exception = assertThrows(
-                CrfStartupException.class,
-                () -> resolvedServices.loadTagger(Path.of("model.bin"))
-        );
-
-        // ASSERT //
-        assertMessageContains(exception, "TaggerLoader");
     }
 
     @Test
@@ -211,7 +179,9 @@ class ResolvedServicesTest {
     @Test
     void resolve__ambiguousServiceRewordsToStartupGuidance() {
         // ARRANGE //
-        AmbiguousServiceException exception = new AmbiguousServiceException("TagProvider", List.of(1, "second"));
+        // reversed implementations so the class names arrive out of order; the expected message proves
+        // AmbiguousServiceException sorts them.
+        AmbiguousServiceException exception = new AmbiguousServiceException(TagProvider.class, List.of("second", 1));
 
         // ACT //
         CrfStartupException startupException = ResolvedServices.ambiguityStartupException(exception);
@@ -224,6 +194,21 @@ class ResolvedServicesTest {
                 startupException.getMessage()
         );
         assertSame(exception, startupException.getCause());
+    }
+
+    @Test
+    void resolve__ambiguousTaggerLoaderSuggestsFlag() {
+        // ARRANGE //
+        AmbiguousServiceException exception = new AmbiguousServiceException(
+                CrfTaggerLoader.class,
+                List.of(1, "second")
+        );
+
+        // ACT //
+        CrfStartupException startupException = ResolvedServices.ambiguityStartupException(exception);
+
+        // ASSERT //
+        assertMessageContains(startupException, "CrfTaggerLoader", "--tagger-loader <name>");
     }
 
     @Test
@@ -292,6 +277,64 @@ class ResolvedServicesTest {
     }
 
     @Test
+    void resolve__taggerLoaderNameSelectsBundledLoader() {
+        // ACT //
+        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
+                .taggerLoaderName("mallet").resolve();
+
+        // ASSERT //
+        assertInstanceOf(MalletCrfTaggerLoader.class, resolvedServices.taggerLoader());
+    }
+
+    record UnknownRewordParameters(String name, List<String> availableNames, String expectedMessage) {}
+
+    static Stream<UnknownRewordParameters> resolve__unknownServiceRewordsToStartupGuidance() {
+        return Stream.of(
+                new UnknownRewordParameters(
+                        "sorts_available_names",
+                        List.of("other", "mallet"),
+                        "no CrfTaggerLoader named \"nope\" is on the classpath; available: mallet, other"
+                ),
+                new UnknownRewordParameters(
+                        "empty_available_reports_none",
+                        List.of(),
+                        "no CrfTaggerLoader named \"nope\" is on the classpath; available: (none)"
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void resolve__unknownServiceRewordsToStartupGuidance(UnknownRewordParameters parameters) {
+        // ARRANGE //
+        UnknownServiceException exception = new UnknownServiceException(
+                "CrfTaggerLoader",
+                "nope",
+                parameters.availableNames()
+        );
+
+        // ACT //
+        CrfStartupException startupException = ResolvedServices.unknownServiceStartupException(exception);
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), startupException.getMessage());
+        assertSame(exception, startupException.getCause());
+    }
+
+    @Test
+    void resolve__unknownTaggerLoaderNameFailsFast() {
+        // ACT //
+        // mallet is the only loader on the CLI classpath, so an unknown name re-words to startup guidance.
+        CrfStartupException exception = assertThrows(
+                CrfStartupException.class,
+                () -> ResolvedServices.builder().tagProvider(TAG_PROVIDER).taggerLoaderName("nope").resolve()
+        );
+
+        // ASSERT //
+        assertMessageContains(exception, "nope", "mallet");
+    }
+
+    @Test
     void resolve__usesDefaultsWhenNothingRegistered() {
         // ACT //
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).resolve();
@@ -300,7 +343,14 @@ class ResolvedServicesTest {
         assertInstanceOf(WhitespaceTokenizer.class, resolvedServices.tokenizer());
         assertNull(resolvedServices.fullFeatureExtractor());
         assertNull(resolvedServices.keyFeatureExtractor());
-        assertNull(resolvedServices.taggerLoader());
         assertSame(TAG_PROVIDER, resolvedServices.tagProvider());
+    }
+
+    @Test
+    void taggerLoader__malletBundledOnClasspath() {
+        // ACT & ASSERT //
+        // Regression guard: bundling :mallet in the CLI puts a CrfTaggerLoader on the runtime classpath,
+        // so the annotator's --model path works out of the box without a hand-dropped ext/ jar.
+        assertInstanceOf(MalletCrfTaggerLoader.class, CrfServices.taggerLoader(null).orElseThrow());
     }
 }

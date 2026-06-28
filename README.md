@@ -50,7 +50,7 @@ their APIs are designed for flexibility, which often means writing significant b
 - **Multi-threaded Training** - Parallel training support via MALLET
 - **Configurable** - Fine-grained control over training parameters, regularization, and model output
 - **Interactive Annotator** - Terminal-based UI for tagging sequences and writing the XML training data — see [`annotator/README.md`](annotator/README.md)
-- **`crf` command** - One command-line entry point for the interactive `annotate` and `retokenize` tools; register your components as services, no `main` required — see [`cli/README.md`](cli/README.md)
+- **`crf` command** - One command-line entry point for the interactive `annotate` and `retokenize` tools; the distribution bundles the MALLET model loader so `--model` works out of the box, and you register your own components as services with no `main` required — see [`cli/README.md`](cli/README.md)
 
 ## Project Structure
 

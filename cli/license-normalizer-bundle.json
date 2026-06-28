@@ -1,0 +1,17 @@
+{
+  "_comment": "Custom jk1 LicenseBundleNormalizer rules, merged ahead of jk1's built-in bundle. Override the display names of jk1's CPL/LGPL bundles to stable, readable forms. Bundle names (CPL-1.0, LGPL-2.1-only, LGPL-3.0-only) must match jk1's built-in bundle names so our licenseName wins; jk1's default rules still map each dependency's raw POM license onto these bundles. Keep the licenseName values in sync with allowed-licenses.json and LICENSE_TEXT_FILE in cli/build.gradle.",
+  "bundles": [
+    {
+      "bundleName": "CPL-1.0",
+      "licenseName": "Common Public License, Version 1.0"
+    },
+    {
+      "bundleName": "LGPL-2.1-only",
+      "licenseName": "GNU Lesser General Public License, Version 2.1"
+    },
+    {
+      "bundleName": "LGPL-3.0-only",
+      "licenseName": "GNU Lesser General Public License, Version 3.0"
+    }
+  ]
+}

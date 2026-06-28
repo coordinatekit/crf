@@ -77,6 +77,12 @@ class MalletCrfTaggerLoaderTest {
     }
 
     @Test
+    void name__isMallet() {
+        // ACT & ASSERT //
+        assertEquals("mallet", new MalletCrfTaggerLoader().name());
+    }
+
+    @Test
     void serviceLoader__discoversExactlyMalletLoader() {
         // ACT //
         List<CrfTaggerLoader> loaders = ServiceLoader.load(CrfTaggerLoader.class).stream()

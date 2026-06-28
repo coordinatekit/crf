@@ -1,37 +1,29 @@
 # CLI
 
 The `crf` command-line tool: a [picocli](https://picocli.info) front end hosting
-the interactive `annotate` and `retokenize` flows. It ships no components of its
-own — it discovers your tag provider, tokenizer, feature extractors, and model
-loader through `ServiceLoader` and assembles the tool around them, so there is no
-`main` to write. Register your components as services and put this module on the
-classpath; the `crf` command then exposes them through its `annotate` and
-`retokenize` subcommands.
+the interactive `annotate` and `retokenize` flows. It discovers your tag provider,
+tokenizer, and feature extractors through `ServiceLoader` and assembles the tool
+around them, so there is no `main` to write. The distribution bundles the `mallet`
+model loader, so `--model` reads MALLET models out of the box; you supply the
+task-specific pieces.
 
-## Depending on it
+## Getting the tool
 
-Depend on `cli`, plus `mallet` if you want model-assisted suggestions (it
-provides the model loader that reads MALLET models):
+`cli` builds the `crf` distribution rather than a published library. Run
+`./gradlew :cli:installDist` and you get a self-contained `crf` under
+`cli/build/install/crf`, with `core`, `annotator`, and the `mallet` model loader
+(and its dependencies) already on the classpath. `./gradlew :cli:distZip` packages
+the same tree as a zip.
 
-```groovy
-dependencies {
-    implementation "org.coordinatekit.crf:cli:0.1.0"
-    // Optional, only for model-assisted suggestions:
-    implementation "org.coordinatekit.crf:mallet:0.1.0"
-}
-```
+The distribution ships everything except the task-specific components, which are
+yours to supply: at minimum a tag provider, and usually a feature extractor.
+Register them as services in a jar and drop it in the distribution's `ext/`
+directory, which is on the `crf` classpath (see [Registering your
+components](#registering-your-components)).
 
-```xml
-<dependency>
-    <groupId>org.coordinatekit.crf</groupId>
-    <artifactId>cli</artifactId>
-    <version>0.1.0</version>
-</dependency>
-```
-
-The underlying `annotator` module stays a plain library, so you can embed the
-`annotate` and `retokenize` flows directly if the `crf` command doesn't fit. This
-module is only the command-line wiring.
+The underlying `annotator` module stays a plain published library, so you can
+embed the `annotate` and `retokenize` flows directly if the `crf` command doesn't
+fit. This module is only the command-line wiring.
 
 ## Registering your components
 
@@ -44,24 +36,26 @@ module is only the command-line wiring.
 | Tokenizer              | `org.coordinatekit.crf.core.preprocessing.Tokenizer`            | `WhitespaceTokenizer`            | always                     |
 | Full feature extractor | `org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor` | none (tags without features)     | recommended with `--model` |
 | Key feature extractor  | `org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor`  | falls back to the full extractor | optional                   |
-| Model loader           | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`                | none                             | `--model`                  |
+| Model loader           | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`                | `mallet` (bundled)               | overriding the bundled one |
 
 The full feature extractor is the one your model was trained with: it drives the
 tagger and the verbose "all features" view. The key feature extractor backs the
 simpler "key features" view and falls back to the full extractor when you don't
 register one.
 
-Only the tag provider is required. Register one by adding a `META-INF/services`
-file that names your implementation:
+Only the tag provider is required, and it stays yours to supply even with `mallet`
+bundled: a tag provider defines the task's label space, so it is task-specific in a
+way the model loader is not. Register one by adding a `META-INF/services` file that
+names your implementation:
 
 ```
 # src/main/resources/META-INF/services/org.coordinatekit.crf.core.TagProvider
 com.example.MyTagProvider
 ```
 
-For model-assisted suggestions, register a full feature extractor too and keep the
-`mallet` module on the classpath — it registers the `CrfTaggerLoader` that reads
-MALLET models:
+For model-assisted suggestions, register a full feature extractor too — the one
+your model was trained with. The `mallet` model loader is already bundled, so
+`--model` reads MALLET models without any extra setup:
 
 ```
 # src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor
@@ -85,11 +79,20 @@ a `ServiceConfigurationError` at load time.
 
 With no tag provider on the classpath, the command fails fast with guidance
 rather than producing garbage. If any slot has more than one registered service
-it also fails, naming the conflict; leave exactly one or supply it explicitly.
-Passing `--model` without a registered model loader is the same kind of failure:
-it stops before the terminal opens and tells you to add `mallet`. A model loaded
-without a matching `FullFeatureExtractor` still runs, but prints a warning — a
-model's suggestions are only meaningful with the extractor it was trained on.
+it also fails, naming the conflict; leave exactly one or supply it explicitly. A
+model loaded without a matching `FullFeatureExtractor` still runs, but prints a
+warning — a model's suggestions are only meaningful with the extractor it was
+trained on.
+
+## Choosing a model loader
+
+The bundled `mallet` loader reads MALLET models and is the only loader on the
+classpath by default, so `--model` works with no further setup. To use a different
+format, register another `CrfTaggerLoader` by dropping its jar in the
+distribution's `ext/` directory. Once more than one loader is present, pick one
+with `--tagger-loader <name>`, where the name is the loader's `name()` (`mallet`
+for the bundled one). An unknown name fails fast and lists the names that are
+available. With a single loader on the classpath the flag is unnecessary.
 
 ## Subcommands
 
@@ -111,14 +114,15 @@ crf annotate --input lines.txt --output labeled.xml
 crf annotate --input lines.txt --output labeled.xml --model pos.crf
 ```
 
-| Flag                | Required | Default | Notes                                                                           |
-| ------------------- | -------- | ------- | ------------------------------------------------------------------------------- |
-| `--input`, `-i`     | yes      | —       | Plain-text UTF-8 input file, one sequence per line.                             |
-| `--output`, `-o`    | yes      | —       | XML output; created or appended. Flushed after every acceptance.                |
-| `--model`, `-m`     | no       | none    | Path to a serialized model. Without it, the annotator runs without suggestions. |
-| `--threshold`, `-t` | no       | `0.80`  | Confidence below which tokens are highlighted. Must be in `[0.0, 1.0]`.         |
-| `--help`, `-h`      | —        | —       | Print the usage banner and exit.                                                |
-| `--version`, `-V`   | —        | —       | Print the version and exit.                                                     |
+| Flag                | Required | Default  | Notes                                                                           |
+| ------------------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| `--input`, `-i`     | yes      | —        | Plain-text UTF-8 input file, one sequence per line.                             |
+| `--output`, `-o`    | yes      | —        | XML output; created or appended. Flushed after every acceptance.                |
+| `--model`, `-m`     | no       | none     | Path to a serialized model. Without it, the annotator runs without suggestions. |
+| `--tagger-loader`   | no       | `mallet` | Model loader to select when more than one is on the classpath.                  |
+| `--threshold`, `-t` | no       | `0.80`   | Confidence below which tokens are highlighted. Must be in `[0.0, 1.0]`.         |
+| `--help`, `-h`      | —        | —        | Print the usage banner and exit.                                                |
+| `--version`, `-V`   | —        | —        | Print the version and exit.                                                     |
 
 See [`annotator/README.md`](../annotator/README.md) for the per-sequence key
 bindings, the resume behavior, and the rule about keeping your tokenizer stable
@@ -138,14 +142,15 @@ crf retokenize --input labeled.xml --output retokenized.xml
 crf retokenize --input labeled.xml --output retokenized.xml --model pos.crf
 ```
 
-| Flag                | Required | Default | Notes                                                                        |
-| ------------------- | -------- | ------- | ---------------------------------------------------------------------------- |
-| `--input`, `-i`     | yes      | —       | XML training-data file to review.                                            |
-| `--output`, `-o`    | yes      | —       | XML output; must be absent or empty.                                         |
-| `--model`, `-m`     | no       | none    | Path to a serialized model. Without it, re-tagging runs without suggestions. |
-| `--threshold`, `-t` | no       | `0.80`  | Confidence below which tokens are highlighted. Must be in `[0.0, 1.0]`.      |
-| `--help`, `-h`      | —        | —       | Print the usage banner and exit.                                             |
-| `--version`, `-V`   | —        | —       | Print the version and exit.                                                  |
+| Flag                | Required | Default  | Notes                                                                        |
+| ------------------- | -------- | -------- | ---------------------------------------------------------------------------- |
+| `--input`, `-i`     | yes      | —        | XML training-data file to review.                                            |
+| `--output`, `-o`    | yes      | —        | XML output; must be absent or empty.                                         |
+| `--model`, `-m`     | no       | none     | Path to a serialized model. Without it, re-tagging runs without suggestions. |
+| `--tagger-loader`   | no       | `mallet` | Model loader to select when more than one is on the classpath.               |
+| `--threshold`, `-t` | no       | `0.80`   | Confidence below which tokens are highlighted. Must be in `[0.0, 1.0]`.      |
+| `--help`, `-h`      | —        | —        | Print the usage banner and exit.                                             |
+| `--version`, `-V`   | —        | —        | Print the version and exit.                                                  |
 
 The interactive prompt is the same one `annotate` uses; run `crf retokenize
 --help` for the authoritative flag list.
