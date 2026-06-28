@@ -33,7 +33,6 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -80,18 +79,7 @@ class ResolvedServicesFactoryTest {
     private static final CrfTagger<String, String> TAGGER = input -> {
         throw new UnsupportedOperationException("not used");
     };
-    private static final CrfTaggerLoader TAGGER_LOADER = new CrfTaggerLoader() {
-        @SuppressWarnings("unchecked")
-        @Override
-        public <F, T extends Comparable<T>> CrfTagger<F, T> load(
-                Path modelPath,
-                FeatureExtractor<F> featureExtractor,
-                TagProvider<T> tagProvider,
-                Tokenizer tokenizer
-        ) {
-            return (CrfTagger<F, T>) TAGGER;
-        }
-    };
+    private static final CrfTaggerLoader TAGGER_LOADER = TestCrfTaggerLoader.returning(TAGGER);
     private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("NN"), "NN");
 
     /** Assembles a CLI component from a factory, given a terminal; mirrors {@code create}. */

@@ -76,7 +76,7 @@ public final class CrfServices {
      *         is explicit
      */
     public static <F> Optional<FeatureExtractor<F>> fullFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
-        return resolveExtractor("FullFeatureExtractor", FullFeatureExtractor.class, explicit);
+        return resolveExtractor(FullFeatureExtractor.class, explicit);
     }
 
     /**
@@ -105,16 +105,16 @@ public final class CrfServices {
      *         is explicit
      */
     public static <F> Optional<FeatureExtractor<F>> keyFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
-        return resolveExtractor("KeyFeatureExtractor", KeyFeatureExtractor.class, explicit);
+        return resolveExtractor(KeyFeatureExtractor.class, explicit);
     }
 
     /**
      * Resolves a marker-typed feature extractor slot by
      * {@code explicit > single registered provider > none}, shared by the full and key overloads.
      *
-     * @param name the service name used in {@link AmbiguousServiceException} messages
      * @param serviceType the marker subinterface to discover ({@code FullFeatureExtractor} or
-     *        {@code KeyFeatureExtractor})
+     *        {@code KeyFeatureExtractor}); also identifies the slot in
+     *        {@link AmbiguousServiceException}
      * @param explicit the explicitly supplied extractor, or {@code null} if none was set
      * @param <F> the feature type
      * @return the resolved extractor, or empty if none was supplied or registered
@@ -123,12 +123,41 @@ public final class CrfServices {
     // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
     @SuppressWarnings("unchecked")
     private static <F> Optional<FeatureExtractor<F>> resolveExtractor(
-            String name,
             Class<?> serviceType,
             @Nullable FeatureExtractor<F> explicit
     ) {
         List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) ServiceResolution.discover(serviceType);
-        return Optional.ofNullable(ServiceResolution.resolve(name, explicit, discovered, null));
+        return Optional.ofNullable(ServiceResolution.resolve(serviceType, explicit, discovered, null));
+    }
+
+    /**
+     * Selects a tagger loader from {@code discovered} by name, the discovery-only core of
+     * {@link #taggerLoader(CrfTaggerLoader, String)}; kept separate for unit testing with synthetic
+     * loaders.
+     *
+     * @param discovered the loaders discovered through {@link java.util.ServiceLoader}
+     * @param name the requested loader name, or {@code null} to resolve without name selection
+     * @return the selected loader, or empty if none was discovered and no name was requested
+     * @throws AmbiguousServiceException if {@code name} is {@code null} and more than one loader is
+     *         discovered, or if more than one discovered loader carries the requested {@code name}
+     * @throws UnknownServiceException if {@code name} is non-null and no discovered loader carries it
+     */
+    static Optional<CrfTaggerLoader> selectTaggerLoader(List<CrfTaggerLoader> discovered, @Nullable String name) {
+        if (name == null) {
+            return Optional.ofNullable(ServiceResolution.resolve(CrfTaggerLoader.class, null, discovered, null));
+        }
+        List<CrfTaggerLoader> matches = discovered.stream().filter(loader -> loader.name().equals(name)).toList();
+        if (matches.size() > 1) {
+            throw new AmbiguousServiceException(CrfTaggerLoader.class, matches);
+        }
+        if (matches.isEmpty()) {
+            throw new UnknownServiceException(
+                    "CrfTaggerLoader",
+                    name,
+                    discovered.stream().map(CrfTaggerLoader::name).toList()
+            );
+        }
+        return Optional.of(matches.getFirst());
     }
 
     /**
@@ -159,7 +188,7 @@ public final class CrfServices {
     public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider(@Nullable TagProvider<T> explicit) {
         List<TagProvider<T>> discovered = (List<TagProvider<T>>) (List<?>) ServiceResolution
                 .discover(TagProvider.class);
-        return Optional.ofNullable(ServiceResolution.resolve("TagProvider", explicit, discovered, null));
+        return Optional.ofNullable(ServiceResolution.resolve(TagProvider.class, explicit, discovered, null));
     }
 
     /**
@@ -181,7 +210,33 @@ public final class CrfServices {
      *         explicit
      */
     public static Optional<CrfTaggerLoader> taggerLoader(@Nullable CrfTaggerLoader explicit) {
-        return Optional.ofNullable(ServiceResolution.resolve(CrfTaggerLoader.class, explicit, null));
+        return taggerLoader(explicit, null);
+    }
+
+    /**
+     * Resolves the tagger loader by
+     * {@code explicit > name-matched registered CrfTaggerLoader > single registered CrfTaggerLoader >
+     * none}.
+     *
+     * <p>
+     * When {@code name} is {@code null} this matches {@link #taggerLoader(CrfTaggerLoader)}: a single
+     * registered loader wins and more than one is ambiguous. When {@code name} is non-null, selection
+     * is strict — the loader whose {@link CrfTaggerLoader#name()} equals {@code name} is chosen, and a
+     * name matching nothing fails rather than falling back to a lone registered loader, so a script
+     * that names a loader never silently runs a different one.
+     *
+     * @param explicit the explicitly supplied tagger loader, or {@code null} if none was set
+     * @param name the requested loader name, or {@code null} to resolve without name selection
+     * @return the resolved tagger loader, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if {@code name} is {@code null} and more than one loader is
+     *         registered, or if more than one registered loader carries the requested {@code name}
+     * @throws UnknownServiceException if {@code name} is non-null and no registered loader carries it
+     */
+    public static Optional<CrfTaggerLoader> taggerLoader(@Nullable CrfTaggerLoader explicit, @Nullable String name) {
+        if (explicit != null) {
+            return Optional.of(explicit);
+        }
+        return selectTaggerLoader(ServiceResolution.discover(CrfTaggerLoader.class), name);
     }
 
     /**

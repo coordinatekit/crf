@@ -23,6 +23,7 @@ import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
@@ -63,10 +64,7 @@ public enum PartsOfSpeechModel {
                 MalletCrfTrainerConfiguration.builder().conllOutputEnabled(false).modelOutputEnabled(false)
                         .trainingFraction(1).build()
         );
-        trainer.train(
-                Path.of(Objects.requireNonNull(PartsOfSpeechModel.class.getResource(TRAINING_DATA_RESOURCE)).getPath()),
-                modelPath
-        );
+        trainer.train(resourcePath(TRAINING_DATA_RESOURCE), modelPath);
     }
 
     /**
@@ -75,7 +73,7 @@ public enum PartsOfSpeechModel {
      * @return the path to the serialized CRF model file
      */
     public Path modelPath() {
-        return Path.of(Objects.requireNonNull(getClass().getResource(MODEL_PATH)).getPath());
+        return resourcePath(MODEL_PATH);
     }
 
     /**
@@ -109,6 +107,20 @@ public enum PartsOfSpeechModel {
      */
     public SortedSet<String> validTags() {
         return VALID_TAGS;
+    }
+
+    /**
+     * Resolves a classpath resource to a filesystem path, decoding any URL-encoded characters.
+     *
+     * @param name the absolute resource name to resolve
+     * @return the filesystem path of the resource
+     */
+    private static Path resourcePath(String name) {
+        try {
+            return Path.of(Objects.requireNonNull(PartsOfSpeechModel.class.getResource(name)).toURI());
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException("Failed to resolve resource: " + name, exception);
+        }
     }
 
     /**

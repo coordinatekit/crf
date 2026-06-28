@@ -36,30 +36,31 @@ public final class AmbiguousServiceException extends UncheckedCrfException {
     private final List<String> implementationNames;
 
     /**
-     * The human-readable name of the ambiguous service.
+     * The type of the ambiguous service; the authoritative identity callers branch on, and the source
+     * of the human-readable {@link #serviceName()}.
      */
-    private final String serviceName;
+    private final Class<?> serviceType;
 
     /**
      * Constructs an exception naming the ambiguous service and its registered implementations.
      *
-     * @param serviceName the human-readable service name
+     * @param serviceType the ambiguous service type
      * @param implementations the discovered provider instances
      */
-    public AmbiguousServiceException(String serviceName, List<?> implementations) {
+    public AmbiguousServiceException(Class<?> serviceType, List<?> implementations) {
         this(
                 implementations.stream().map(implementation -> implementation.getClass().getName()).sorted().toList(),
-                serviceName
+                serviceType
         );
     }
 
-    private AmbiguousServiceException(List<String> implementationNames, String serviceName) {
+    private AmbiguousServiceException(List<String> implementationNames, Class<?> serviceType) {
         super(
-                "multiple " + serviceName + " service implementations are registered: "
+                "multiple " + serviceType.getSimpleName() + " service implementations are registered: "
                         + String.join(", ", implementationNames)
         );
         this.implementationNames = implementationNames;
-        this.serviceName = serviceName;
+        this.serviceType = serviceType;
     }
 
     /**
@@ -72,11 +73,21 @@ public final class AmbiguousServiceException extends UncheckedCrfException {
     }
 
     /**
-     * Returns the human-readable name of the ambiguous service.
+     * Returns the human-readable name of the ambiguous service, derived from {@link #serviceType()}.
      *
      * @return the service name
      */
     public String serviceName() {
-        return serviceName;
+        return serviceType.getSimpleName();
+    }
+
+    /**
+     * Returns the type of the ambiguous service, the authoritative identity for callers that tailor
+     * guidance per slot.
+     *
+     * @return the service type
+     */
+    public Class<?> serviceType() {
+        return serviceType;
     }
 }

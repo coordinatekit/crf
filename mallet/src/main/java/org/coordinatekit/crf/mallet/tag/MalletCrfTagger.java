@@ -33,8 +33,6 @@ import org.coordinatekit.crf.core.tag.TaggedTokenization;
 import org.coordinatekit.crf.core.tag.TaggedTokenizations;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.ObjectInputFilter;
@@ -60,10 +58,7 @@ import java.util.function.ToDoubleFunction;
  * @param <T> the type of tags assigned to tokens, must be comparable for ordering
  */
 @NullMarked
-public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F, T> {
-    @SuppressWarnings("unused")
-    private static final Logger logger = LoggerFactory.getLogger(MalletCrfTagger.class);
-
+public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F, T> {
     private static final ObjectInputFilter MODEL_DESERIALIZATION_FILTER = ObjectInputFilter.Config
             .createFilter("cc.mallet.**;gnu.trove.**;java.**;!*");
 
@@ -105,10 +100,7 @@ public class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F,
      * @param featureSequence a sequence of feature-positioned tokens to convert
      * @return a MALLET feature vector sequence corresponding to the input sequence
      */
-    protected FeatureVectorSequence createMalletSequences(
-            CRF crf,
-            Sequence<FeaturePositionedToken<F>> featureSequence
-    ) {
+    private FeatureVectorSequence createMalletSequences(CRF crf, Sequence<FeaturePositionedToken<F>> featureSequence) {
         int sequenceLength = featureSequence.size();
         FeatureVector[] featureVectors = new FeatureVector[sequenceLength];
 

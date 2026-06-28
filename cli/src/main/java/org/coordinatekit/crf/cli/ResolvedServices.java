@@ -22,6 +22,7 @@ import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.spi.AmbiguousServiceException;
 import org.coordinatekit.crf.core.spi.CrfServices;
+import org.coordinatekit.crf.core.spi.UnknownServiceException;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
 import org.jspecify.annotations.NullMarked;
@@ -84,10 +85,13 @@ final class ResolvedServices {
      * @return a startup exception naming the conflicting implementations and how to resolve them
      */
     static CrfStartupException ambiguityStartupException(AmbiguousServiceException exception) {
+        String resolution = "; leave exactly one on the classpath or provide one explicitly";
+        if (exception.serviceType() == CrfTaggerLoader.class) {
+            resolution += ", or pass --tagger-loader <name>";
+        }
         return new CrfStartupException(
                 "multiple " + exception.serviceName() + " service implementations found on the classpath: "
-                        + String.join(", ", exception.implementationNames())
-                        + "; leave exactly one on the classpath or provide one explicitly",
+                        + String.join(", ", exception.implementationNames()) + resolution,
                 exception
         );
     }
@@ -156,8 +160,9 @@ final class ResolvedServices {
         if (taggerLoader == null) {
             throw new CrfStartupException(
                     "a model was supplied (--model " + modelPath
-                            + ") but no TaggerLoader service is available; add the mallet module"
-                            + " (or another TaggerLoader provider) to the classpath"
+                            + ") but no TaggerLoader service is available; the distribution bundles the"
+                            + " mallet loader, so this means it was stripped from the classpath — restore"
+                            + " the mallet module (or another TaggerLoader provider)"
             );
         }
         FeatureExtractor<?> resolvedFeatureExtractor = fullFeatureExtractor != null ? fullFeatureExtractor
@@ -173,15 +178,6 @@ final class ResolvedServices {
     }
 
     /**
-     * Returns the resolved tag provider, which defines the label space.
-     *
-     * @return the tag provider
-     */
-    TagProvider<?> tagProvider() {
-        return tagProvider;
-    }
-
-    /**
      * Returns the resolved model loader, or {@code null} if none was supplied or discovered.
      *
      * @return the tagger loader, or {@code null}
@@ -192,12 +188,42 @@ final class ResolvedServices {
     }
 
     /**
+     * Returns the resolved tag provider, which defines the label space.
+     *
+     * @return the tag provider
+     */
+    TagProvider<?> tagProvider() {
+        return tagProvider;
+    }
+
+    /**
      * Returns the resolved tokenizer.
      *
      * @return the tokenizer
      */
     Tokenizer tokenizer() {
         return tokenizer;
+    }
+
+    /**
+     * Re-words an {@link UnknownServiceException} into a {@link CrfStartupException} with
+     * launcher-facing guidance, preserving the original as the cause.
+     *
+     * <p>
+     * Raised when {@code --tagger-loader} names a loader no registered provider carries; the message
+     * lists the names a user could pick instead.
+     *
+     * @param exception the unknown-name failure raised while resolving the tagger loader
+     * @return a startup exception naming the unknown loader and the available names
+     */
+    static CrfStartupException unknownServiceStartupException(UnknownServiceException exception) {
+        return new CrfStartupException(
+                "no " + exception.serviceName() + " named \"" + exception.requestedName()
+                        + "\" is on the classpath; available: "
+                        + (exception.availableNames().isEmpty() ? "(none)"
+                                : String.join(", ", exception.availableNames())),
+                exception
+        );
     }
 
     /**
@@ -213,6 +239,7 @@ final class ResolvedServices {
         private @Nullable FeatureExtractor<?> keyFeatureExtractor;
         private @Nullable TagProvider<?> tagProvider;
         private @Nullable CrfTaggerLoader taggerLoader;
+        private @Nullable String taggerLoaderName;
         private @Nullable Tokenizer tokenizer;
 
         private Builder() {}
@@ -267,7 +294,7 @@ final class ResolvedServices {
                 if (resolvedKeyFeatureExtractor == null) {
                     resolvedKeyFeatureExtractor = resolvedFullFeatureExtractor;
                 }
-                resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader).orElse(null);
+                resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
                 resolvedTagProvider = CrfServices.tagProvider(tagProvider).orElseThrow(
                         () -> new CrfStartupException(
                                 "no TagProvider is available: register a TagProvider service"
@@ -275,6 +302,8 @@ final class ResolvedServices {
                                         + " so the launcher can build the label space"
                         )
                 );
+            } catch (UnknownServiceException exception) {
+                throw unknownServiceStartupException(exception);
             } catch (AmbiguousServiceException exception) {
                 throw ambiguityStartupException(exception);
             }
@@ -306,6 +335,22 @@ final class ResolvedServices {
          */
         Builder taggerLoader(CrfTaggerLoader taggerLoader) {
             this.taggerLoader = taggerLoader;
+            return this;
+        }
+
+        /**
+         * Sets the name of the tagger loader to select, used when more than one loader is registered.
+         *
+         * <p>
+         * A {@code null} name (the default) resolves the loader by discovery alone; a non-null name picks
+         * the registered loader whose {@link CrfTaggerLoader#name()} matches, and fails fast if none does.
+         * Ignored when an explicit {@link #taggerLoader(CrfTaggerLoader)} is set.
+         *
+         * @param taggerLoaderName the loader name to select, or {@code null} to resolve by discovery
+         * @return this builder
+         */
+        Builder taggerLoaderName(@Nullable String taggerLoaderName) {
+            this.taggerLoaderName = taggerLoaderName;
             return this;
         }
 

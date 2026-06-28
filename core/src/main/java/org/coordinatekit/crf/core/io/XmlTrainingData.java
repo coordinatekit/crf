@@ -835,7 +835,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
          */
         void recordFatal(SAXException exception) {
             if (errors.isEmpty()) {
-                errors.add(exception.getMessage());
+                errors.add(Objects.requireNonNullElse(exception.getMessage(), "unknown error"));
             }
         }
 
@@ -914,7 +914,8 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
          * document order. {@code <crf:Excluded>} elements in the CRF schema namespace are captured verbatim
          * as {@link SegmentKind#EXCLUDED} segments (preserving whitespace, never trimmed), but an empty
          * (zero-length) excluded run is dropped; other CRF-namespace elements are skipped; non-CRF elements
-         * become trimmed token segments, dropped when empty.
+         * become trimmed token segments, dropped when empty. A token element that contains a nested child
+         * element is skipped and logged rather than aborting the parse.
          *
          * @return the parsed training sequence
          * @throws XMLStreamException if an error occurs while reading
@@ -928,7 +929,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
                 if (event == XMLStreamConstants.START_ELEMENT) {
                     if (CRF_SCHEMA_NAMESPACE_URI.equals(reader.getNamespaceURI())) {
                         if (EXCLUDED_ELEMENT_NAME.equals(reader.getLocalName())) {
-                            String excludedText = readExcludedText();
+                            String excludedText = readElementText();
                             if (excludedText != null && !excludedText.isEmpty()) {
                                 segments.add(excluded(excludedText));
                             }
@@ -937,9 +938,12 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
                         }
                     } else {
                         String localName = reader.getLocalName();
-                        String token = reader.getElementText().trim();
-                        if (!token.isEmpty()) {
-                            segments.add(token(tagProvider.decode(localName), token));
+                        String raw = readElementText();
+                        if (raw != null) {
+                            String token = raw.trim();
+                            if (!token.isEmpty()) {
+                                segments.add(token(tagProvider.decode(localName), token));
+                            }
                         }
                     }
                 } else if (event == XMLStreamConstants.END_ELEMENT) {
@@ -951,19 +955,19 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
         }
 
         /**
-         * Reads the verbatim text content of a {@code <crf:Excluded>} element.
+         * Reads the verbatim text content of the current element.
          *
          * <p>
-         * The reader should be positioned on the {@code <crf:Excluded>} start element. This method
-         * accumulates {@code CHARACTERS} and {@code CDATA} content until the matching end element, never
-         * trimming. If a nested start element is encountered (which the schema forbids but a hand-authored
-         * document may contain), the element is skipped and ignored: this method consumes through the
-         * matching end element and returns {@code null} so the run is not captured.
+         * The reader should be positioned on the element's start tag. This method accumulates
+         * {@code CHARACTERS} and {@code CDATA} content until the matching end element, never trimming. If a
+         * nested start element is encountered (which the schema forbids but a hand-authored document may
+         * contain), the element is skipped and ignored: this method consumes through the matching end
+         * element and returns {@code null} so the run is not captured.
          *
-         * @return the verbatim excluded text, or {@code null} if the element contained a child element
+         * @return the verbatim text content, or {@code null} if the element contained a child element
          * @throws XMLStreamException if an error occurs while reading
          */
-        private @Nullable String readExcludedText() throws XMLStreamException {
+        private @Nullable String readElementText() throws XMLStreamException {
             StringBuilder text = new StringBuilder();
             boolean hasChildElement = false;
             int depth = 1;
@@ -988,10 +992,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             }
 
             if (hasChildElement) {
-                logger.debug(
-                        "Skipped a <crf:Excluded> run because it contained a child element, which the schema "
-                                + "forbids."
-                );
+                logger.debug("Skipped an element run because it contained a nested child element.");
                 return null;
             }
             return text.toString();
@@ -1117,7 +1118,24 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             if (closed) {
                 throw new IOException("Cannot write after close.");
             }
+            // Validate the entire sequence before emitting any bytes: a tag that encodes to null is a
+            // TagProvider contract violation, and throwing here keeps a half-written <crf:Sequence>
+            // out of the stream. The resolved names are reused by the write pass below.
+            List<String> encodedTagNames = new ArrayList<>();
+            for (TrainingSegment<T> segment : sequence.segments()) {
+                if (segment.kind() != SegmentKind.EXCLUDED) {
+                    T tag = Objects.requireNonNull(segment.tag());
+                    String tagName = tagProvider.encode(tag);
+                    if (tagName == null) {
+                        throw new IllegalArgumentException(
+                                "Tag '" + tag + "' encodes to null and cannot be serialized."
+                        );
+                    }
+                    encodedTagNames.add(tagName);
+                }
+            }
             try {
+                Iterator<String> tagNames = encodedTagNames.iterator();
                 xmlWriter.writeCharacters("    ");
                 xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, SEQUENCE_ELEMENT_NAME);
                 for (TrainingSegment<T> segment : sequence.segments()) {
@@ -1126,14 +1144,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
                         xmlWriter.writeCharacters(segment.text());
                         xmlWriter.writeEndElement();
                     } else {
-                        T tag = Objects.requireNonNull(segment.tag());
-                        String tagName = tagProvider.encode(tag);
-                        if (tagName == null) {
-                            throw new IllegalArgumentException(
-                                    "Tag '" + tag + "' encodes to null and cannot be serialized."
-                            );
-                        }
-                        xmlWriter.writeStartElement(tagName);
+                        xmlWriter.writeStartElement(tagNames.next());
                         xmlWriter.writeCharacters(segment.text());
                         xmlWriter.writeEndElement();
                     }

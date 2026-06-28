@@ -315,6 +315,8 @@ class XmlTrainingDataWriterTest {
         XmlTrainingData<String> data = new XmlTrainingData<>(new NullEncodingTagProvider("Noun"));
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         TrainingSequenceWriter<String> writer = data.writer(output);
+        writer.flush();
+        int sizeBeforeWrite = output.size();
 
         // ACT //
         IllegalArgumentException exception = assertThrows(
@@ -324,6 +326,16 @@ class XmlTrainingDataWriterTest {
 
         // ASSERT //
         assertEquals("Tag 'Noun' encodes to null and cannot be serialized.", exception.getMessage());
+        writer.flush();
+        assertEquals(
+                sizeBeforeWrite,
+                output.size(),
+                "No partial <crf:Sequence> bytes should be emitted when a tag in the sequence encodes to null"
+        );
+        assertFalse(
+                output.toString(StandardCharsets.UTF_8).contains("<crf:Sequence>"),
+                "No dangling <crf:Sequence> open tag should be left in the stream"
+        );
         assertDoesNotThrow(writer::close);
     }
 

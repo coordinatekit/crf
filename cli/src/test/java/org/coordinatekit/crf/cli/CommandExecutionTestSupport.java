@@ -126,6 +126,19 @@ abstract class CommandExecutionTestSupport {
     }
 
     @Test
+    void execute__unknownTaggerLoaderNameFailsFast() {
+        // ACT //
+        // mallet is the only loader bundled on the CLI classpath, so an unknown --tagger-loader name fails
+        // during resolution (before the tag provider is read), proving the flag reaches the services
+        // builder.
+        Execution execution = execute("--input", "input", "--output", "output.xml", "--tagger-loader", "nope");
+
+        // ASSERT //
+        assertEquals(1, execution.exitCode());
+        assertTrue(execution.err().contains("nope"), "stderr should name the unknown loader; was: " + execution.err());
+    }
+
+    @Test
     void execute__versionFlagPrintsVersionAndReturnsZero() {
         // ACT //
         Execution execution = execute("--version");

@@ -15,16 +15,27 @@
  */
 package org.coordinatekit.crf.core.spi;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
+import org.coordinatekit.crf.core.tag.CrfTagger;
+import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -42,6 +53,15 @@ class CrfServicesTest {
     record ExplicitWinsParameters(
             String name,
             Function<FeatureExtractor<String>, Optional<FeatureExtractor<String>>> resolver
+    ) {}
+
+    record SelectExceptionParameters(String name, Executable action, Class<? extends Exception> expectedClass) {}
+
+    record SelectParameters(
+            String name,
+            List<CrfTaggerLoader> discovered,
+            @Nullable String requestedName,
+            @Nullable CrfTaggerLoader expected
     ) {}
 
     static Stream<ExplicitWinsParameters> explicitWins() {
@@ -81,6 +101,114 @@ class CrfServicesTest {
                 parameters.accessor().get().isEmpty(),
                 parameters.name() + " should be empty when nothing is registered"
         );
+    }
+
+    private static CrfTaggerLoader namedLoader(String name) {
+        return new CrfTaggerLoader() {
+            @Override
+            public <F, T extends Comparable<T>> CrfTagger<F, T> load(
+                    Path modelPath,
+                    FeatureExtractor<F> featureExtractor,
+                    TagProvider<T> tagProvider,
+                    Tokenizer tokenizer
+            ) {
+                throw new UnsupportedOperationException("synthetic loader does not load");
+            }
+
+            @Override
+            public String name() {
+                return name;
+            }
+        };
+    }
+
+    static Stream<SelectParameters> selectTaggerLoader() {
+        CrfTaggerLoader mallet = namedLoader("mallet");
+        CrfTaggerLoader other = namedLoader("other");
+        return Stream.of(
+                new SelectParameters("name_selects_match", List.of(mallet, other), "other", other),
+                new SelectParameters("null_name_single", List.of(mallet), null, mallet),
+                new SelectParameters("null_name_none", List.of(), null, null)
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void selectTaggerLoader(SelectParameters parameters) {
+        // ACT //
+        Optional<CrfTaggerLoader> selected = CrfServices
+                .selectTaggerLoader(parameters.discovered(), parameters.requestedName());
+
+        // ASSERT //
+        assertSame(parameters.expected(), selected.orElse(null), parameters.name());
+    }
+
+    static Stream<SelectExceptionParameters> selectTaggerLoader__exception() {
+        return Stream.of(
+                new SelectExceptionParameters(
+                        "duplicate_name",
+                        () -> CrfServices
+                                .selectTaggerLoader(List.of(namedLoader("mallet"), namedLoader("mallet")), "mallet"),
+                        AmbiguousServiceException.class
+                ),
+                new SelectExceptionParameters(
+                        "null_name_multiple",
+                        () -> CrfServices
+                                .selectTaggerLoader(List.of(namedLoader("mallet"), namedLoader("other")), null),
+                        AmbiguousServiceException.class
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void selectTaggerLoader__exception(SelectExceptionParameters parameters) {
+        // ACT & ASSERT //
+        assertThrows(parameters.expectedClass(), parameters.action());
+    }
+
+    @Test
+    void selectTaggerLoader__unknownNameThrowsWithAvailableNames() {
+        // ARRANGE //
+        // unsorted input so the assertion fails if UnknownServiceException stops sorting.
+        List<CrfTaggerLoader> discovered = List.of(namedLoader("other"), namedLoader("mallet"));
+
+        // ACT //
+        UnknownServiceException exception = assertThrows(
+                UnknownServiceException.class,
+                () -> CrfServices.selectTaggerLoader(discovered, "missing")
+        );
+
+        // ASSERT //
+        assertEquals("missing", exception.requestedName());
+        assertEquals(List.of("mallet", "other"), exception.availableNames(), "available names should be sorted");
+    }
+
+    @Test
+    void selectTaggerLoader__unknownNameWithNoLoadersReportsNone() {
+        // ACT //
+        UnknownServiceException exception = assertThrows(
+                UnknownServiceException.class,
+                () -> CrfServices.selectTaggerLoader(List.of(), "x")
+        );
+
+        // ASSERT //
+        assertTrue(exception.availableNames().isEmpty());
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(message.contains("(none)"), "message should report (none); was: " + message);
+    }
+
+    @Test
+    void taggerLoader__explicitWinsOverName() {
+        // ARRANGE //
+        CrfTaggerLoader explicit = namedLoader("explicit");
+
+        // ACT //
+        Optional<CrfTaggerLoader> selected = CrfServices.taggerLoader(explicit, "ignored");
+
+        // ASSERT //
+        assertSame(explicit, selected.orElseThrow(), "an explicit loader wins over name selection");
     }
 
     @Test
