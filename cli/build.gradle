@@ -110,8 +110,8 @@ tasks.register('generateThirdPartyLicenses') {
 }
 
 // Ship the project's own license and the generated third-party attribution at the archive root.
-applicationDistribution.from(rootProject.file("LICENSE.txt"))
-applicationDistribution.from(tasks.named("generateThirdPartyLicenses")) {
+distributions.main.contents.from(rootProject.file("LICENSE.txt"))
+distributions.main.contents.from(tasks.named("generateThirdPartyLicenses")) {
     include "THIRD-PARTY-LICENSES.txt"
 }
 
