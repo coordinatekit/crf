@@ -18,7 +18,9 @@ package org.coordinatekit.crf.core.spi;
 import static java.util.Objects.requireNonNull;
 
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -48,6 +50,29 @@ import java.util.Optional;
 public final class CrfServices {
     private CrfServices() {
         throw new UnsupportedOperationException("CrfServices is a utility class");
+    }
+
+    /**
+     * Resolves the feature format by {@code single registered FeatureFormat > DefaultFeatureFormat}.
+     *
+     * @return the resolved feature format, never {@code null}
+     * @throws AmbiguousServiceException if more than one feature format is registered
+     */
+    public static FeatureFormat featureFormat() {
+        return featureFormat(null);
+    }
+
+    /**
+     * Resolves the feature format by {@code explicit > single registered FeatureFormat >
+     * DefaultFeatureFormat}.
+     *
+     * @param explicit the explicitly supplied feature format, or {@code null} if none was set
+     * @return the resolved feature format, never {@code null}
+     * @throws AmbiguousServiceException if more than one feature format is registered and none is
+     *         explicit
+     */
+    public static FeatureFormat featureFormat(@Nullable FeatureFormat explicit) {
+        return requireNonNull(ServiceResolution.resolve(FeatureFormat.class, explicit, new DefaultFeatureFormat()));
     }
 
     /**
