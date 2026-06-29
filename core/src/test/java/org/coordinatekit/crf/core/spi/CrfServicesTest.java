@@ -23,7 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -82,6 +84,24 @@ class CrfServicesTest {
 
         // ASSERT //
         assertSame(featureExtractor, result.orElseThrow(), parameters.name() + " explicit should win");
+    }
+
+    @Test
+    void featureFormat__defaultsToDefaultFeatureFormat() {
+        // ACT & ASSERT //
+        assertInstanceOf(DefaultFeatureFormat.class, CrfServices.featureFormat(null));
+    }
+
+    @Test
+    void featureFormat__explicitWins() {
+        // ARRANGE //
+        FeatureFormat explicit = new DefaultFeatureFormat();
+
+        // ACT //
+        FeatureFormat result = CrfServices.featureFormat(explicit);
+
+        // ASSERT //
+        assertSame(explicit, result, "an explicit feature format should win");
     }
 
     static Stream<EmptyParameters> isEmptyWhenNothingRegistered() {
