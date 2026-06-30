@@ -16,7 +16,6 @@
 package org.coordinatekit.crf.core.preprocessing;
 
 import org.coordinatekit.crf.core.InputSequence;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,28 +28,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WindowFeatureExtractorTest {
-    private static final FeatureExtractor<String> TOKEN_EXTRACTOR = (seq, pos) -> Set
-            .of("TOKEN=" + seq.get(pos).token());
+    private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
+            .of(Features.of("TOKEN", seq.get(pos).token()));
 
-    private static final WindowFeatureMapper<String> POSITION_MAPPER = (feature, pos) -> (pos < 0 ? "PREV_" : "NEXT_")
-            + Math.abs(pos) + "__" + feature;
-
-    private static WindowFeatureExtractor<String> extractor(int before, int after, boolean includeCurrent) {
-        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR, POSITION_MAPPER).windowBefore(before).windowAfter(after)
+    private static WindowFeatureExtractor extractor(int before, int after, boolean includeCurrent) {
+        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).windowBefore(before).windowAfter(after)
                 .includeCurrentToken(includeCurrent).build();
     }
 
-    private static WindowFeatureExtractor<String> defaultExtractor() {
-        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR, POSITION_MAPPER).build();
+    private static WindowFeatureExtractor defaultExtractor() {
+        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).build();
     }
 
-    private static WindowFeatureExtractor<String> multipleFeaturesExtractor() {
-        FeatureExtractor<String> multiFeatureExtractor = (seq, pos) -> {
+    private static WindowFeatureExtractor multipleFeaturesExtractor() {
+        FeatureExtractor multiFeatureExtractor = (seq, pos) -> {
             String token = seq.get(pos).token();
-            return Set.of("TOKEN=" + token, "LENGTH=" + token.length());
+            return Set.of(Features.of("TOKEN", token), Features.of("LENGTH", String.valueOf(token.length())));
         };
 
-        return WindowFeatureExtractor.builder(multiFeatureExtractor, POSITION_MAPPER).build();
+        return WindowFeatureExtractor.builder(multiFeatureExtractor).build();
     }
 
     record BuilderExceptionParameters(
@@ -64,13 +60,13 @@ class WindowFeatureExtractorTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "negativeWindowBefore",
-                        () -> WindowFeatureExtractor.builder(TOKEN_EXTRACTOR, POSITION_MAPPER).windowBefore(-1),
+                        () -> WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).windowBefore(-1),
                         IllegalArgumentException.class,
                         "windowBefore must be non-negative"
                 ),
                 new BuilderExceptionParameters(
                         "negativeWindowAfter",
-                        () -> WindowFeatureExtractor.builder(TOKEN_EXTRACTOR, POSITION_MAPPER).windowAfter(-1),
+                        () -> WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).windowAfter(-1),
                         IllegalArgumentException.class,
                         "windowAfter must be non-negative"
                 )
@@ -89,10 +85,10 @@ class WindowFeatureExtractorTest {
 
     record ExtractAtParameters(
             String name,
-            WindowFeatureExtractor<String> extractor,
+            WindowFeatureExtractor extractor,
             List<String> tokens,
             int position,
-            Set<String> expectedResult
+            Set<Feature> expectedResult
     ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
@@ -102,63 +98,77 @@ class WindowFeatureExtractorTest {
                         defaultExtractor(),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("TOKEN=b", "PREV_1__TOKEN=a", "NEXT_1__TOKEN=c")
+                        Set.of(
+                                Features.of("TOKEN", "b"),
+                                Features.of("TOKEN", "a").withOffset(-1),
+                                Features.of("TOKEN", "c").withOffset(1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "excludeCurrentToken_neighborsOnly",
                         extractor(1, 1, false),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("PREV_1__TOKEN=a", "NEXT_1__TOKEN=c")
+                        Set.of(Features.of("TOKEN", "a").withOffset(-1), Features.of("TOKEN", "c").withOffset(1))
                 ),
                 new ExtractAtParameters(
                         "startOfSequence_currentAndNext",
                         defaultExtractor(),
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("TOKEN=a", "NEXT_1__TOKEN=b")
+                        Set.of(Features.of("TOKEN", "a"), Features.of("TOKEN", "b").withOffset(1))
                 ),
                 new ExtractAtParameters(
                         "endOfSequence_currentAndPrevious",
                         defaultExtractor(),
                         List.of("a", "b", "c"),
                         2,
-                        Set.of("TOKEN=c", "PREV_1__TOKEN=b")
+                        Set.of(Features.of("TOKEN", "c"), Features.of("TOKEN", "b").withOffset(-1))
                 ),
                 new ExtractAtParameters(
                         "largerWindow_multipleNeighbors",
                         extractor(2, 2, true),
                         List.of("a", "b", "c", "d", "e"),
                         2,
-                        Set.of("TOKEN=c", "PREV_1__TOKEN=b", "PREV_2__TOKEN=a", "NEXT_1__TOKEN=d", "NEXT_2__TOKEN=e")
+                        Set.of(
+                                Features.of("TOKEN", "c"),
+                                Features.of("TOKEN", "b").withOffset(-1),
+                                Features.of("TOKEN", "a").withOffset(-2),
+                                Features.of("TOKEN", "d").withOffset(1),
+                                Features.of("TOKEN", "e").withOffset(2)
+                        )
                 ),
                 new ExtractAtParameters(
                         "partialWindowAtBoundaries",
                         extractor(3, 3, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("TOKEN=b", "PREV_1__TOKEN=a", "NEXT_1__TOKEN=c")
+                        Set.of(
+                                Features.of("TOKEN", "b"),
+                                Features.of("TOKEN", "a").withOffset(-1),
+                                Features.of("TOKEN", "c").withOffset(1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "zeroWindowBefore_currentAndAfter",
                         extractor(0, 1, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("TOKEN=b", "NEXT_1__TOKEN=c")
+                        Set.of(Features.of("TOKEN", "b"), Features.of("TOKEN", "c").withOffset(1))
                 ),
                 new ExtractAtParameters(
                         "zeroWindowAfter_currentAndBefore",
                         extractor(1, 0, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("TOKEN=b", "PREV_1__TOKEN=a")
+                        Set.of(Features.of("TOKEN", "b"), Features.of("TOKEN", "a").withOffset(-1))
                 ),
                 new ExtractAtParameters(
                         "zeroWindowBoth_currentOnly",
                         extractor(0, 0, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("TOKEN=b")
+                        Set.of(Features.of("TOKEN", "b"))
                 ),
                 new ExtractAtParameters(
                         "zeroWindowBoth_excludeCurrent_empty",
@@ -172,7 +182,7 @@ class WindowFeatureExtractorTest {
                         defaultExtractor(),
                         List.of("alone"),
                         0,
-                        Set.of("TOKEN=alone")
+                        Set.of(Features.of("TOKEN", "alone"))
                 ),
                 new ExtractAtParameters(
                         "singleToken_excludeCurrent_empty",
@@ -186,21 +196,35 @@ class WindowFeatureExtractorTest {
                         extractor(2, 1, true),
                         List.of("a", "b", "c", "d", "e"),
                         2,
-                        Set.of("TOKEN=c", "PREV_1__TOKEN=b", "PREV_2__TOKEN=a", "NEXT_1__TOKEN=d")
+                        Set.of(
+                                Features.of("TOKEN", "c"),
+                                Features.of("TOKEN", "b").withOffset(-1),
+                                Features.of("TOKEN", "a").withOffset(-2),
+                                Features.of("TOKEN", "d").withOffset(1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "defaultWindowSize_middlePosition",
                         defaultExtractor(),
                         List.of("a", "b", "c", "d", "e"),
                         2,
-                        Set.of("TOKEN=c", "PREV_1__TOKEN=b", "NEXT_1__TOKEN=d")
+                        Set.of(
+                                Features.of("TOKEN", "c"),
+                                Features.of("TOKEN", "b").withOffset(-1),
+                                Features.of("TOKEN", "d").withOffset(1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "delegateReturnsMultipleFeatures",
                         multipleFeaturesExtractor(),
                         List.of("hi", "there"),
                         0,
-                        Set.of("TOKEN=hi", "LENGTH=2", "NEXT_1__TOKEN=there", "NEXT_1__LENGTH=5")
+                        Set.of(
+                                Features.of("TOKEN", "hi"),
+                                Features.of("LENGTH", "2"),
+                                Features.of("TOKEN", "there").withOffset(1),
+                                Features.of("LENGTH", "5").withOffset(1)
+                        )
                 )
         );
     }
@@ -212,41 +236,9 @@ class WindowFeatureExtractorTest {
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //
-        Set<String> actual = parameters.extractor().extractAt(sequence, parameters.position());
+        Set<Feature> actual = parameters.extractor().extractAt(sequence, parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);
-    }
-
-    @Test
-    void extractAt__worksWithIntegerFeatures() {
-        FeatureExtractor<Integer> lengthExtractor = (seq, pos) -> Set.of(seq.get(pos).token().length());
-        WindowFeatureMapper<Integer> mapper = (feature, pos) -> feature * 10 + Math.abs(pos);
-
-        WindowFeatureExtractor<Integer> extractor = WindowFeatureExtractor.builder(lengthExtractor, mapper)
-                .includeCurrentToken(false).build();
-
-        InputSequence sequence = new InputSequence(List.of("hi", "there", "world"));
-        Set<Integer> features = extractor.extractAt(sequence, 1);
-
-        // "hi" has length 2, position -1, result = 2*10 + 1 = 21
-        // "world" has length 5, position +1, result = 5*10 + 1 = 51
-        assertEquals(Set.of(21, 51), features);
-    }
-
-    @Test
-    void extractAt__worksWithIntegerFeaturesIncludingCurrent() {
-        FeatureExtractor<Integer> lengthExtractor = (seq, pos) -> Set.of(seq.get(pos).token().length());
-        WindowFeatureMapper<Integer> mapper = (feature, pos) -> feature * 10 + Math.abs(pos);
-
-        WindowFeatureExtractor<Integer> extractor = WindowFeatureExtractor.builder(lengthExtractor, mapper).build();
-
-        InputSequence sequence = new InputSequence(List.of("hi", "there", "world"));
-        Set<Integer> features = extractor.extractAt(sequence, 1);
-
-        // "there" has length 5 (current token, untransformed)
-        // "hi" has length 2, position -1, result = 2*10 + 1 = 21
-        // "world" has length 5, position +1, result = 5*10 + 1 = 51
-        assertEquals(Set.of(5, 21, 51), features);
     }
 }

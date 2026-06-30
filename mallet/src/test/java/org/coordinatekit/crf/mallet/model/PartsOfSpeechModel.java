@@ -18,7 +18,10 @@ package org.coordinatekit.crf.mallet.model;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
 
@@ -59,6 +62,7 @@ public enum PartsOfSpeechModel {
     public void generate(Path modelPath) throws IOException {
         var trainer = new MalletCrfTrainer<>(
                 featureExtractor(),
+                featureFormat(),
                 tagProvider(),
                 new XmlTrainingData<>(tagProvider()),
                 MalletCrfTrainerConfiguration.builder().conllOutputEnabled(false).modelOutputEnabled(false)
@@ -84,11 +88,27 @@ public enum PartsOfSpeechModel {
      *
      * @return the feature extractor for parts-of-speech tagging
      */
-    public FeatureExtractor<String> featureExtractor() {
+    public FeatureExtractor featureExtractor() {
         return (sequence, position) -> {
             String token = sequence.get(position).token();
-            return Set.of("LENGTH=" + token.length(), "LOWER=" + token.toLowerCase(Locale.getDefault()));
+            return Set.of(
+                    Features.of("LENGTH", String.valueOf(token.length())),
+                    Features.of("LOWER", token.toLowerCase(Locale.getDefault()))
+            );
         };
+    }
+
+    /**
+     * Returns the feature format used by this model.
+     *
+     * <p>
+     * The built-in {@link DefaultFeatureFormat} renders each feature to the same {@code name=value}
+     * alphabet entry the model was trained against.
+     *
+     * @return the feature format for parts-of-speech tagging
+     */
+    public FeatureFormat featureFormat() {
+        return new DefaultFeatureFormat();
     }
 
     /**

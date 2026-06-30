@@ -20,6 +20,7 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.SegmentKind;
@@ -53,17 +54,16 @@ final class AnnotatorSupport {
      *
      * @param extractor the extractor to run, or {@code null} when not configured
      * @param positionedTokens the positioned tokens to extract features from
-     * @param <F> the feature type
      * @return one feature set per token, or {@code null} when {@code extractor} is {@code null}
      */
-    static <F> @Nullable List<Set<F>> extractDisplayFeatures(
-            @Nullable FeatureExtractor<F> extractor,
+    static @Nullable List<Set<Feature>> extractDisplayFeatures(
+            @Nullable FeatureExtractor extractor,
             Sequence<? extends PositionedToken> positionedTokens
     ) {
         if (extractor == null) {
             return null;
         }
-        List<Set<F>> features = new ArrayList<>(positionedTokens.size());
+        List<Set<Feature>> features = new ArrayList<>(positionedTokens.size());
         for (int position = 0; position < positionedTokens.size(); position++) {
             features.add(extractor.extractAt(positionedTokens, position));
         }
@@ -79,13 +79,12 @@ final class AnnotatorSupport {
      *        configured
      * @param tagged the tagger's output for the sequence, or {@code null} on the no-tagger path
      * @param positionedTokens the positioned tokens of the sequence
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return one verbose feature set per token, or {@code null} when no verbose source applies
      */
-    static <F, T extends Comparable<T>> @Nullable List<Set<F>> resolveVerboseFeatures(
-            @Nullable FeatureExtractor<F> verboseFeatureExtractor,
-            @Nullable TaggedTokenization<F, T> tagged,
+    static <T extends Comparable<T>> @Nullable List<Set<Feature>> resolveVerboseFeatures(
+            @Nullable FeatureExtractor verboseFeatureExtractor,
+            @Nullable TaggedTokenization<T> tagged,
             Sequence<? extends PositionedToken> positionedTokens
     ) {
         if (verboseFeatureExtractor != null) {

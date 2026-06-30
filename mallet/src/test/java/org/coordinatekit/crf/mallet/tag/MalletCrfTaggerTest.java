@@ -16,6 +16,9 @@
 package org.coordinatekit.crf.mallet.tag;
 
 import org.coordinatekit.crf.core.Sequence;
+import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
@@ -31,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,12 +43,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MalletCrfTaggerTest {
-    private MalletCrfTagger<String, String> tagger;
+    private MalletCrfTagger<String> tagger;
 
     @BeforeEach
     void setup() throws IOException {
         tagger = new MalletCrfTagger<>(
                 PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                PartsOfSpeechModel.INSTANCE.featureFormat(),
                 PartsOfSpeechModel.INSTANCE.modelPath(),
                 PartsOfSpeechModel.INSTANCE.tagProvider(),
                 new WhitespaceTokenizer()
@@ -63,6 +68,7 @@ class MalletCrfTaggerTest {
                     IOException.class,
                     () -> new MalletCrfTagger<>(
                             PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                            PartsOfSpeechModel.INSTANCE.featureFormat(),
                             maliciousPath,
                             PartsOfSpeechModel.INSTANCE.tagProvider(),
                             new WhitespaceTokenizer()
@@ -81,6 +87,7 @@ class MalletCrfTaggerTest {
                 IOException.class,
                 () -> new MalletCrfTagger<>(
                         PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                        PartsOfSpeechModel.INSTANCE.featureFormat(),
                         nonExistentPath,
                         PartsOfSpeechModel.INSTANCE.tagProvider(),
                         new WhitespaceTokenizer()
@@ -98,6 +105,7 @@ class MalletCrfTaggerTest {
                     Exception.class,
                     () -> new MalletCrfTagger<>(
                             PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                            PartsOfSpeechModel.INSTANCE.featureFormat(),
                             tempFile,
                             PartsOfSpeechModel.INSTANCE.tagProvider(),
                             new WhitespaceTokenizer()
@@ -111,7 +119,7 @@ class MalletCrfTaggerTest {
     @Test
     void probabilityOf__bestTaggingIsProbableAndDominatesWorstTagging() {
         // ARRANGE //
-        TaggedTokenization<String, String> tagged = tagger.tag("They quickly opened the door");
+        TaggedTokenization<String> tagged = tagger.tag("They quickly opened the door");
         // The model's per-token best tags, and the per-token worst tags (the lowest-marginal tag at each
         // position), which together make an obviously-wrong tagging.
         List<String> bestTags = tagged.taggedSequence().stream().map(TaggedPositionedToken::tag).toList();
@@ -129,8 +137,8 @@ class MalletCrfTaggerTest {
 
     @Test
     void tag() {
-        TaggedTokenization<String, String> tagged = tagger.tag("They quickly opened the door");
-        Sequence<TaggedPositionedToken<String, String>> actual = tagged.taggedSequence();
+        TaggedTokenization<String> tagged = tagger.tag("They quickly opened the door");
+        Sequence<TaggedPositionedToken<String>> actual = tagged.taggedSequence();
 
         assertEquals(
                 "They quickly opened the door",
@@ -191,13 +199,48 @@ class MalletCrfTaggerTest {
     }
 
     @Test
+    void tag__routesFeaturesThroughFeatureFormat() throws IOException {
+        // ARRANGE //
+        // A recording format wrapping the default proves the tagger renders every feature at the alphabet
+        // edge rather than touching feature strings itself.
+        AtomicInteger renderCount = new AtomicInteger();
+        FeatureFormat recordingFormat = new FeatureFormat() {
+            private final FeatureFormat delegate = new DefaultFeatureFormat();
+
+            @Override
+            public Feature parse(String rendered) {
+                return delegate.parse(rendered);
+            }
+
+            @Override
+            public String render(Feature feature) {
+                renderCount.incrementAndGet();
+                return delegate.render(feature);
+            }
+        };
+        MalletCrfTagger<String> recordingTagger = new MalletCrfTagger<>(
+                PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                recordingFormat,
+                PartsOfSpeechModel.INSTANCE.modelPath(),
+                PartsOfSpeechModel.INSTANCE.tagProvider(),
+                new WhitespaceTokenizer()
+        );
+
+        // ACT //
+        recordingTagger.tag("They quickly opened the door");
+
+        // ASSERT //
+        assertTrue(renderCount.get() > 0, "the tagger must render every feature through the FeatureFormat");
+    }
+
+    @Test
     void tag_emptyInput() {
         assertThrows(RuntimeException.class, () -> tagger.tag(""));
     }
 
     @Test
     void tag_singleToken() {
-        Sequence<TaggedPositionedToken<String, String>> actual = tagger.tag("Hello").taggedSequence();
+        Sequence<TaggedPositionedToken<String>> actual = tagger.tag("Hello").taggedSequence();
 
         assertEquals(1, actual.size());
         assertEquals(0, actual.get(0).position());

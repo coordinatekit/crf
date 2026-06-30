@@ -26,14 +26,13 @@ import org.jspecify.annotations.NullMarked;
  * text input by tokenizing it, extracting features, and applying a trained CRF model to produce a
  * sequence of tagged tokens with their associated scores.
  *
- * @param <F> the type of features extracted from tokens
  * @param <T> the type of tags (labels) assigned to tokens
  * @see TaggedPositionedToken
  * @see TaggedSequence
  * @see TaggedTokenization
  */
 @NullMarked
-public interface CrfTagger<F, T extends Comparable<T>> {
+public interface CrfTagger<T extends Comparable<T>> {
     /**
      * Tags the tokens in the input string using the CRF model.
      *
@@ -48,5 +47,5 @@ public interface CrfTagger<F, T extends Comparable<T>> {
      * @throws InvalidInputException if the input string is empty or blank
      * @throws NullPointerException if the input string is null
      */
-    TaggedTokenization<F, T> tag(String input);
+    TaggedTokenization<T> tag(String input);
 }

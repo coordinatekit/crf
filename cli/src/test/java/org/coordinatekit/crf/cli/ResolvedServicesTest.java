@@ -55,7 +55,7 @@ import java.util.stream.Stream;
  */
 class ResolvedServicesTest {
     private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("NN"), "NN");
-    private static final CrfTagger<String, String> UNUSED_TAGGER = input -> {
+    private static final CrfTagger<String> UNUSED_TAGGER = input -> {
         throw new UnsupportedOperationException("not used");
     };
 
@@ -96,7 +96,7 @@ class ResolvedServicesTest {
     @ParameterizedTest
     void loadTagger__loadFailuresWrappedAsStartupException(LoadFailureParameters parameters) {
         // ARRANGE //
-        FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.throwing(parameters.thrown()))
                 .resolve();
@@ -115,13 +115,13 @@ class ResolvedServicesTest {
     @Test
     void loadTagger__loadsViaTaggerLoader() {
         // ARRANGE //
-        FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor featureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.returning(UNUSED_TAGGER))
                 .resolve();
 
         // ACT //
-        CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
+        CrfTagger<?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
 
         // ASSERT //
         assertSame(UNUSED_TAGGER, loaded);
@@ -130,7 +130,7 @@ class ResolvedServicesTest {
     @Test
     void loadTagger__modelUsesFullFeatureExtractor() {
         // ARRANGE //
-        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
         TestCrfTaggerLoader loader = TestCrfTaggerLoader.returning(UNUSED_TAGGER);
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loader).resolve();
@@ -144,6 +144,7 @@ class ResolvedServicesTest {
                 loader.capturedFeatureExtractor(),
                 "the loader should receive the full feature extractor"
         );
+        assertNotNull(loader.capturedFeatureFormat(), "the loader should receive the resolved feature format");
     }
 
     @Test
@@ -154,12 +155,12 @@ class ResolvedServicesTest {
                 .resolve();
 
         // ACT //
-        CrfTagger<?, ?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
+        CrfTagger<?> loaded = resolvedServices.loadTagger(Path.of("model.bin"));
 
         // ASSERT //
         assertSame(UNUSED_TAGGER, loaded);
         assertNull(resolvedServices.fullFeatureExtractor(), "no full feature extractor should be resolved");
-        FeatureExtractor<?> substituted = loader.capturedFeatureExtractor();
+        FeatureExtractor substituted = loader.capturedFeatureExtractor();
         assertNotNull(substituted, "an empty feature extractor should be substituted for the absent full extractor");
         assertTrue(
                 substituted.extractAt(new InputSequence(List.of("token")), 0).isEmpty(),
@@ -225,7 +226,7 @@ class ResolvedServicesTest {
     @Test
     void resolve__keyFeatureExtractorFallsBackToFull() {
         // ARRANGE //
-        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(fullFeatureExtractor).resolve();
 
@@ -240,8 +241,8 @@ class ResolvedServicesTest {
     @Test
     void resolve__keyFeatureExtractorOverridesFull() {
         // ARRANGE //
-        FeatureExtractor<String> fullFeatureExtractor = (sequence, position) -> Set.of();
-        FeatureExtractor<String> keyFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor keyFeatureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(fullFeatureExtractor).keyFeatureExtractor(keyFeatureExtractor).resolve();
 
@@ -253,7 +254,7 @@ class ResolvedServicesTest {
     @Test
     void resolve__keyFeatureExtractorWithoutFullStaysExplicit() {
         // ARRANGE //
-        FeatureExtractor<String> keyFeatureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor keyFeatureExtractor = (sequence, position) -> Set.of();
 
         // ACT //
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)

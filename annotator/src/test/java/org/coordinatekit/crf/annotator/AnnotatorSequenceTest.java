@@ -17,6 +17,8 @@ package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;
@@ -86,7 +88,7 @@ class AnnotatorSequenceTest {
 
     record DefensiveCopyParameters(
             String name,
-            BiFunction<List<Set<String>>, List<Set<String>>, AnnotatorSequence<String, TestTag>> factory
+            BiFunction<List<Set<Feature>>, List<Set<Feature>>, AnnotatorSequence<TestTag>> factory
     ) {}
 
     record ExceptionParameters(
@@ -100,15 +102,16 @@ class AnnotatorSequenceTest {
 
     record WithFeaturesParameters(
             String name,
-            Supplier<AnnotatorSequence<String, TestTag>> sequenceSupplier,
+            Supplier<AnnotatorSequence<TestTag>> sequenceSupplier,
             boolean expectedFeaturesAvailable,
-            List<Set<String>> expectedFeatures,
+            List<Set<Feature>> expectedFeatures,
             boolean expectedVerboseFeaturesAvailable,
-            List<Set<String>> expectedVerboseFeatures
+            List<Set<Feature>> expectedVerboseFeatures
     ) {}
 
-    private static final List<Set<String>> KEY_FEATURES = List.of(Set.of("k1"), Set.of("k2a", "k2b"));
-    private static final List<Set<String>> VERBOSE_FEATURES = List.of(Set.of("v1"), Set.of());
+    private static final List<Set<Feature>> KEY_FEATURES = List
+            .of(Set.of(Features.of("k1")), Set.of(Features.of("k2a"), Features.of("k2b")));
+    private static final List<Set<Feature>> VERBOSE_FEATURES = List.of(Set.of(Features.of("v1")), Set.of());
 
     static Stream<DefensiveCopyParameters> annotatorSequence__defensivelyCopiesFeatureInputs() {
         return Stream.of(
@@ -140,17 +143,17 @@ class AnnotatorSequenceTest {
     @ParameterizedTest
     void annotatorSequence__defensivelyCopiesFeatureInputs(DefensiveCopyParameters parameters) {
         // ARRANGE //
-        List<Set<String>> features = new ArrayList<>(List.of(new HashSet<>(Set.of("k1"))));
-        List<Set<String>> verboseFeatures = new ArrayList<>(List.of(new HashSet<>(Set.of("v1"))));
-        AnnotatorSequence<String, TestTag> sequence = parameters.factory().apply(features, verboseFeatures);
+        List<Set<Feature>> features = new ArrayList<>(List.of(new HashSet<>(Set.of(Features.of("k1")))));
+        List<Set<Feature>> verboseFeatures = new ArrayList<>(List.of(new HashSet<>(Set.of(Features.of("v1")))));
+        AnnotatorSequence<TestTag> sequence = parameters.factory().apply(features, verboseFeatures);
 
         // ACT //
-        features.getFirst().add("late");
-        verboseFeatures.getFirst().add("late");
+        features.getFirst().add(Features.of("late"));
+        verboseFeatures.getFirst().add(Features.of("late"));
 
         // ASSERT //
-        assertEquals(Set.of("k1"), sequence.tokens().getFirst().features());
-        assertEquals(Set.of("v1"), sequence.tokens().getFirst().verboseFeatures());
+        assertEquals(Set.of(Features.of("k1")), sequence.tokens().getFirst().features());
+        assertEquals(Set.of(Features.of("v1")), sequence.tokens().getFirst().verboseFeatures());
     }
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
@@ -183,7 +186,7 @@ class AnnotatorSequenceTest {
                 ),
                 new ExceptionParameters(
                         "withTagger_nullTaggedSequence",
-                        () -> annotatorSequence(1, 1, (TaggedSequence<String, TestTag>) null),
+                        () -> annotatorSequence(1, 1, (TaggedSequence<TestTag>) null),
                         NullPointerException.class,
                         "taggedSequence must not be null"
                 ),
@@ -193,7 +196,7 @@ class AnnotatorSequenceTest {
                                 1,
                                 1,
                                 singleTokenTaggedSequence(),
-                                List.of(Set.of("f1"), Set.of("f2")),
+                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"))),
                                 null
                         ),
                         IllegalArgumentException.class,
@@ -205,8 +208,8 @@ class AnnotatorSequenceTest {
                                 1,
                                 1,
                                 singleTokenTaggedSequence(),
-                                List.of(Set.of("f1")),
-                                List.of(Set.of("v1"), Set.of("v2"))
+                                List.of(Set.of(Features.of("f1"))),
+                                List.of(Set.of(Features.of("v1")), Set.of(Features.of("v2")))
                         ),
                         IllegalArgumentException.class,
                         "verboseFeatures must have one entry per token, got: verboseFeatures=2, tokens=1"
@@ -219,44 +222,43 @@ class AnnotatorSequenceTest {
                 ),
                 new ExceptionParameters(
                         "withoutTagger_sequenceNumberZero",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(0, 1, List.of("a"), provider),
+                        () -> AnnotatorModels.annotatorSequence(0, 1, List.of("a"), provider),
                         IllegalArgumentException.class,
                         "sequenceNumber must be at least 1, got: 0"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_sequenceNumberNegative",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(-1, 1, List.of("a"), provider),
+                        () -> AnnotatorModels.annotatorSequence(-1, 1, List.of("a"), provider),
                         IllegalArgumentException.class,
                         "sequenceNumber must be at least 1, got: -1"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_totalSequencesLessThanSequenceNumber",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(3, 2, List.of("a"), provider),
+                        () -> AnnotatorModels.annotatorSequence(3, 2, List.of("a"), provider),
                         IllegalArgumentException.class,
                         "totalSequences must be at least sequenceNumber, got: totalSequences=2, sequenceNumber=3"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_emptyTokens",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(1, 1, List.of(), provider),
+                        () -> AnnotatorModels.annotatorSequence(1, 1, List.of(), provider),
                         IllegalArgumentException.class,
                         "tokens must not be empty"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_emptyTags",
-                        () -> AnnotatorModels
-                                .<String, TestTag>annotatorSequence(1, 1, List.of("a"), new TestTagProvider()),
+                        () -> AnnotatorModels.annotatorSequence(1, 1, List.of("a"), new TestTagProvider()),
                         IllegalArgumentException.class,
                         "tagProvider.tags() must not be empty"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_nullTokens",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(1, 1, null, provider),
+                        () -> AnnotatorModels.annotatorSequence(1, 1, null, provider),
                         NullPointerException.class,
                         "tokens must not be null"
                 ),
                 new ExceptionParameters(
                         "withoutTagger_nullTagProvider",
-                        () -> AnnotatorModels.<String, TestTag>annotatorSequence(1, 1, List.of("a"), null),
+                        () -> AnnotatorModels.annotatorSequence(1, 1, List.of("a"), null),
                         NullPointerException.class,
                         "tagProvider must not be null"
                 ),
@@ -267,7 +269,7 @@ class AnnotatorSequenceTest {
                                 1,
                                 List.of("a"),
                                 provider,
-                                List.of(Set.of("f1"), Set.of("f2")),
+                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"))),
                                 null
                         ),
                         IllegalArgumentException.class,
@@ -280,8 +282,8 @@ class AnnotatorSequenceTest {
                                 1,
                                 List.of("a"),
                                 provider,
-                                List.of(Set.of("f1")),
-                                List.of(Set.of("v1"), Set.of("v2"))
+                                List.of(Set.of(Features.of("f1"))),
+                                List.of(Set.of(Features.of("v1")), Set.of(Features.of("v2")))
                         ),
                         IllegalArgumentException.class,
                         "verboseFeatures must have one entry per token, got: verboseFeatures=2, tokens=1"
@@ -323,14 +325,14 @@ class AnnotatorSequenceTest {
     @ParameterizedTest
     void canonicalOrdering(CanonicalOrderingParameters parameters) {
         // ARRANGE //
-        TaggedSequence<String, TestTag> tagged = new TaggedSequence<>(
+        TaggedSequence<TestTag> tagged = new TaggedSequence<>(
                 List.of("token"),
                 List.of(Set.of()),
                 List.of(parameters.inputScores())
         );
 
         // ACT //
-        AnnotatorSequence<String, TestTag> sequence = annotatorSequence(1, 1, tagged);
+        AnnotatorSequence<TestTag> sequence = annotatorSequence(1, 1, tagged);
 
         // ASSERT //
         assertEquals(
@@ -345,11 +347,10 @@ class AnnotatorSequenceTest {
         TestTagProvider tagProvider = new TestTagProvider(TestTag.values());
 
         // ACT //
-        AnnotatorSequence<String, TestTag> sequence = AnnotatorModels
-                .annotatorSequence(1, 1, List.of("a"), tagProvider);
+        AnnotatorSequence<TestTag> sequence = AnnotatorModels.annotatorSequence(1, 1, List.of("a"), tagProvider);
 
         // ASSERT //
-        AnnotatorToken<String, TestTag> annotatorToken = sequence.tokens().getFirst();
+        AnnotatorToken<TestTag> annotatorToken = sequence.tokens().getFirst();
         assertEquals(
                 List.of(TestTag.ALPHA, TestTag.BETA, TestTag.GAMMA),
                 List.copyOf(annotatorToken.alternativeTagScores().keySet())
@@ -364,7 +365,7 @@ class AnnotatorSequenceTest {
         List<TestTag> tags = List.of(TestTag.ALPHA);
 
         // ACT //
-        AnnotatorSequence<String, TestTag> withScorer = annotatorSequence(
+        AnnotatorSequence<TestTag> withScorer = annotatorSequence(
                 1,
                 1,
                 singleTokenTaggedSequence(),
@@ -372,8 +373,8 @@ class AnnotatorSequenceTest {
                 null,
                 probabilityFunction
         );
-        AnnotatorSequence<String, TestTag> withoutScorer = annotatorSequence(1, 1, singleTokenTaggedSequence());
-        AnnotatorSequence<String, TestTag> noTagger = annotatorSequence(
+        AnnotatorSequence<TestTag> withoutScorer = annotatorSequence(1, 1, singleTokenTaggedSequence());
+        AnnotatorSequence<TestTag> noTagger = annotatorSequence(
                 1,
                 1,
                 List.of("a"),
@@ -431,7 +432,7 @@ class AnnotatorSequenceTest {
 
     static Stream<WithFeaturesParameters> withFeatures__populatesTokensAndAvailability() {
         TestTagProvider provider = new TestTagProvider(TestTag.values());
-        List<Set<String>> noFeatures = List.of(Set.of(), Set.of());
+        List<Set<Feature>> noFeatures = List.of(Set.of(), Set.of());
         return Stream.of(
                 new WithFeaturesParameters(
                         "withTagger_keyOnly",
@@ -488,7 +489,7 @@ class AnnotatorSequenceTest {
     @ParameterizedTest
     void withFeatures__populatesTokensAndAvailability(WithFeaturesParameters parameters) {
         // ACT //
-        AnnotatorSequence<String, TestTag> sequence = parameters.sequenceSupplier().get();
+        AnnotatorSequence<TestTag> sequence = parameters.sequenceSupplier().get();
 
         // ASSERT //
         assertEquals(parameters.expectedFeaturesAvailable(), sequence.featureAvailability().keyAvailable());
@@ -504,17 +505,13 @@ class AnnotatorSequenceTest {
     void withTagger__copiesFromTaggedSequence() {
         // ARRANGE //
         List<String> tokens = List.of("the", "fox");
-        List<Set<String>> features = List.of(Set.of("f1"), Set.of("f2", "f3"));
+        List<Set<Feature>> features = List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"), Features.of("f3")));
         Map<TestTag, Double> firstScores = scoreMap(TestTag.ALPHA, 0.7, TestTag.BETA, 0.2, TestTag.GAMMA, 0.1);
         Map<TestTag, Double> secondScores = scoreMap(TestTag.BETA, 0.6, TestTag.GAMMA, 0.3, TestTag.ALPHA, 0.1);
-        TaggedSequence<String, TestTag> tagged = new TaggedSequence<>(
-                tokens,
-                features,
-                List.of(firstScores, secondScores)
-        );
+        TaggedSequence<TestTag> tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
 
         // ACT //
-        AnnotatorSequence<String, TestTag> sequence = annotatorSequence(2, 5, tagged);
+        AnnotatorSequence<TestTag> sequence = annotatorSequence(2, 5, tagged);
 
         // ASSERT //
         assertEquals(2, sequence.sequenceNumber());
@@ -550,13 +547,13 @@ class AnnotatorSequenceTest {
         var tagProvider = new TestTagProvider(TestTag.values());
 
         // ACT //
-        AnnotatorSequence<String, TestTag> sequence = annotatorSequence(1, 1, tokens, tagProvider);
+        AnnotatorSequence<TestTag> sequence = annotatorSequence(1, 1, tokens, tagProvider);
 
         // ASSERT //
         assertEquals(3, sequence.tokens().size());
         assertEquals(FeatureAvailability.NONE, sequence.featureAvailability());
         for (int index = 0; index < tokens.size(); index++) {
-            AnnotatorToken<String, TestTag> annotatorToken = sequence.tokens().get(index);
+            AnnotatorToken<TestTag> annotatorToken = sequence.tokens().get(index);
             assertEquals(tokens.get(index), annotatorToken.token());
             assertEquals(Set.of(), annotatorToken.features());
             assertEquals(Set.of(), annotatorToken.verboseFeatures());
@@ -596,11 +593,12 @@ class AnnotatorSequenceTest {
                 ),
                 new ImmutabilityParameters(
                         "features_add",
-                        () -> immutableFeaturedSequence().tokens().getFirst().features().add("extra")
+                        () -> immutableFeaturedSequence().tokens().getFirst().features().add(Features.of("extra"))
                 ),
                 new ImmutabilityParameters(
                         "verboseFeatures_add",
-                        () -> immutableFeaturedSequence().tokens().getFirst().verboseFeatures().add("extra")
+                        () -> immutableFeaturedSequence().tokens().getFirst().verboseFeatures()
+                                .add(Features.of("extra"))
                 )
         );
     }
@@ -613,7 +611,7 @@ class AnnotatorSequenceTest {
     }
 
     private static void assertToken(
-            AnnotatorToken<String, TestTag> token,
+            AnnotatorToken<TestTag> token,
             String expectedToken,
             TestTag expectedTag,
             Double expectedConfidence,
@@ -629,15 +627,15 @@ class AnnotatorSequenceTest {
         assertEquals(expectedTopScore, token.alternativeTagScores().get(expectedTag));
     }
 
-    private static Sequence<TaggedPositionedToken<String, TestTag>> emptyTaggedSequence() {
+    private static Sequence<TaggedPositionedToken<TestTag>> emptyTaggedSequence() {
         return new Sequence<>() {
             @Override
-            public TaggedPositionedToken<String, TestTag> get(int position) {
+            public TaggedPositionedToken<TestTag> get(int position) {
                 throw new IndexOutOfBoundsException(position);
             }
 
             @Override
-            public Iterator<TaggedPositionedToken<String, TestTag>> iterator() {
+            public Iterator<TaggedPositionedToken<TestTag>> iterator() {
                 return Collections.emptyIterator();
             }
 
@@ -647,35 +645,35 @@ class AnnotatorSequenceTest {
             }
 
             @Override
-            public Stream<TaggedPositionedToken<String, TestTag>> stream() {
+            public Stream<TaggedPositionedToken<TestTag>> stream() {
                 return Stream.empty();
             }
         };
     }
 
-    private static AnnotatorSequence<String, TestTag> immutableFeaturedSequence() {
+    private static AnnotatorSequence<TestTag> immutableFeaturedSequence() {
         return annotatorSequence(
                 1,
                 1,
                 List.of("a"),
                 new TestTagProvider(TestTag.values()),
-                List.of(Set.of("k1")),
-                List.of(Set.of("v1"))
+                List.of(Set.of(Features.of("k1"))),
+                List.of(Set.of(Features.of("v1")))
         );
     }
 
-    private static AnnotatorSequence<String, TestTag> immutableSequence() {
+    private static AnnotatorSequence<TestTag> immutableSequence() {
         return AnnotatorModels.annotatorSequence(1, 1, List.of("a"), new TestTagProvider(TestTag.values()));
     }
 
-    private static TaggedSequence<String, TestTag> singleTokenTaggedSequence() {
+    private static TaggedSequence<TestTag> singleTokenTaggedSequence() {
         return new TaggedSequence<>(List.of("a"), List.of(Set.of()), List.of(Map.of(TestTag.ALPHA, 1.0)));
     }
 
-    private static TaggedSequence<String, TestTag> twoTokenTaggedSequence() {
+    private static TaggedSequence<TestTag> twoTokenTaggedSequence() {
         return new TaggedSequence<>(
                 List.of("the", "fox"),
-                List.of(Set.of("e1"), Set.of("e2")),
+                List.of(Set.of(Features.of("e1")), Set.of(Features.of("e2"))),
                 List.of(Map.of(TestTag.ALPHA, 1.0), Map.of(TestTag.BETA, 1.0))
         );
     }

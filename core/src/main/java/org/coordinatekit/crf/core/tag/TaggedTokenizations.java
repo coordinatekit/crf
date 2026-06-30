@@ -50,7 +50,6 @@ public final class TaggedTokenizations {
      * @param tokenization the authoritative tokenization carrying tokens and excluded runs
      * @param probabilityFunction the function computing {@code P(tags | input)} for an arbitrary
      *        tagging
-     * @param <F> the type of features associated with each token
      * @param <T> the type of tags assigned to tokens, must be comparable for ordering
      * @return a new tagged tokenization
      * @throws NullPointerException if {@code taggedSequence}, {@code tokenization}, or
@@ -58,19 +57,19 @@ public final class TaggedTokenizations {
      * @throws IllegalArgumentException if {@code taggedSequence} does not have exactly one entry per
      *         token segment of {@code tokenization}
      */
-    public static <F, T extends Comparable<T>> TaggedTokenization<F, T> of(
-            Sequence<TaggedPositionedToken<F, T>> taggedSequence,
+    public static <T extends Comparable<T>> TaggedTokenization<T> of(
+            Sequence<TaggedPositionedToken<T>> taggedSequence,
             Tokenization tokenization,
             ToDoubleFunction<List<T>> probabilityFunction
     ) {
         return new DefaultTaggedTokenization<>(probabilityFunction, taggedSequence, tokenization);
     }
 
-    private record DefaultTaggedTokenization<F, T extends Comparable<T>> (
+    private record DefaultTaggedTokenization<T extends Comparable<T>> (
             ToDoubleFunction<List<T>> probabilityFunction,
-            Sequence<TaggedPositionedToken<F, T>> taggedSequence,
+            Sequence<TaggedPositionedToken<T>> taggedSequence,
             Tokenization tokenization
-    ) implements TaggedTokenization<F, T> {
+    ) implements TaggedTokenization<T> {
         private DefaultTaggedTokenization {
             Objects.requireNonNull(probabilityFunction, "probabilityFunction must not be null");
             Objects.requireNonNull(taggedSequence, "taggedSequence must not be null");

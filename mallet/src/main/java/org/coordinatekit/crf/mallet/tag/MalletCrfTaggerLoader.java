@@ -17,6 +17,7 @@ package org.coordinatekit.crf.mallet.tag;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
@@ -45,13 +46,14 @@ public final class MalletCrfTaggerLoader implements CrfTaggerLoader {
     public MalletCrfTaggerLoader() {}
 
     @Override
-    public <F, T extends Comparable<T>> CrfTagger<F, T> load(
+    public <T extends Comparable<T>> CrfTagger<T> load(
             Path modelPath,
-            FeatureExtractor<F> featureExtractor,
+            FeatureExtractor featureExtractor,
+            FeatureFormat featureFormat,
             TagProvider<T> tagProvider,
             Tokenizer tokenizer
     ) throws IOException {
-        return new MalletCrfTagger<>(featureExtractor, modelPath, tagProvider, tokenizer);
+        return new MalletCrfTagger<>(featureExtractor, featureFormat, modelPath, tagProvider, tokenizer);
     }
 
     @Override

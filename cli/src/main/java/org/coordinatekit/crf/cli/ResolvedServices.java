@@ -18,6 +18,7 @@ package org.coordinatekit.crf.cli;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.spi.AmbiguousServiceException;
@@ -33,23 +34,24 @@ import java.nio.file.Path;
 import java.util.Set;
 
 /**
- * The resolved set of services a command needs: a tag provider, a tokenizer, an optional full and
- * key feature extractor, and an optional model loader.
+ * The resolved set of services a command needs: a tag provider, a tokenizer, a feature format, an
+ * optional full and key feature extractor, and an optional model loader.
  *
  * <p>
  * Each slot is resolved independently by {@link Builder#resolve()} with the precedence
  * {@code explicit > single service-provider implementation > built-in default}. The full feature
  * extractor has no built-in default: when none is supplied or discovered it resolves to
  * {@code null}, and callers can warn before tagging without features. The key feature extractor
- * falls back to the full extractor when neither is supplied nor discovered. The set is internally
- * untyped — the feature type and tag type are erased to wildcards — because the slots come from
+ * falls back to the full extractor when neither is supplied nor discovered. The feature format
+ * always resolves to a non-null value (the single registered format, or the built-in fallback). The
+ * set is internally untyped — the tag type is erased to a wildcard — because the slots come from
  * independent sources that cannot prove their agreement at compile time. The companion
  * {@link ResolvedServicesFactory} assembles them into a typed annotator or reviewer with the
- * unchecked casts that gap requires. The resolved full {@link FeatureExtractor} and
- * {@link TagProvider} are threaded into both the tagger (via {@link #loadTagger}) and the runner's
- * verbose view, so their types are coherent by construction; the key extractor feeds the runner's
- * key view only. {@link CrfTaggerLoader#load} is generic in the feature and tag types, so the
- * tagger it returns is bound to the services it is handed rather than to types of its own (see
+ * unchecked casts that gap requires. The resolved {@link FeatureExtractor}, {@link FeatureFormat},
+ * and {@link TagProvider} are threaded into both the tagger (via {@link #loadTagger}) and the
+ * runner's verbose view, so they are coherent by construction; the key extractor feeds the runner's
+ * key view only. {@link CrfTaggerLoader#load} is generic in the tag type, so the tagger it returns
+ * is bound to the services it is handed rather than to a type of its own (see
  * {@link CrfTaggerLoader}).
  *
  * @see Builder
@@ -57,8 +59,9 @@ import java.util.Set;
  */
 @NullMarked
 final class ResolvedServices {
-    private final @Nullable FeatureExtractor<?> fullFeatureExtractor;
-    private final @Nullable FeatureExtractor<?> keyFeatureExtractor;
+    private final FeatureFormat featureFormat;
+    private final @Nullable FeatureExtractor fullFeatureExtractor;
+    private final @Nullable FeatureExtractor keyFeatureExtractor;
     private final TagProvider<?> tagProvider;
     private final @Nullable CrfTaggerLoader taggerLoader;
     private final Tokenizer tokenizer;
@@ -66,10 +69,12 @@ final class ResolvedServices {
     private ResolvedServices(
             TagProvider<?> tagProvider,
             Tokenizer tokenizer,
-            @Nullable FeatureExtractor<?> fullFeatureExtractor,
-            @Nullable FeatureExtractor<?> keyFeatureExtractor,
+            FeatureFormat featureFormat,
+            @Nullable FeatureExtractor fullFeatureExtractor,
+            @Nullable FeatureExtractor keyFeatureExtractor,
             @Nullable CrfTaggerLoader taggerLoader
     ) {
+        this.featureFormat = featureFormat;
         this.fullFeatureExtractor = fullFeatureExtractor;
         this.keyFeatureExtractor = keyFeatureExtractor;
         this.tagProvider = tagProvider;
@@ -105,8 +110,22 @@ final class ResolvedServices {
         return new Builder();
     }
 
-    private static <F> FeatureExtractor<F> emptyFeatureExtractor() {
+    private static FeatureExtractor emptyFeatureExtractor() {
         return (sequence, position) -> Set.of();
+    }
+
+    /**
+     * Returns the resolved feature format, never {@code null}.
+     *
+     * <p>
+     * The format renders each structured feature to the flat string the model's alphabet stores and the
+     * terminal display shows. It is threaded into the tagger (via {@link #loadTagger}) and the runner's
+     * terminal interface so both render features the same way the model was trained against.
+     *
+     * @return the feature format
+     */
+    FeatureFormat featureFormat() {
+        return featureFormat;
     }
 
     /**
@@ -121,7 +140,7 @@ final class ResolvedServices {
      * @return the full feature extractor, or {@code null}
      */
     @Nullable
-    FeatureExtractor<?> fullFeatureExtractor() {
+    FeatureExtractor fullFeatureExtractor() {
         return fullFeatureExtractor;
     }
 
@@ -136,7 +155,7 @@ final class ResolvedServices {
      * @return the key feature extractor, or {@code null}
      */
     @Nullable
-    FeatureExtractor<?> keyFeatureExtractor() {
+    FeatureExtractor keyFeatureExtractor() {
         return keyFeatureExtractor;
     }
 
@@ -153,7 +172,7 @@ final class ResolvedServices {
      *         or the model cannot be read or is not a valid model
      */
     @Nullable
-    CrfTagger<?, ?> loadTagger(@Nullable Path modelPath) {
+    CrfTagger<?> loadTagger(@Nullable Path modelPath) {
         if (modelPath == null) {
             return null;
         }
@@ -165,10 +184,10 @@ final class ResolvedServices {
                             + " the mallet module (or another TaggerLoader provider)"
             );
         }
-        FeatureExtractor<?> resolvedFeatureExtractor = fullFeatureExtractor != null ? fullFeatureExtractor
+        FeatureExtractor resolvedFeatureExtractor = fullFeatureExtractor != null ? fullFeatureExtractor
                 : emptyFeatureExtractor();
         try {
-            return taggerLoader.load(modelPath, resolvedFeatureExtractor, tagProvider, tokenizer);
+            return taggerLoader.load(modelPath, resolvedFeatureExtractor, featureFormat, tagProvider, tokenizer);
         } catch (IOException | UncheckedCrfException | ClassCastException exception) {
             throw new CrfStartupException(
                     "failed to load the model from " + modelPath + ": " + exception.getMessage(),
@@ -235,8 +254,8 @@ final class ResolvedServices {
      * {@link CrfLauncher} leaves them unset so every slot is resolved from the classpath.
      */
     static final class Builder {
-        private @Nullable FeatureExtractor<?> fullFeatureExtractor;
-        private @Nullable FeatureExtractor<?> keyFeatureExtractor;
+        private @Nullable FeatureExtractor fullFeatureExtractor;
+        private @Nullable FeatureExtractor keyFeatureExtractor;
         private @Nullable TagProvider<?> tagProvider;
         private @Nullable CrfTaggerLoader taggerLoader;
         private @Nullable String taggerLoaderName;
@@ -250,7 +269,7 @@ final class ResolvedServices {
          * @param fullFeatureExtractor the full feature extractor
          * @return this builder
          */
-        Builder fullFeatureExtractor(FeatureExtractor<?> fullFeatureExtractor) {
+        Builder fullFeatureExtractor(FeatureExtractor fullFeatureExtractor) {
             this.fullFeatureExtractor = fullFeatureExtractor;
             return this;
         }
@@ -261,7 +280,7 @@ final class ResolvedServices {
          * @param keyFeatureExtractor the key feature extractor
          * @return this builder
          */
-        Builder keyFeatureExtractor(FeatureExtractor<?> keyFeatureExtractor) {
+        Builder keyFeatureExtractor(FeatureExtractor keyFeatureExtractor) {
             this.keyFeatureExtractor = keyFeatureExtractor;
             return this;
         }
@@ -270,11 +289,11 @@ final class ResolvedServices {
          * Resolves every slot and returns an immutable resolved set of services.
          *
          * <p>
-         * The tokenizer defaults to {@link WhitespaceTokenizer}; the full feature extractor defaults to
-         * absent (the tagger then runs without features); the key feature extractor defaults to the full
-         * extractor; the tagger loader defaults to absent; the tag provider has no built-in default
-         * (tag-set inference is not yet implemented) and must be supplied explicitly or by a single
-         * registered service.
+         * The tokenizer defaults to {@link WhitespaceTokenizer}; the feature format defaults to the single
+         * registered format or the built-in fallback; the full feature extractor defaults to absent (the
+         * tagger then runs without features); the key feature extractor defaults to the full extractor; the
+         * tagger loader defaults to absent; the tag provider has no built-in default (tag-set inference is
+         * not yet implemented) and must be supplied explicitly or by a single registered service.
          *
          * @return the resolved set of services
          * @throws CrfStartupException if no tag provider can be resolved, or any slot has more than one
@@ -282,18 +301,17 @@ final class ResolvedServices {
          */
         ResolvedServices resolve() {
             Tokenizer resolvedTokenizer;
-            FeatureExtractor<?> resolvedFullFeatureExtractor;
-            FeatureExtractor<?> resolvedKeyFeatureExtractor;
+            FeatureFormat resolvedFeatureFormat;
+            FeatureExtractor resolvedFullFeatureExtractor;
+            FeatureExtractor resolvedKeyFeatureExtractor;
             CrfTaggerLoader resolvedTaggerLoader;
             TagProvider<?> resolvedTagProvider;
             try {
                 resolvedTokenizer = CrfServices.tokenizer(tokenizer);
+                resolvedFeatureFormat = CrfServices.featureFormat();
                 resolvedFullFeatureExtractor = CrfServices.fullFeatureExtractor(fullFeatureExtractor).orElse(null);
-                // key view falls back to the full extractor; orElse cannot bridge the two wildcard captures
-                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor).orElse(null);
-                if (resolvedKeyFeatureExtractor == null) {
-                    resolvedKeyFeatureExtractor = resolvedFullFeatureExtractor;
-                }
+                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor)
+                        .orElse(resolvedFullFeatureExtractor);
                 resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
                 resolvedTagProvider = CrfServices.tagProvider(tagProvider).orElseThrow(
                         () -> new CrfStartupException(
@@ -310,6 +328,7 @@ final class ResolvedServices {
             return new ResolvedServices(
                     resolvedTagProvider,
                     resolvedTokenizer,
+                    resolvedFeatureFormat,
                     resolvedFullFeatureExtractor,
                     resolvedKeyFeatureExtractor,
                     resolvedTaggerLoader

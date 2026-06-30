@@ -108,7 +108,7 @@ public final class AnnotatorRunner {
 
     private static int annotate(AnnotatorConfiguration configuration, AnnotatorFactory factory, Terminal terminal)
             throws IOException {
-        Annotator<?, ?> annotator = factory.create(configuration, terminal);
+        Annotator<?> annotator = factory.create(configuration, terminal);
         annotator.annotate(configuration.input(), configuration.output());
         return 0;
     }
@@ -127,6 +127,6 @@ public final class AnnotatorRunner {
          *        remains with the runner
          * @return a configured annotator ready to {@link Annotator#annotate(Path, Path) annotate}
          */
-        Annotator<?, ?> create(AnnotatorConfiguration configuration, Terminal terminal);
+        Annotator<?> create(AnnotatorConfiguration configuration, Terminal terminal);
     }
 }

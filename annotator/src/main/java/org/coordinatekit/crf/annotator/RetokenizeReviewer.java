@@ -24,6 +24,7 @@ import org.coordinatekit.crf.core.align.AlignmentStrategy;
 import org.coordinatekit.crf.core.align.SequenceAlignment;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
@@ -98,22 +99,21 @@ import static org.coordinatekit.crf.core.align.AlignmentModels.exactMatchStrateg
  * <p>
  * Instances are constructed via the nested {@link Builder}.
  *
- * @param <F> the feature type carried by the tagger and the per-token entries
  * @param <T> the tag type
  * @see Builder
  * @see Annotator
  * @see AlignmentDetector
  */
 @NullMarked
-public final class RetokenizeReviewer<F, T extends Comparable<T>> {
+public final class RetokenizeReviewer<T extends Comparable<T>> {
     private final AlignmentStrategy alignmentStrategy;
-    private final @Nullable FeatureExtractor<F> featureExtractor;
-    private final @Nullable CrfTagger<F, T> tagger;
+    private final @Nullable FeatureExtractor featureExtractor;
+    private final @Nullable CrfTagger<T> tagger;
     private final TagProvider<T> tagProvider;
-    private final TaggingInterface<F, T> taggingInterface;
+    private final TaggingInterface<T> taggingInterface;
     private final Terminal terminal;
     private final Tokenizer tokenizer;
-    private final @Nullable FeatureExtractor<F> verboseFeatureExtractor;
+    private final @Nullable FeatureExtractor verboseFeatureExtractor;
 
     /**
      * Constructs a reviewer from a populated builder.
@@ -121,7 +121,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
      * @param builder the builder providing configured fields
      * @throws NullPointerException if any required builder field is null
      */
-    private RetokenizeReviewer(Builder<F, T> builder) {
+    private RetokenizeReviewer(Builder<T> builder) {
         this.alignmentStrategy = builder.alignmentStrategy == null ? exactMatchStrategy() : builder.alignmentStrategy;
         this.featureExtractor = builder.featureExtractor;
         this.tagger = builder.tagger;
@@ -135,11 +135,10 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
     /**
      * Returns a new builder for {@link RetokenizeReviewer}.
      *
-     * @param <F> the feature type carried by the tagger and the per-token entries
      * @param <T> the tag type
      * @return a new builder with no values set
      */
-    public static <F, T extends Comparable<T>> Builder<F, T> builder() {
+    public static <T extends Comparable<T>> Builder<T> builder() {
         return new Builder<>();
     }
 
@@ -231,14 +230,14 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
     private Presentation<T> present(TrainingSequence<T> sequence, int sequenceNumber, int totalSequences) {
         String surface = sequence.surface();
         Tokenization tokenization = tokenizer.tokenize(surface); // alignment authority; persisted on ACCEPT
-        TaggedTokenization<F, T> tagged = tagger != null ? tagger.tag(surface) : null;
+        TaggedTokenization<T> tagged = tagger != null ? tagger.tag(surface) : null;
 
         Sequence<? extends PositionedToken> presentedTokens = tagged != null ? tagged.taggedSequence()
                 : tokenization.sequence();
-        List<Set<F>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
-        List<Set<F>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
+        List<Set<Feature>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
+        List<Set<Feature>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
 
-        AnnotatorSequence<F, T> displaySequence = tagged != null
+        AnnotatorSequence<T> displaySequence = tagged != null
                 ? annotatorSequence(
                         sequenceNumber,
                         totalSequences,
@@ -443,18 +442,17 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
      * {@link Annotator.Builder}, the tokenizer is always required: it is the alignment-detection
      * authority. A {@link #tagger(CrfTagger) tagger} is optional and supplies tag suggestions only.
      *
-     * @param <F> the feature type carried by the tagger and the per-token entries
      * @param <T> the tag type
      */
-    public static final class Builder<F, T extends Comparable<T>> {
+    public static final class Builder<T extends Comparable<T>> {
         private @Nullable AlignmentStrategy alignmentStrategy;
-        private @Nullable FeatureExtractor<F> featureExtractor;
-        private @Nullable CrfTagger<F, T> tagger;
+        private @Nullable FeatureExtractor featureExtractor;
+        private @Nullable CrfTagger<T> tagger;
         private @Nullable TagProvider<T> tagProvider;
-        private @Nullable TaggingInterface<F, T> taggingInterface;
+        private @Nullable TaggingInterface<T> taggingInterface;
         private @Nullable Terminal terminal;
         private @Nullable Tokenizer tokenizer;
-        private @Nullable FeatureExtractor<F> verboseFeatureExtractor;
+        private @Nullable FeatureExtractor verboseFeatureExtractor;
 
         private Builder() {}
 
@@ -468,7 +466,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param alignmentStrategy the comparison strategy, or {@code null} to use the exact-match default
          * @return this builder
          */
-        public Builder<F, T> alignmentStrategy(@Nullable AlignmentStrategy alignmentStrategy) {
+        public Builder<T> alignmentStrategy(@Nullable AlignmentStrategy alignmentStrategy) {
             this.alignmentStrategy = alignmentStrategy;
             return this;
         }
@@ -482,7 +480,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          *         terminal}, or {@link #tokenizer(Tokenizer) tokenizer} have not been set, or if the
          *         supplied {@link TagProvider#tags()} set is empty
          */
-        public RetokenizeReviewer<F, T> build() {
+        public RetokenizeReviewer<T> build() {
             if (tagProvider == null) {
                 throw new IllegalStateException("tagProvider must be set");
             } else if (taggingInterface == null) {
@@ -508,7 +506,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          *        display
          * @return this builder
          */
-        public Builder<F, T> featureExtractor(@Nullable FeatureExtractor<F> featureExtractor) {
+        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
             this.featureExtractor = featureExtractor;
             return this;
         }
@@ -523,7 +521,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param tagger the tagger, or {@code null} to re-tag without suggestions
          * @return this builder
          */
-        public Builder<F, T> tagger(@Nullable CrfTagger<F, T> tagger) {
+        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
             this.tagger = tagger;
             return this;
         }
@@ -534,7 +532,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param tagProvider the tag provider
          * @return this builder
          */
-        public Builder<F, T> tagProvider(TagProvider<T> tagProvider) {
+        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
             this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
             return this;
         }
@@ -545,7 +543,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param taggingInterface the tagging interface
          * @return this builder
          */
-        public Builder<F, T> taggingInterface(TaggingInterface<F, T> taggingInterface) {
+        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
             this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
             return this;
         }
@@ -557,7 +555,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param terminal the terminal
          * @return this builder
          */
-        public Builder<F, T> terminal(Terminal terminal) {
+        public Builder<T> terminal(Terminal terminal) {
             this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
             return this;
         }
@@ -571,7 +569,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          * @param tokenizer the tokenizer
          * @return this builder
          */
-        public Builder<F, T> tokenizer(Tokenizer tokenizer) {
+        public Builder<T> tokenizer(Tokenizer tokenizer) {
             this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
             return this;
         }
@@ -588,7 +586,7 @@ public final class RetokenizeReviewer<F, T extends Comparable<T>> {
          *        tagger fallback (or no verbose display)
          * @return this builder
          */
-        public Builder<F, T> verboseFeatureExtractor(@Nullable FeatureExtractor<F> verboseFeatureExtractor) {
+        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
             this.verboseFeatureExtractor = verboseFeatureExtractor;
             return this;
         }

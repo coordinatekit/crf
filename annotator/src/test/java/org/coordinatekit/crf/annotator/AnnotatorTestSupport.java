@@ -20,6 +20,8 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.Segments;
@@ -69,10 +71,10 @@ public final class AnnotatorTestSupport {
     /** Builds the annotate flow's typed beans (string tags, whitespace tokenizer) onto a terminal. */
     public static AnnotatorRunner.AnnotatorFactory annotatorFactory() {
         return (configuration, sharedTerminal) -> {
-            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
-                    .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(configuration.threshold()).build();
-            return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
-                    .terminal(sharedTerminal).tokenizer(new WhitespaceTokenizer()).build();
+            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder().tagProvider(TAG_PROVIDER)
+                    .terminal(sharedTerminal).threshold(configuration.threshold()).build();
+            return Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui).terminal(sharedTerminal)
+                    .tokenizer(new WhitespaceTokenizer()).build();
         };
     }
 
@@ -124,7 +126,7 @@ public final class AnnotatorTestSupport {
     }
 
     /** Returns each token's initial tag, in token order. */
-    public static <F, T extends Comparable<T>> List<T> initialTagsOf(AnnotatorSequence<F, T> sequence) {
+    public static <T extends Comparable<T>> List<T> initialTagsOf(AnnotatorSequence<T> sequence) {
         return sequence.tokens().stream().map(AnnotatorToken::initialTag).toList();
     }
 
@@ -180,9 +182,9 @@ public final class AnnotatorTestSupport {
      */
     public static RetokenizeRunner.ReviewerFactory reviewerFactory() {
         return (configuration, sharedTerminal) -> {
-            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
-                    .tagProvider(TAG_PROVIDER).terminal(sharedTerminal).threshold(configuration.threshold()).build();
-            return RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
+            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder().tagProvider(TAG_PROVIDER)
+                    .terminal(sharedTerminal).threshold(configuration.threshold()).build();
+            return RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
                     .terminal(sharedTerminal).tokenizer(new PunctuationTokenizer()).build();
         };
     }
@@ -213,10 +215,10 @@ public final class AnnotatorTestSupport {
      * Returns a two-token ("the", "fox") annotator sequence whose key and verbose feature presence
      * matches {@code availability}, for exercising feature-view logic.
      */
-    public static AnnotatorSequence<String, String> sequenceWith(FeatureAvailability availability) {
+    public static AnnotatorSequence<String> sequenceWith(FeatureAvailability availability) {
         List<String> tokens = List.of("the", "fox");
-        List<Set<String>> key = List.of(Set.of("k0"), Set.of("k1"));
-        List<Set<String>> verbose = List.of(Set.of("v0"), Set.of("v1"));
+        List<Set<Feature>> key = List.of(Set.of(Features.of("k0")), Set.of(Features.of("k1")));
+        List<Set<Feature>> verbose = List.of(Set.of(Features.of("v0")), Set.of(Features.of("v1")));
         return switch (availability) {
             case NONE -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, null, null);
             case KEY_ONLY -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, key, null);

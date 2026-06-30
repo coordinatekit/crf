@@ -20,6 +20,7 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
@@ -84,19 +85,18 @@ import static org.coordinatekit.crf.annotator.AnnotatorSupport.toSegments;
  * <p>
  * Instances are constructed via the nested {@link Builder}.
  *
- * @param <F> the feature type carried by the tagger and the per-token entries
  * @param <T> the tag type
  * @see Builder
  */
 @NullMarked
-public final class Annotator<F, T extends Comparable<T>> {
-    private final @Nullable FeatureExtractor<F> featureExtractor;
-    private final @Nullable CrfTagger<F, T> tagger;
+public final class Annotator<T extends Comparable<T>> {
+    private final @Nullable FeatureExtractor featureExtractor;
+    private final @Nullable CrfTagger<T> tagger;
     private final TagProvider<T> tagProvider;
-    private final TaggingInterface<F, T> taggingInterface;
+    private final TaggingInterface<T> taggingInterface;
     private final Terminal terminal;
     private final @Nullable Tokenizer tokenizer;
-    private final @Nullable FeatureExtractor<F> verboseFeatureExtractor;
+    private final @Nullable FeatureExtractor verboseFeatureExtractor;
 
     /**
      * Constructs an annotator from a populated builder.
@@ -105,7 +105,7 @@ public final class Annotator<F, T extends Comparable<T>> {
      *        {@code taggingInterface}, and {@code terminal} must be non-null
      * @throws NullPointerException if any required builder field is null
      */
-    private Annotator(Builder<F, T> builder) {
+    private Annotator(Builder<T> builder) {
         this.featureExtractor = builder.featureExtractor;
         this.tagger = builder.tagger;
         this.tagProvider = Objects.requireNonNull(builder.tagProvider, "tagProvider must be set");
@@ -118,11 +118,10 @@ public final class Annotator<F, T extends Comparable<T>> {
     /**
      * Returns a new builder for {@link Annotator}.
      *
-     * @param <F> the feature type carried by the tagger and the per-token entries
      * @param <T> the tag type
      * @return a new builder with no values set
      */
-    public static <F, T extends Comparable<T>> Builder<F, T> builder() {
+    public static <T extends Comparable<T>> Builder<T> builder() {
         return new Builder<>();
     }
 
@@ -259,7 +258,7 @@ public final class Annotator<F, T extends Comparable<T>> {
             return true;
         }
 
-        TaggedTokenization<F, T> tagged;
+        TaggedTokenization<T> tagged;
         Tokenization tokenized;
         try {
             tagged = tagger != null ? tagger.tag(line) : null;
@@ -288,12 +287,12 @@ public final class Annotator<F, T extends Comparable<T>> {
 
         Sequence<? extends PositionedToken> presentedTokens = tagged != null ? tagged.taggedSequence()
                 : tokenized.sequence();
-        List<Set<F>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
-        List<Set<F>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
+        List<Set<Feature>> features = extractDisplayFeatures(featureExtractor, presentedTokens);
+        List<Set<Feature>> verboseFeatures = resolveVerboseFeatures(verboseFeatureExtractor, tagged, presentedTokens);
 
         ++state.presentationNumber;
         int currentPresentation = state.skipped + state.untokenizable + state.presentationNumber;
-        AnnotatorSequence<F, T> displaySequence = tagged != null
+        AnnotatorSequence<T> displaySequence = tagged != null
                 ? annotatorSequence(
                         currentPresentation,
                         state.totalSequences,
@@ -373,17 +372,16 @@ public final class Annotator<F, T extends Comparable<T>> {
      * or {@link #tagger(CrfTagger) tagger} must be set: a tagger supplies both the tokenization and tag
      * suggestions, while a tokenizer alone drives the manual-only path — see the class-level Javadoc.
      *
-     * @param <F> the feature type carried by the tagger and the per-token entries
      * @param <T> the tag type
      */
-    public static final class Builder<F, T extends Comparable<T>> {
-        private @Nullable FeatureExtractor<F> featureExtractor;
-        private @Nullable CrfTagger<F, T> tagger;
+    public static final class Builder<T extends Comparable<T>> {
+        private @Nullable FeatureExtractor featureExtractor;
+        private @Nullable CrfTagger<T> tagger;
         private @Nullable TagProvider<T> tagProvider;
-        private @Nullable TaggingInterface<F, T> taggingInterface;
+        private @Nullable TaggingInterface<T> taggingInterface;
         private @Nullable Terminal terminal;
         private @Nullable Tokenizer tokenizer;
-        private @Nullable FeatureExtractor<F> verboseFeatureExtractor;
+        private @Nullable FeatureExtractor verboseFeatureExtractor;
 
         private Builder() {}
 
@@ -397,7 +395,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          *         {@link #tokenizer(Tokenizer) tokenizer} nor a {@link #tagger(CrfTagger) tagger} has been
          *         set; or if the supplied {@link TagProvider#tags()} set is empty
          */
-        public Annotator<F, T> build() {
+        public Annotator<T> build() {
             if (tagProvider == null) {
                 throw new IllegalStateException("tagProvider must be set");
             } else if (taggingInterface == null) {
@@ -423,7 +421,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          *        display
          * @return this builder
          */
-        public Builder<F, T> featureExtractor(@Nullable FeatureExtractor<F> featureExtractor) {
+        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
             this.featureExtractor = featureExtractor;
             return this;
         }
@@ -437,7 +435,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @param tagger the tagger, or {@code null} to run without tag suggestions
          * @return this builder
          */
-        public Builder<F, T> tagger(@Nullable CrfTagger<F, T> tagger) {
+        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
             this.tagger = tagger;
             return this;
         }
@@ -448,7 +446,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @param tagProvider the tag provider
          * @return this builder
          */
-        public Builder<F, T> tagProvider(TagProvider<T> tagProvider) {
+        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
             this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
             return this;
         }
@@ -459,7 +457,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @param taggingInterface the tagging interface
          * @return this builder
          */
-        public Builder<F, T> taggingInterface(TaggingInterface<F, T> taggingInterface) {
+        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
             this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
             return this;
         }
@@ -471,7 +469,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @param terminal the terminal
          * @return this builder
          */
-        public Builder<F, T> terminal(Terminal terminal) {
+        public Builder<T> terminal(Terminal terminal) {
             this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
             return this;
         }
@@ -484,7 +482,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          * @param tokenizer the tokenizer
          * @return this builder
          */
-        public Builder<F, T> tokenizer(Tokenizer tokenizer) {
+        public Builder<T> tokenizer(Tokenizer tokenizer) {
             this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
             return this;
         }
@@ -501,7 +499,7 @@ public final class Annotator<F, T extends Comparable<T>> {
          *        tagger fallback (or no verbose display)
          * @return this builder
          */
-        public Builder<F, T> verboseFeatureExtractor(@Nullable FeatureExtractor<F> verboseFeatureExtractor) {
+        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
             this.verboseFeatureExtractor = verboseFeatureExtractor;
             return this;
         }

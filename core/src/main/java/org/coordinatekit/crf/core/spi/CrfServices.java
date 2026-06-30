@@ -82,11 +82,10 @@ public final class CrfServices {
      * The full extractor is the one used for training and tagging — the complete feature set the model
      * sees — and it also feeds the annotator's verbose ("all features") view.
      *
-     * @param <F> the feature type
      * @return the resolved full feature extractor, or empty if none is registered
      * @throws AmbiguousServiceException if more than one full feature extractor is registered
      */
-    public static <F> Optional<FeatureExtractor<F>> fullFeatureExtractor() {
+    public static Optional<FeatureExtractor> fullFeatureExtractor() {
         return fullFeatureExtractor(null);
     }
 
@@ -95,12 +94,11 @@ public final class CrfServices {
      * {@code explicit > single registered FullFeatureExtractor > none}.
      *
      * @param explicit the explicitly supplied full feature extractor, or {@code null} if none was set
-     * @param <F> the feature type
      * @return the resolved full feature extractor, or empty if none was supplied or registered
      * @throws AmbiguousServiceException if more than one full feature extractor is registered and none
      *         is explicit
      */
-    public static <F> Optional<FeatureExtractor<F>> fullFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
+    public static Optional<FeatureExtractor> fullFeatureExtractor(@Nullable FeatureExtractor explicit) {
         return resolveExtractor(FullFeatureExtractor.class, explicit);
     }
 
@@ -111,11 +109,10 @@ public final class CrfServices {
      * The key extractor is the simpler pre-window extractor that feeds the annotator's key ("key
      * features") view. When none is registered, callers fall the key view back to the full extractor.
      *
-     * @param <F> the feature type
      * @return the resolved key feature extractor, or empty if none is registered
      * @throws AmbiguousServiceException if more than one key feature extractor is registered
      */
-    public static <F> Optional<FeatureExtractor<F>> keyFeatureExtractor() {
+    public static Optional<FeatureExtractor> keyFeatureExtractor() {
         return keyFeatureExtractor(null);
     }
 
@@ -124,12 +121,11 @@ public final class CrfServices {
      * {@code explicit > single registered KeyFeatureExtractor > none}.
      *
      * @param explicit the explicitly supplied key feature extractor, or {@code null} if none was set
-     * @param <F> the feature type
      * @return the resolved key feature extractor, or empty if none was supplied or registered
      * @throws AmbiguousServiceException if more than one key feature extractor is registered and none
      *         is explicit
      */
-    public static <F> Optional<FeatureExtractor<F>> keyFeatureExtractor(@Nullable FeatureExtractor<F> explicit) {
+    public static Optional<FeatureExtractor> keyFeatureExtractor(@Nullable FeatureExtractor explicit) {
         return resolveExtractor(KeyFeatureExtractor.class, explicit);
     }
 
@@ -141,17 +137,17 @@ public final class CrfServices {
      *        {@code KeyFeatureExtractor}); also identifies the slot in
      *        {@link AmbiguousServiceException}
      * @param explicit the explicitly supplied extractor, or {@code null} if none was set
-     * @param <F> the feature type
      * @return the resolved extractor, or empty if none was supplied or registered
      * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
      */
-    // ServiceLoader erases the type; F is bound from explicit or assumed of the discovered provider
+    // ServiceLoader hands back the marker subtype; widen the discovered list to the FeatureExtractor
+    // slot
     @SuppressWarnings("unchecked")
-    private static <F> Optional<FeatureExtractor<F>> resolveExtractor(
+    private static Optional<FeatureExtractor> resolveExtractor(
             Class<?> serviceType,
-            @Nullable FeatureExtractor<F> explicit
+            @Nullable FeatureExtractor explicit
     ) {
-        List<FeatureExtractor<F>> discovered = (List<FeatureExtractor<F>>) ServiceResolution.discover(serviceType);
+        List<FeatureExtractor> discovered = (List<FeatureExtractor>) ServiceResolution.discover(serviceType);
         return Optional.ofNullable(ServiceResolution.resolve(serviceType, explicit, discovered, null));
     }
 

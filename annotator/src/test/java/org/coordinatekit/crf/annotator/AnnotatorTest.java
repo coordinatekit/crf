@@ -19,7 +19,9 @@ import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -82,11 +84,11 @@ class AnnotatorTest {
 
     record FeatureWiringParameters(
             String name,
-            UnaryOperator<Annotator.Builder<String, String>> configure,
+            UnaryOperator<Annotator.Builder<String>> configure,
             boolean expectedFeaturesAvailable,
-            List<Set<String>> expectedFeatures,
+            List<Set<Feature>> expectedFeatures,
             boolean expectedVerboseFeaturesAvailable,
-            List<Set<String>> expectedVerboseFeatures
+            List<Set<Feature>> expectedVerboseFeatures
     ) {}
 
     record SessionParameters(
@@ -101,21 +103,21 @@ class AnnotatorTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "no_tagProvider",
-                        () -> Annotator.<String, String>builder().taggingInterface(new ScriptedTaggingInterface<>())
+                        () -> Annotator.<String>builder().taggingInterface(new ScriptedTaggingInterface<>())
                                 .terminal(quietTerminal()).tokenizer(new WhitespaceTokenizer()).build(),
                         IllegalStateException.class,
                         "tagProvider must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_taggingInterface",
-                        () -> Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).terminal(quietTerminal())
+                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER).terminal(quietTerminal())
                                 .tokenizer(new WhitespaceTokenizer()).build(),
                         IllegalStateException.class,
                         "taggingInterface must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_terminal",
-                        () -> Annotator.<String, String>builder().tagProvider(TAG_PROVIDER)
+                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER)
                                 .taggingInterface(new ScriptedTaggingInterface<>()).tokenizer(new WhitespaceTokenizer())
                                 .build(),
                         IllegalStateException.class,
@@ -123,7 +125,7 @@ class AnnotatorTest {
                 ),
                 new BuilderExceptionParameters(
                         "empty_tags",
-                        () -> Annotator.<String, String>builder().tagProvider(new StringTagProvider("NN"))
+                        () -> Annotator.<String>builder().tagProvider(new StringTagProvider("NN"))
                                 .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal())
                                 .tokenizer(new WhitespaceTokenizer()).build(),
                         IllegalStateException.class,
@@ -131,7 +133,7 @@ class AnnotatorTest {
                 ),
                 new BuilderExceptionParameters(
                         "no_tokenizer_no_tagger",
-                        () -> Annotator.<String, String>builder().tagProvider(TAG_PROVIDER)
+                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER)
                                 .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal()).build(),
                         IllegalStateException.class,
                         "at least one of tokenizer or tagger must be set"
@@ -141,92 +143,140 @@ class AnnotatorTest {
 
     static Stream<FeatureWiringParameters> featureWiring() {
         List<String> lowercaseTokens = List.of("the", "quick", "brown");
-        List<Set<String>> embeddedFeatures = List.of(Set.of("embedded1"), Set.of("embedded2"), Set.of("embedded3"));
-        List<Set<String>> noFeatures = List.of(Set.of(), Set.of(), Set.of());
-        return Stream.of(
-                new FeatureWiringParameters(
-                        "no_feature_sources_baseline",
-                        builder -> builder.tokenizer(new WhitespaceTokenizer()),
-                        false,
-                        noFeatures,
-                        false,
-                        noFeatures
-                ),
-                new FeatureWiringParameters(
-                        "tagger_alone_enables_verbose_fallback",
-                        builder -> builder.tagger(fixedTagger(lowercaseTokens, embeddedFeatures)),
-                        false,
-                        noFeatures,
-                        true,
-                        embeddedFeatures
-                ),
-                new FeatureWiringParameters(
-                        "extractor_runs_on_tagger_tokens",
-                        builder -> builder.featureExtractor(prefixExtractor("TOKEN_"))
-                                .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
-                        true,
-                        List.of(Set.of("TOKEN_THE"), Set.of("TOKEN_QUICK"), Set.of("TOKEN_BROWN")),
-                        true,
-                        noFeatures
-                ),
-                new FeatureWiringParameters(
-                        "extractor_runs_on_tokenizer_tokens",
-                        builder -> builder.featureExtractor(
-                                (sequence, position) -> Set.of("LENGTH_" + sequence.get(position).token().length())
-                        ).tokenizer(new WhitespaceTokenizer()),
-                        true,
-                        List.of(Set.of("LENGTH_3"), Set.of("LENGTH_5"), Set.of("LENGTH_5")),
-                        false,
-                        noFeatures
-                ),
-                new FeatureWiringParameters(
-                        "extractor_sees_whole_sequence_and_positions",
-                        builder -> builder.featureExtractor(positionAndNextTokenExtractor())
-                                .tokenizer(new WhitespaceTokenizer()),
-                        true,
-                        List.of(Set.of("0:NEXT_quick"), Set.of("1:NEXT_brown"), Set.of("2:END")),
-                        false,
-                        noFeatures
-                ),
-                new FeatureWiringParameters(
-                        "verbose_extractor_populates_verbose_features",
-                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                .tokenizer(new WhitespaceTokenizer())
-                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                        true,
-                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
-                        true,
-                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
-                ),
-                new FeatureWiringParameters(
-                        "verbose_extractor_overrides_tagger_fallback",
-                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                .tagger(fixedTagger(lowercaseTokens, embeddedFeatures))
-                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                        true,
-                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
-                        true,
-                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
-                ),
-                new FeatureWiringParameters(
-                        "verbose_extractor_without_key_extractor",
-                        builder -> builder.tokenizer(new WhitespaceTokenizer())
-                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                        false,
-                        noFeatures,
-                        true,
-                        List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown"))
-                ),
-                new FeatureWiringParameters(
-                        "verbose_unavailable_without_tagger_or_verbose_extractor",
-                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                .tokenizer(new WhitespaceTokenizer()),
-                        true,
-                        List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
-                        false,
-                        noFeatures
-                )
+        List<Set<Feature>> embeddedFeatures = List.of(
+                Set.of(Features.of("embedded1")),
+                Set.of(Features.of("embedded2")),
+                Set.of(Features.of("embedded3"))
         );
+        List<Set<Feature>> noFeatures = List.of(Set.of(), Set.of(), Set.of());
+        return Stream
+                .of(
+                        new FeatureWiringParameters(
+                                "no_feature_sources_baseline",
+                                builder -> builder.tokenizer(new WhitespaceTokenizer()),
+                                false,
+                                noFeatures,
+                                false,
+                                noFeatures
+                        ),
+                        new FeatureWiringParameters(
+                                "tagger_alone_enables_verbose_fallback",
+                                builder -> builder.tagger(fixedTagger(lowercaseTokens, embeddedFeatures)),
+                                false,
+                                noFeatures,
+                                true,
+                                embeddedFeatures
+                        ),
+                        new FeatureWiringParameters(
+                                "extractor_runs_on_tagger_tokens",
+                                builder -> builder.featureExtractor(prefixExtractor("TOKEN_"))
+                                        .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("TOKEN_THE")),
+                                        Set.of(Features.of("TOKEN_QUICK")),
+                                        Set.of(Features.of("TOKEN_BROWN"))
+                                ),
+                                true,
+                                noFeatures
+                        ),
+                        new FeatureWiringParameters(
+                                "extractor_runs_on_tokenizer_tokens",
+                                builder -> builder
+                                        .featureExtractor(
+                                                (sequence, position) -> Set
+                                                        .of(
+                                                                Features.of(
+                                                                        "LENGTH_" + sequence.get(position).token()
+                                                                                .length()
+                                                                )
+                                                        )
+                                        ).tokenizer(new WhitespaceTokenizer()),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("LENGTH_3")),
+                                        Set.of(Features.of("LENGTH_5")),
+                                        Set.of(Features.of("LENGTH_5"))
+                                ),
+                                false,
+                                noFeatures
+                        ),
+                        new FeatureWiringParameters(
+                                "extractor_sees_whole_sequence_and_positions",
+                                builder -> builder.featureExtractor(positionAndNextTokenExtractor())
+                                        .tokenizer(new WhitespaceTokenizer()),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("0:NEXT_quick")),
+                                        Set.of(Features.of("1:NEXT_brown")),
+                                        Set.of(Features.of("2:END"))
+                                ),
+                                false,
+                                noFeatures
+                        ),
+                        new FeatureWiringParameters(
+                                "verbose_extractor_populates_verbose_features",
+                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                        .tokenizer(new WhitespaceTokenizer())
+                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("KEY_the")),
+                                        Set.of(Features.of("KEY_quick")),
+                                        Set.of(Features.of("KEY_brown"))
+                                ),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("VERBOSE_the")),
+                                        Set.of(Features.of("VERBOSE_quick")),
+                                        Set.of(Features.of("VERBOSE_brown"))
+                                )
+                        ),
+                        new FeatureWiringParameters(
+                                "verbose_extractor_overrides_tagger_fallback",
+                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                        .tagger(fixedTagger(lowercaseTokens, embeddedFeatures))
+                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("KEY_the")),
+                                        Set.of(Features.of("KEY_quick")),
+                                        Set.of(Features.of("KEY_brown"))
+                                ),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("VERBOSE_the")),
+                                        Set.of(Features.of("VERBOSE_quick")),
+                                        Set.of(Features.of("VERBOSE_brown"))
+                                )
+                        ),
+                        new FeatureWiringParameters(
+                                "verbose_extractor_without_key_extractor",
+                                builder -> builder.tokenizer(new WhitespaceTokenizer())
+                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                                false,
+                                noFeatures,
+                                true,
+                                List.of(
+                                        Set.of(Features.of("VERBOSE_the")),
+                                        Set.of(Features.of("VERBOSE_quick")),
+                                        Set.of(Features.of("VERBOSE_brown"))
+                                )
+                        ),
+                        new FeatureWiringParameters(
+                                "verbose_unavailable_without_tagger_or_verbose_extractor",
+                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                        .tokenizer(new WhitespaceTokenizer()),
+                                true,
+                                List.of(
+                                        Set.of(Features.of("KEY_the")),
+                                        Set.of(Features.of("KEY_quick")),
+                                        Set.of(Features.of("KEY_brown"))
+                                ),
+                                false,
+                                noFeatures
+                        )
+                );
     }
 
     static Stream<SessionParameters> session() {
@@ -283,7 +333,7 @@ class AnnotatorTest {
         String line = "Smith,  Jones .";
         Path inputFile = writeInput(tempDirectory, List.of(line));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "NN", "NN"));
 
         // ACT //
@@ -307,12 +357,12 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN")); // two tags for a three-token line
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            Annotator<String, String> annotator = annotatorWith(tagging, terminal);
+            Annotator<String> annotator = annotatorWith(tagging, terminal);
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
                     () -> annotator.annotate(inputFile, outputFile)
@@ -341,13 +391,13 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, INPUT_LINES);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
         tagging.throwAfterScriptedResults = new RuntimeException("simulated tagging interface crash");
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            Annotator<String, String> annotator = annotatorWith(tagging, terminal);
+            Annotator<String> annotator = annotatorWith(tagging, terminal);
             RuntimeException thrown = assertThrows(
                     RuntimeException.class,
                     () -> annotator.annotate(inputFile, outputFile)
@@ -369,20 +419,20 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
             parameters.configure()
                     .apply(
-                            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+                            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
                                     .terminal(terminal)
                     ).build().annotate(inputFile, outputFile);
         }
 
         // ASSERT //
-        AnnotatorSequence<String, String> presented = tagging.presented.getFirst();
+        AnnotatorSequence<String> presented = tagging.presented.getFirst();
         assertEquals(parameters.expectedFeaturesAvailable(), presented.featureAvailability().keyAvailable());
         assertEquals(parameters.expectedFeatures(), presented.tokens().stream().map(AnnotatorToken::features).toList());
         assertEquals(parameters.expectedVerboseFeaturesAvailable(), presented.featureAvailability().verboseAvailable());
@@ -404,7 +454,7 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, INPUT_LINES);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = prepopulateTwoLinesAndScriptThreeAccepts(outputFile);
+        ScriptedTaggingInterface<String> tagging = prepopulateTwoLinesAndScriptThreeAccepts(outputFile);
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
@@ -413,7 +463,7 @@ class AnnotatorTest {
 
         // ASSERT //
         assertEquals(3, tagging.presented.size(), "the first two pre-existing lines should be skipped");
-        AnnotatorSequence<String, String> firstPresented = tagging.presented.getFirst();
+        AnnotatorSequence<String> firstPresented = tagging.presented.getFirst();
         assertEquals(List.of("the", "lazy", "dog"), tokensOf(firstPresented));
         assertEquals(
                 3,
@@ -439,7 +489,7 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, INPUT_LINES);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = prepopulateTwoLinesAndScriptThreeAccepts(outputFile);
+        ScriptedTaggingInterface<String> tagging = prepopulateTwoLinesAndScriptThreeAccepts(outputFile);
         ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -467,7 +517,7 @@ class AnnotatorTest {
                 outputFile,
                 TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN"))
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "VB", "DT"));
 
         // ACT //
@@ -497,7 +547,7 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, INPUT_LINES);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.addAll(parameters.script());
 
         // ACT //
@@ -518,10 +568,10 @@ class AnnotatorTest {
         Path inputFile = writeInput(tempDirectory, INPUT_LINES);
         Path outputFile = tempDirectory.resolve("output.xml");
 
-        ScriptedTaggingInterface<String, String> firstRun = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> firstRun = new ScriptedTaggingInterface<>();
         INPUT_LINES.forEach(line -> firstRun.results.add(skip()));
 
-        ScriptedTaggingInterface<String, String> secondRun = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> secondRun = new ScriptedTaggingInterface<>();
         INPUT_LINES.forEach(line -> secondRun.results.add(accept("DT", "NN", "NN")));
 
         // ACT //
@@ -557,13 +607,13 @@ class AnnotatorTest {
         Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
         Path outputFile = tempDirectory.resolve("output.xml");
         FixedTagger tagger = theQuickBrownTagger();
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            var builder = Annotator.<String, String>builder().tagger(tagger).tagProvider(TAG_PROVIDER)
-                    .taggingInterface(tagging).terminal(terminal);
+            var builder = Annotator.<String>builder().tagger(tagger).tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+                    .terminal(terminal);
             if (withTokenizer) {
                 builder.tokenizer(new WhitespaceTokenizer());
             }
@@ -590,7 +640,7 @@ class AnnotatorTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, List.of("the quick brown", "bad ? line", "one more line"));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
         tagging.results.add(accept("DT", "NN", "NN"));
         ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
@@ -598,7 +648,7 @@ class AnnotatorTest {
 
         // ACT //
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
+            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
                     .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
             terminal.flush();
         }
@@ -643,14 +693,14 @@ class AnnotatorTest {
                 outputFile,
                 TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN"))
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
         ByteArrayInputStream in = new ByteArrayInputStream(new byte[0]);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         // ACT //
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
+            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
                     .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
             terminal.flush();
         }
@@ -681,19 +731,16 @@ class AnnotatorTest {
         return taggingResult(ACCEPT, List.of(tags));
     }
 
-    private static Annotator<String, String> annotatorWith(
-            TaggingInterface<String, String> tagging,
-            Terminal terminal
-    ) {
-        return Annotator.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
-                .terminal(terminal).tokenizer(new WhitespaceTokenizer()).build();
+    private static Annotator<String> annotatorWith(TaggingInterface<String> tagging, Terminal terminal) {
+        return Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
+                .tokenizer(new WhitespaceTokenizer()).build();
     }
 
     private static TaggingResult<String> exit() {
         return taggingResult(EXIT, List.of());
     }
 
-    private static FixedTagger fixedTagger(List<String> tokens, List<Set<String>> embeddedFeatures) {
+    private static FixedTagger fixedTagger(List<String> tokens, List<Set<Feature>> embeddedFeatures) {
         List<Map<String, Double>> scores = new ArrayList<>();
         for (int index = 0; index < tokens.size(); index++) {
             scores.add(Map.of(index == 0 ? "DT" : "NN", 1.0));
@@ -701,15 +748,15 @@ class AnnotatorTest {
         return new FixedTagger(Map.of("the quick brown", new TaggedSequence<>(tokens, embeddedFeatures, scores)));
     }
 
-    private static FeatureExtractor<String> positionAndNextTokenExtractor() {
+    private static FeatureExtractor positionAndNextTokenExtractor() {
         return (sequence, position) -> {
             String next = position + 1 < sequence.size() ? "NEXT_" + sequence.get(position + 1).token() : "END";
-            return Set.of(position + ":" + next);
+            return Set.of(Features.of(position + ":" + next));
         };
     }
 
-    private static FeatureExtractor<String> prefixExtractor(String prefix) {
-        return (sequence, position) -> Set.of(prefix + sequence.get(position).token());
+    private static FeatureExtractor prefixExtractor(String prefix) {
+        return (sequence, position) -> Set.of(Features.of(prefix + sequence.get(position).token()));
     }
 
     @SafeVarargs
@@ -722,14 +769,14 @@ class AnnotatorTest {
         }
     }
 
-    private static ScriptedTaggingInterface<String, String> prepopulateTwoLinesAndScriptThreeAccepts(Path outputFile)
+    private static ScriptedTaggingInterface<String> prepopulateTwoLinesAndScriptThreeAccepts(Path outputFile)
             throws IOException {
         prepopulateOutput(
                 outputFile,
                 TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN")),
                 TrainingSequence.ofTokens(List.of("fox", "jumps", "over"), List.of("NN", "VB", "DT"))
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
         tagging.results.add(accept("DT", "NN", "NN"));
         tagging.results.add(accept("DT", "NN", "NN"));
@@ -768,7 +815,7 @@ class AnnotatorTest {
         return sequence.stream().map(TrainingPositionedToken::token).toList();
     }
 
-    private static <F, T extends Comparable<T>> List<String> tokensOf(AnnotatorSequence<F, T> sequence) {
+    private static <T extends Comparable<T>> List<String> tokensOf(AnnotatorSequence<T> sequence) {
         return sequence.tokens().stream().map(AnnotatorToken::token).toList();
     }
 
@@ -778,17 +825,17 @@ class AnnotatorTest {
         return inputFile;
     }
 
-    private static final class FixedTagger implements CrfTagger<String, String> {
-        private final Map<String, Sequence<TaggedPositionedToken<String, String>>> responses;
+    private static final class FixedTagger implements CrfTagger<String> {
+        private final Map<String, Sequence<TaggedPositionedToken<String>>> responses;
         private final Tokenizer tokenizer = new WhitespaceTokenizer();
 
-        FixedTagger(Map<String, Sequence<TaggedPositionedToken<String, String>>> responses) {
+        FixedTagger(Map<String, Sequence<TaggedPositionedToken<String>>> responses) {
             this.responses = responses;
         }
 
         @Override
-        public TaggedTokenization<String, String> tag(String input) {
-            Sequence<TaggedPositionedToken<String, String>> response = responses.get(input);
+        public TaggedTokenization<String> tag(String input) {
+            Sequence<TaggedPositionedToken<String>> response = responses.get(input);
             if (response == null) {
                 throw new AssertionError("FixedTagger has no scripted response for input: " + input);
             }
@@ -796,8 +843,8 @@ class AnnotatorTest {
         }
     }
 
-    private static final class ScriptedTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
-        final List<AnnotatorSequence<F, T>> presented = new ArrayList<>();
+    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
+        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
         final Deque<TaggingResult<T>> results = new ArrayDeque<>();
 
         /** Throws after scripted results are exhausted, not on the next call. */
@@ -805,7 +852,7 @@ class AnnotatorTest {
         RuntimeException throwAfterScriptedResults;
 
         @Override
-        public TaggingResult<T> present(AnnotatorSequence<F, T> sequence) {
+        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
             presented.add(sequence);
             if (!results.isEmpty()) {
                 return results.removeFirst();

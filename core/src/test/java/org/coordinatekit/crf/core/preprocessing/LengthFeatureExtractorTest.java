@@ -31,11 +31,11 @@ class LengthFeatureExtractorTest {
     record ExtractAtParameters(
             String name,
             int lengthUpperLimit,
-            @Nullable Function<Integer, String> hasLengthFeatureMapper,
-            @Nullable Function<Integer, String> lacksLengthFeatureMapper,
+            @Nullable Function<Integer, Feature> hasLengthFeatureMapper,
+            @Nullable Function<Integer, Feature> lacksLengthFeatureMapper,
             List<String> tokens,
             int position,
-            Set<String> expectedResult
+            Set<Feature> expectedResult
     ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
@@ -43,44 +43,44 @@ class LengthFeatureExtractorTest {
                 new ExtractAtParameters(
                         "hasLengthOnly_sequenceSizeEqualsLimit",
                         3,
-                        len -> "HAS_" + len,
+                        len -> Features.of("HAS_" + len),
                         null,
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("HAS_1", "HAS_2", "HAS_3")
+                        Set.of(Features.of("HAS_1"), Features.of("HAS_2"), Features.of("HAS_3"))
                 ),
                 new ExtractAtParameters(
                         "hasLengthOnly_sequenceSizeLessThanLimit",
                         5,
-                        len -> "HAS_" + len,
+                        len -> Features.of("HAS_" + len),
                         null,
                         List.of("a", "b"),
                         0,
-                        Set.of("HAS_1", "HAS_2")
+                        Set.of(Features.of("HAS_1"), Features.of("HAS_2"))
                 ),
                 new ExtractAtParameters(
                         "hasLengthOnly_sequenceSizeGreaterThanLimit",
                         2,
-                        len -> "HAS_" + len,
+                        len -> Features.of("HAS_" + len),
                         null,
                         List.of("a", "b", "c", "d"),
                         0,
-                        Set.of("HAS_1", "HAS_2")
+                        Set.of(Features.of("HAS_1"), Features.of("HAS_2"))
                 ),
                 new ExtractAtParameters(
                         "lacksLengthOnly_sequenceSizeLessThanLimit",
                         5,
                         null,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("LACKS_" + len),
                         List.of("a", "b"),
                         0,
-                        Set.of("LACKS_3", "LACKS_4", "LACKS_5")
+                        Set.of(Features.of("LACKS_3"), Features.of("LACKS_4"), Features.of("LACKS_5"))
                 ),
                 new ExtractAtParameters(
                         "lacksLengthOnly_sequenceSizeEqualsLimit",
                         3,
                         null,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("LACKS_" + len),
                         List.of("a", "b", "c"),
                         0,
                         Set.of()
@@ -88,11 +88,17 @@ class LengthFeatureExtractorTest {
                 new ExtractAtParameters(
                         "bothMappers_partitionsCorrectly",
                         5,
-                        len -> "HAS_" + len,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("HAS_" + len),
+                        len -> Features.of("LACKS_" + len),
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("HAS_1", "HAS_2", "HAS_3", "LACKS_4", "LACKS_5")
+                        Set.of(
+                                Features.of("HAS_1"),
+                                Features.of("HAS_2"),
+                                Features.of("HAS_3"),
+                                Features.of("LACKS_4"),
+                                Features.of("LACKS_5")
+                        )
                 ),
                 new ExtractAtParameters(
                         "noMappers_returnsEmptySet",
@@ -106,38 +112,38 @@ class LengthFeatureExtractorTest {
                 new ExtractAtParameters(
                         "singleTokenSequence",
                         3,
-                        len -> "HAS_" + len,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("HAS_" + len),
+                        len -> Features.of("LACKS_" + len),
                         List.of("only"),
                         0,
-                        Set.of("HAS_1", "LACKS_2", "LACKS_3")
+                        Set.of(Features.of("HAS_1"), Features.of("LACKS_2"), Features.of("LACKS_3"))
                 ),
                 new ExtractAtParameters(
                         "positionDoesNotAffectResult",
                         3,
-                        len -> "HAS_" + len,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("HAS_" + len),
+                        len -> Features.of("LACKS_" + len),
                         List.of("a", "b"),
                         1,
-                        Set.of("HAS_1", "HAS_2", "LACKS_3")
+                        Set.of(Features.of("HAS_1"), Features.of("HAS_2"), Features.of("LACKS_3"))
                 ),
                 new ExtractAtParameters(
                         "limitOfOne_singleHasFeature",
                         1,
-                        len -> "HAS_" + len,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("HAS_" + len),
+                        len -> Features.of("LACKS_" + len),
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("HAS_1")
+                        Set.of(Features.of("HAS_1"))
                 ),
                 new ExtractAtParameters(
                         "limitOfOne_singleLacksFeatureForEmptySequenceNotPossible",
                         1,
-                        len -> "HAS_" + len,
-                        len -> "LACKS_" + len,
+                        len -> Features.of("HAS_" + len),
+                        len -> Features.of("LACKS_" + len),
                         List.of("a"),
                         0,
-                        Set.of("HAS_1")
+                        Set.of(Features.of("HAS_1"))
                 )
         );
     }
@@ -146,13 +152,13 @@ class LengthFeatureExtractorTest {
     @ParameterizedTest
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
-        LengthFeatureExtractor<String> extractor = LengthFeatureExtractor.<String>builder(parameters.lengthUpperLimit())
+        LengthFeatureExtractor extractor = LengthFeatureExtractor.builder(parameters.lengthUpperLimit())
                 .hasLengthFeatureMapper(parameters.hasLengthFeatureMapper())
                 .lacksLengthFeatureMapper(parameters.lacksLengthFeatureMapper()).build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //
-        Set<String> actual = extractor.extractAt(sequence, parameters.position());
+        Set<Feature> actual = extractor.extractAt(sequence, parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);

@@ -23,7 +23,9 @@ import cc.mallet.types.FeatureVectorSequence;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.UncheckedCrfException;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FeaturePositionedToken;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -54,15 +56,15 @@ import java.util.function.ToDoubleFunction;
  * tokens in input text. The tagging process involves tokenizing the input, extracting features, and
  * running inference on the CRF model to compute tag probabilities for each token.
  *
- * @param <F> the type of features extracted from tokens
  * @param <T> the type of tags assigned to tokens, must be comparable for ordering
  */
 @NullMarked
-public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTagger<F, T> {
+public final class MalletCrfTagger<T extends Comparable<T>> implements CrfTagger<T> {
     private static final ObjectInputFilter MODEL_DESERIALIZATION_FILTER = ObjectInputFilter.Config
             .createFilter("cc.mallet.**;gnu.trove.**;java.**;!*");
 
-    private final FeatureExtractor<F> featureExtractor;
+    private final FeatureExtractor featureExtractor;
+    private final FeatureFormat featureFormat;
     private final CRF model;
     private final TagProvider<T> tagProvider;
     private final Tokenizer tokenizer;
@@ -71,6 +73,7 @@ public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTag
      * Creates a new tagger by loading a serialized CRF model from the specified path.
      *
      * @param featureExtractor the feature extractor used to generate features from tokens
+     * @param featureFormat the format rendering each feature to the alphabet entry the model stores
      * @param modelPath the path to the serialized MALLET CRF model file
      * @param tagProvider the provider that decodes tag names from the model into typed tag values
      * @param tokenizer the tokenizer used to split input text into tokens
@@ -78,12 +81,14 @@ public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTag
      * @throws UncheckedCrfException if the model class cannot be found during deserialization
      */
     public MalletCrfTagger(
-            FeatureExtractor<F> featureExtractor,
+            FeatureExtractor featureExtractor,
+            FeatureFormat featureFormat,
             Path modelPath,
             TagProvider<T> tagProvider,
             Tokenizer tokenizer
     ) throws IOException {
         this.featureExtractor = featureExtractor;
+        this.featureFormat = featureFormat;
         this.model = Serializables.deserialize(CRF.class, modelPath, MODEL_DESERIALIZATION_FILTER);
         this.tagProvider = tagProvider;
         this.tokenizer = tokenizer;
@@ -100,13 +105,14 @@ public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTag
      * @param featureSequence a sequence of feature-positioned tokens to convert
      * @return a MALLET feature vector sequence corresponding to the input sequence
      */
-    private FeatureVectorSequence createMalletSequences(CRF crf, Sequence<FeaturePositionedToken<F>> featureSequence) {
+    private FeatureVectorSequence createMalletSequences(CRF crf, Sequence<FeaturePositionedToken> featureSequence) {
         int sequenceLength = featureSequence.size();
         FeatureVector[] featureVectors = new FeatureVector[sequenceLength];
 
         for (int i = 0; i < sequenceLength; i++) {
             var tokenFeatures = featureSequence.get(i).features();
-            int[] featureIndices = tokenFeatures.stream().mapToInt(f -> crf.getInputAlphabet().lookupIndex(f, false))
+            int[] featureIndices = tokenFeatures.stream()
+                    .mapToInt(feature -> crf.getInputAlphabet().lookupIndex(featureFormat.render(feature), false))
                     .filter(index -> index >= 0).toArray();
             featureVectors[i] = new FeatureVector(crf.getInputAlphabet(), featureIndices);
         }
@@ -115,16 +121,16 @@ public final class MalletCrfTagger<F, T extends Comparable<T>> implements CrfTag
     }
 
     @Override
-    public TaggedTokenization<F, T> tag(String input) {
+    public TaggedTokenization<T> tag(String input) {
         Tokenization tokenization = tokenizer.tokenize(input);
-        Sequence<FeaturePositionedToken<F>> featureSequence = featureExtractor.extract(tokenization.sequence());
+        Sequence<FeaturePositionedToken> featureSequence = featureExtractor.extract(tokenization.sequence());
         FeatureVectorSequence malletSequence = createMalletSequences(model, featureSequence);
 
         var lattice = model.getSumLatticeFactory().newSumLattice(model, malletSequence);
         double logPartition = lattice.getTotalWeight();
 
         List<String> tokens = new ArrayList<>(featureSequence.size());
-        List<Set<F>> features = new ArrayList<>(featureSequence.size());
+        List<Set<Feature>> features = new ArrayList<>(featureSequence.size());
         List<Map<T, Double>> tagScoresByToken = new ArrayList<>();
         for (int i = 0; i < featureSequence.size(); i++) {
             tokens.add(featureSequence.get(i).token());

@@ -25,13 +25,12 @@ import org.jspecify.annotations.NullMarked;
  * tag, representing a token used in CRF training where both features and the correct label are
  * known.
  *
- * @param <F> the type of features associated with this token
  * @param <T> the type of tag (label) associated with this token
  * @see FeaturePositionedToken
  * @see FeatureTrainingSequence
  */
 @NullMarked
-public interface FeatureTrainingPositionedToken<F, T> extends FeaturePositionedToken<F> {
+public interface FeatureTrainingPositionedToken<T> extends FeaturePositionedToken {
     /**
      * Returns the training tag (label) for this token.
      *

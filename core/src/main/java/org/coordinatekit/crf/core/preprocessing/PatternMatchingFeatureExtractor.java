@@ -37,27 +37,26 @@ import java.util.regex.Pattern;
  *
  * <pre>
  * <code>
- * PatternMatcherFeatureExtractor&lt;String&gt; extractor = PatternMatcherFeatureExtractor
- *         .&lt;String&gt;builder("[A-Z]+", false).matchedFeature("IS_CAPS").notMatchedFeature("NOT_CAPS").build();
+ * PatternMatchingFeatureExtractor extractor = PatternMatchingFeatureExtractor
+ *         .builder("[A-Z]+", false).matchedFeature(Features.of("IS_CAPS"))
+ *         .notMatchedFeature(Features.of("NOT_CAPS")).build();
  * </code>
  * </pre>
- *
- * @param <F> the type of feature produced by the extractor
  */
 @NullMarked
-public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
-    private final @Nullable F matchedFeature;
-    private final @Nullable F notMatchedFeature;
+public class PatternMatchingFeatureExtractor implements FeatureExtractor {
+    private final @Nullable Feature matchedFeature;
+    private final @Nullable Feature notMatchedFeature;
     private final Pattern pattern;
 
-    private PatternMatchingFeatureExtractor(Builder<F> builder) {
+    private PatternMatchingFeatureExtractor(Builder builder) {
         this.pattern = builder.pattern;
         this.matchedFeature = builder.matchedFeature;
         this.notMatchedFeature = builder.notMatchedFeature;
     }
 
     @Override
-    public Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
         Matcher matcher = pattern.matcher(sequence.get(position).token());
 
         if (matcher.matches()) {
@@ -71,11 +70,10 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
      * Creates a new builder with the specified compiled pattern.
      *
      * @param pattern the compiled regex pattern to match tokens against
-     * @param <F> the type of feature produced by the extractor
      * @return a new builder instance
      */
-    public static <F> Builder<F> builder(Pattern pattern) {
-        return new Builder<>(pattern);
+    public static Builder builder(Pattern pattern) {
+        return new Builder(pattern);
     }
 
     /**
@@ -85,11 +83,10 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
      * The pattern is compiled as case-sensitive.
      *
      * @param pattern the regex pattern string to match tokens against
-     * @param <F> the type of feature produced by the extractor
      * @return a new builder instance
      */
-    public static <F> Builder<F> builder(String pattern) {
-        return new Builder<>(Pattern.compile(pattern));
+    public static Builder builder(String pattern) {
+        return new Builder(Pattern.compile(pattern));
     }
 
     /**
@@ -97,22 +94,19 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
      *
      * @param pattern the regex pattern string to match tokens against
      * @param caseSensitive {@code true} for case-sensitive matching, {@code false} for case-insensitive
-     * @param <F> the type of feature produced by the extractor
      * @return a new builder instance
      */
-    public static <F> Builder<F> builder(String pattern, boolean caseSensitive) {
-        return new Builder<>(Pattern.compile(pattern, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE));
+    public static Builder builder(String pattern, boolean caseSensitive) {
+        return new Builder(Pattern.compile(pattern, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE));
     }
 
     /**
      * Builder for {@link PatternMatchingFeatureExtractor}.
-     *
-     * @param <F> the type of feature produced by the extractor
      */
-    public static final class Builder<F> {
+    public static final class Builder {
         private final Pattern pattern;
-        private @Nullable F matchedFeature;
-        private @Nullable F notMatchedFeature;
+        private @Nullable Feature matchedFeature;
+        private @Nullable Feature notMatchedFeature;
 
         private Builder(Pattern pattern) {
             this.pattern = pattern;
@@ -124,7 +118,7 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param matchedFeature the feature to emit on match, or {@code null} for no feature
          * @return this builder
          */
-        public Builder<F> matchedFeature(@Nullable F matchedFeature) {
+        public Builder matchedFeature(@Nullable Feature matchedFeature) {
             this.matchedFeature = matchedFeature;
             return this;
         }
@@ -135,7 +129,7 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param notMatchedFeature the feature to emit on non-match, or {@code null} for no feature
          * @return this builder
          */
-        public Builder<F> notMatchedFeature(@Nullable F notMatchedFeature) {
+        public Builder notMatchedFeature(@Nullable Feature notMatchedFeature) {
             this.notMatchedFeature = notMatchedFeature;
             return this;
         }
@@ -145,8 +139,8 @@ public class PatternMatchingFeatureExtractor<F> implements FeatureExtractor<F> {
          *
          * @return a new {@link PatternMatchingFeatureExtractor} instance
          */
-        public PatternMatchingFeatureExtractor<F> build() {
-            return new PatternMatchingFeatureExtractor<>(this);
+        public PatternMatchingFeatureExtractor build() {
+            return new PatternMatchingFeatureExtractor(this);
         }
     }
 }

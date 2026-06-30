@@ -35,14 +35,13 @@ import java.util.List;
  * <p>
  * Instances are created through {@link TaggedTokenizations}.
  *
- * @param <F> the type of features associated with each token
  * @param <T> the type of tags assigned to tokens, must be comparable for ordering
  * @see CrfTagger
  * @see TaggedSequence
  * @see Tokenization
  */
 @NullMarked
-public interface TaggedTokenization<F, T extends Comparable<T>> {
+public interface TaggedTokenization<T extends Comparable<T>> {
     /**
      * Returns the conditional probability {@code P(tags | input)} the model assigns to the given tag
      * sequence over this tagging's input.
@@ -71,7 +70,7 @@ public interface TaggedTokenization<F, T extends Comparable<T>> {
      *
      * @return the tagged sequence
      */
-    Sequence<TaggedPositionedToken<F, T>> taggedSequence();
+    Sequence<TaggedPositionedToken<T>> taggedSequence();
 
     /**
      * Returns the authoritative tokenization, carrying both the token segments and the excluded runs

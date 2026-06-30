@@ -32,17 +32,16 @@ import java.util.stream.Stream;
  * typically created by {@link FeatureExtractor} during the feature extraction phase for training
  * data. Feature training sequences are used during CRF model training.
  *
- * @param <F> the type of features associated with tokens in this sequence
  * @param <T> the type of tags (labels) associated with tokens in this sequence
  * @see FeatureTrainingPositionedToken
  * @see Sequence
  */
 @NullMarked
-public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPositionedToken<F, T>> {
-    private record FeatureTrainingSequenceToken<F, T> (int position, String token, Set<F> features, T tag)
-            implements FeatureTrainingPositionedToken<F, T> {}
+public class FeatureTrainingSequence<T> implements Sequence<FeatureTrainingPositionedToken<T>> {
+    private record FeatureTrainingSequenceToken<T> (int position, String token, Set<Feature> features, T tag)
+            implements FeatureTrainingPositionedToken<T> {}
 
-    private final List<FeatureTrainingPositionedToken<F, T>> tokens;
+    private final List<FeatureTrainingPositionedToken<T>> tokens;
 
     /**
      * Constructs a new feature training sequence from the given tokens, tags, and features.
@@ -58,7 +57,7 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
      *         not match the number of features or tags
      * @throws IndexOutOfBoundsException if the lists have different sizes
      */
-    public FeatureTrainingSequence(List<String> tokens, List<T> tags, List<Set<F>> features) {
+    public FeatureTrainingSequence(List<String> tokens, List<T> tags, List<Set<Feature>> features) {
         if (tokens.size() != tags.size()) {
             throw new IllegalArgumentException(
                     String.format(
@@ -82,7 +81,7 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
         }
 
         this.tokens = IntStream.range(0, tokens.size())
-                .<FeatureTrainingPositionedToken<F, T>>mapToObj(
+                .<FeatureTrainingPositionedToken<T>>mapToObj(
                         index -> new FeatureTrainingSequenceToken<>(
                                 index,
                                 tokens.get(index),
@@ -93,12 +92,12 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
     }
 
     @Override
-    public FeatureTrainingPositionedToken<F, T> get(int position) {
+    public FeatureTrainingPositionedToken<T> get(int position) {
         return tokens.get(position);
     }
 
     @Override
-    public Iterator<FeatureTrainingPositionedToken<F, T>> iterator() {
+    public Iterator<FeatureTrainingPositionedToken<T>> iterator() {
         return tokens.iterator();
     }
 
@@ -108,7 +107,7 @@ public class FeatureTrainingSequence<F, T> implements Sequence<FeatureTrainingPo
     }
 
     @Override
-    public Stream<FeatureTrainingPositionedToken<F, T>> stream() {
+    public Stream<FeatureTrainingPositionedToken<T>> stream() {
         return tokens.stream();
     }
 }

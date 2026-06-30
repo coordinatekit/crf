@@ -28,32 +28,35 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PositionFeatureExtractorTest {
+    private static final Function<Integer, Feature> END_MAPPER = position -> Features.of("END_" + position);
+    private static final Function<Integer, Feature> START_MAPPER = position -> Features.of("START_" + position);
+
     record ExtractAtParameters(
             String name,
-            @Nullable String firstFeature,
-            @Nullable String lastFeature,
-            @Nullable Function<Integer, String> positionFromStartFeatureMapper,
-            @Nullable Function<Integer, String> positionFromEndFeatureMapper,
+            @Nullable Feature firstFeature,
+            @Nullable Feature lastFeature,
+            @Nullable Function<Integer, Feature> positionFromStartFeatureMapper,
+            @Nullable Function<Integer, Feature> positionFromEndFeatureMapper,
             List<String> tokens,
             int position,
-            Set<String> expectedResult
+            Set<Feature> expectedResult
     ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
                 new ExtractAtParameters(
                         "firstFeature_atPositionZero",
-                        "FIRST",
+                        Features.of("FIRST"),
                         null,
                         null,
                         null,
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("FIRST")
+                        Set.of(Features.of("FIRST"))
                 ),
                 new ExtractAtParameters(
                         "firstFeature_notAtMiddlePosition",
-                        "FIRST",
+                        Features.of("FIRST"),
                         null,
                         null,
                         null,
@@ -63,7 +66,7 @@ class PositionFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "firstFeature_notAtLastPosition",
-                        "FIRST",
+                        Features.of("FIRST"),
                         null,
                         null,
                         null,
@@ -74,17 +77,17 @@ class PositionFeatureExtractorTest {
                 new ExtractAtParameters(
                         "lastFeature_atLastPosition",
                         null,
-                        "LAST",
+                        Features.of("LAST"),
                         null,
                         null,
                         List.of("a", "b", "c"),
                         2,
-                        Set.of("LAST")
+                        Set.of(Features.of("LAST"))
                 ),
                 new ExtractAtParameters(
                         "lastFeature_notAtFirstPosition",
                         null,
-                        "LAST",
+                        Features.of("LAST"),
                         null,
                         null,
                         List.of("a", "b", "c"),
@@ -94,7 +97,7 @@ class PositionFeatureExtractorTest {
                 new ExtractAtParameters(
                         "lastFeature_notAtMiddlePosition",
                         null,
-                        "LAST",
+                        Features.of("LAST"),
                         null,
                         null,
                         List.of("a", "b", "c"),
@@ -103,103 +106,103 @@ class PositionFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "singleToken_bothFirstAndLast",
-                        "FIRST",
-                        "LAST",
+                        Features.of("FIRST"),
+                        Features.of("LAST"),
                         null,
                         null,
                         List.of("only"),
                         0,
-                        Set.of("FIRST", "LAST")
+                        Set.of(Features.of("FIRST"), Features.of("LAST"))
                 ),
                 new ExtractAtParameters(
                         "positionFromStart_atZero",
                         null,
                         null,
-                        pos -> "START_" + pos,
+                        START_MAPPER,
                         null,
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("START_0")
+                        Set.of(Features.of("START_0"))
                 ),
                 new ExtractAtParameters(
                         "positionFromStart_atMiddle",
                         null,
                         null,
-                        pos -> "START_" + pos,
+                        START_MAPPER,
                         null,
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("START_1")
+                        Set.of(Features.of("START_1"))
                 ),
                 new ExtractAtParameters(
                         "positionFromStart_atEnd",
                         null,
                         null,
-                        pos -> "START_" + pos,
+                        START_MAPPER,
                         null,
                         List.of("a", "b", "c"),
                         2,
-                        Set.of("START_2")
+                        Set.of(Features.of("START_2"))
                 ),
                 new ExtractAtParameters(
                         "positionFromEnd_atLastPosition",
                         null,
                         null,
                         null,
-                        pos -> "END_" + pos,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         2,
-                        Set.of("END_0")
+                        Set.of(Features.of("END_0"))
                 ),
                 new ExtractAtParameters(
                         "positionFromEnd_atMiddlePosition",
                         null,
                         null,
                         null,
-                        pos -> "END_" + pos,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("END_1")
+                        Set.of(Features.of("END_1"))
                 ),
                 new ExtractAtParameters(
                         "positionFromEnd_atFirstPosition",
                         null,
                         null,
                         null,
-                        pos -> "END_" + pos,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("END_2")
+                        Set.of(Features.of("END_2"))
                 ),
                 new ExtractAtParameters(
                         "allFeatures_atFirstPosition",
-                        "FIRST",
-                        "LAST",
-                        pos -> "START_" + pos,
-                        pos -> "END_" + pos,
+                        Features.of("FIRST"),
+                        Features.of("LAST"),
+                        START_MAPPER,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         0,
-                        Set.of("FIRST", "START_0", "END_2")
+                        Set.of(Features.of("FIRST"), Features.of("START_0"), Features.of("END_2"))
                 ),
                 new ExtractAtParameters(
                         "allFeatures_atMiddlePosition",
-                        "FIRST",
-                        "LAST",
-                        pos -> "START_" + pos,
-                        pos -> "END_" + pos,
+                        Features.of("FIRST"),
+                        Features.of("LAST"),
+                        START_MAPPER,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         1,
-                        Set.of("START_1", "END_1")
+                        Set.of(Features.of("START_1"), Features.of("END_1"))
                 ),
                 new ExtractAtParameters(
                         "allFeatures_atLastPosition",
-                        "FIRST",
-                        "LAST",
-                        pos -> "START_" + pos,
-                        pos -> "END_" + pos,
+                        Features.of("FIRST"),
+                        Features.of("LAST"),
+                        START_MAPPER,
+                        END_MAPPER,
                         List.of("a", "b", "c"),
                         2,
-                        Set.of("LAST", "START_2", "END_0")
+                        Set.of(Features.of("LAST"), Features.of("START_2"), Features.of("END_0"))
                 ),
                 new ExtractAtParameters(
                         "noFeatures_returnsEmptySet",
@@ -213,13 +216,13 @@ class PositionFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "singleToken_allFeatures",
-                        "FIRST",
-                        "LAST",
-                        pos -> "START_" + pos,
-                        pos -> "END_" + pos,
+                        Features.of("FIRST"),
+                        Features.of("LAST"),
+                        START_MAPPER,
+                        END_MAPPER,
                         List.of("only"),
                         0,
-                        Set.of("FIRST", "LAST", "START_0", "END_0")
+                        Set.of(Features.of("FIRST"), Features.of("LAST"), Features.of("START_0"), Features.of("END_0"))
                 )
         );
     }
@@ -228,14 +231,14 @@ class PositionFeatureExtractorTest {
     @ParameterizedTest
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
-        PositionFeatureExtractor<String> extractor = PositionFeatureExtractor.<String>builder()
-                .firstFeature(parameters.firstFeature()).lastFeature(parameters.lastFeature())
+        PositionFeatureExtractor extractor = PositionFeatureExtractor.builder().firstFeature(parameters.firstFeature())
+                .lastFeature(parameters.lastFeature())
                 .positionFromStartFeatureMapper(parameters.positionFromStartFeatureMapper())
                 .positionFromEndFeatureMapper(parameters.positionFromEndFeatureMapper()).build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //
-        Set<String> actual = extractor.extractAt(sequence, parameters.position());
+        Set<Feature> actual = extractor.extractAt(sequence, parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);

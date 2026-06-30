@@ -31,97 +31,101 @@ class PatternMatchingFeatureExtractorTest {
 
     record ExtractAtParameters(
             String name,
-            PatternMatchingFeatureExtractor<String> extractor,
+            PatternMatchingFeatureExtractor extractor,
             List<String> tokens,
             int position,
-            Set<String> expectedResult
+            Set<Feature> expectedResult
     ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
                 new ExtractAtParameters(
                         "matching_token_returns_matched_feature",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .build(),
                         List.of("HELLO"),
                         0,
-                        Set.of("IS_CAPS")
+                        Set.of(Features.of("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "non_matching_token_returns_not_matched_feature",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(Features.of("NOT_CAPS"))
+                                .build(),
                         List.of("hello"),
                         0,
-                        Set.of("NOT_CAPS")
+                        Set.of(Features.of("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "matching_token_with_null_matched_feature_returns_empty_set",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(Features.of("NOT_CAPS"))
+                                .build(),
                         List.of("HELLO"),
                         0,
                         Set.of()
                 ),
                 new ExtractAtParameters(
                         "non_matching_token_with_null_not_matched_feature_returns_empty_set",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .build(),
                         List.of("hello"),
                         0,
                         Set.of()
                 ),
                 new ExtractAtParameters(
                         "case_sensitive_pattern_does_not_match_different_case",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+", true).matchedFeature("IS_CAPS")
-                                .notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+", true).matchedFeature(Features.of("IS_CAPS"))
+                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
                         List.of("Hello"),
                         0,
-                        Set.of("NOT_CAPS")
+                        Set.of(Features.of("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "case_insensitive_pattern_matches_different_case",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+", false).matchedFeature("IS_ALPHA")
-                                .notMatchedFeature("NOT_ALPHA").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+", false).matchedFeature(Features.of("IS_ALPHA"))
+                                .notMatchedFeature(Features.of("NOT_ALPHA")).build(),
                         List.of("Hello"),
                         0,
-                        Set.of("IS_ALPHA")
+                        Set.of(Features.of("IS_ALPHA"))
                 ),
                 new ExtractAtParameters(
                         "builder_with_compiled_pattern",
-                        PatternMatchingFeatureExtractor.<String>builder(Pattern.compile("\\d+"))
-                                .matchedFeature("IS_NUMBER").build(),
+                        PatternMatchingFeatureExtractor.builder(Pattern.compile("\\d+"))
+                                .matchedFeature(Features.of("IS_NUMBER")).build(),
                         List.of("123"),
                         0,
-                        Set.of("IS_NUMBER")
+                        Set.of(Features.of("IS_NUMBER"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_0",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS")
-                                .notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         0,
-                        Set.of("NOT_CAPS")
+                        Set.of(Features.of("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_1",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS")
-                                .notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         1,
-                        Set.of("IS_CAPS")
+                        Set.of(Features.of("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_2",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS")
-                                .notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         2,
-                        Set.of("NOT_CAPS")
+                        Set.of(Features.of("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "pattern_must_match_entire_token",
-                        PatternMatchingFeatureExtractor.<String>builder("[A-Z]+").matchedFeature("IS_CAPS")
-                                .notMatchedFeature("NOT_CAPS").build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
                         List.of("HELLOworld"),
                         0,
-                        Set.of("NOT_CAPS")
+                        Set.of(Features.of("NOT_CAPS"))
                 )
         );
     }
@@ -133,7 +137,7 @@ class PatternMatchingFeatureExtractorTest {
         Sequence<PositionedToken> sequence = new InputSequence(parameters.tokens());
 
         // ACT //
-        Set<String> actual = parameters.extractor().extractAt(sequence, parameters.position());
+        Set<Feature> actual = parameters.extractor().extractAt(sequence, parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);

@@ -126,7 +126,7 @@ public final class RetokenizeRunner {
     ) throws IOException {
         try {
             RetokenizeReviewer.validateFreshPass(configuration.input(), configuration.output());
-            RetokenizeReviewer<?, ?> reviewer = factory.create(configuration, terminal);
+            RetokenizeReviewer<?> reviewer = factory.create(configuration, terminal);
             reviewer.review(configuration.input(), configuration.output());
             return 0;
         } catch (ReviewPreconditionException exception) {
@@ -149,6 +149,6 @@ public final class RetokenizeRunner {
          *        remains with the runner
          * @return a configured reviewer ready to {@link RetokenizeReviewer#review(Path, Path) review}
          */
-        RetokenizeReviewer<?, ?> create(RetokenizeConfiguration configuration, Terminal terminal);
+        RetokenizeReviewer<?> create(RetokenizeConfiguration configuration, Terminal terminal);
     }
 }

@@ -17,6 +17,7 @@ package org.coordinatekit.crf.cli;
 
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;
@@ -34,11 +35,12 @@ import java.util.Objects;
  */
 @NullMarked
 final class TestCrfTaggerLoader implements CrfTaggerLoader {
-    private final @Nullable CrfTagger<?, ?> tagger;
+    private final @Nullable CrfTagger<?> tagger;
     private final @Nullable Exception failure;
-    private @Nullable FeatureExtractor<?> capturedFeatureExtractor;
+    private @Nullable FeatureExtractor capturedFeatureExtractor;
+    private @Nullable FeatureFormat capturedFeatureFormat;
 
-    private TestCrfTaggerLoader(@Nullable CrfTagger<?, ?> tagger, @Nullable Exception failure) {
+    private TestCrfTaggerLoader(@Nullable CrfTagger<?> tagger, @Nullable Exception failure) {
         this.tagger = tagger;
         this.failure = failure;
     }
@@ -46,7 +48,7 @@ final class TestCrfTaggerLoader implements CrfTaggerLoader {
     /**
      * A loader whose {@link #load} returns {@code tagger}, capturing the feature extractor it receives.
      */
-    static TestCrfTaggerLoader returning(CrfTagger<?, ?> tagger) {
+    static TestCrfTaggerLoader returning(CrfTagger<?> tagger) {
         return new TestCrfTaggerLoader(tagger, null);
     }
 
@@ -60,26 +62,34 @@ final class TestCrfTaggerLoader implements CrfTaggerLoader {
 
     /** Returns the feature extractor passed to the most recent {@link #load} call, or {@code null}. */
     @Nullable
-    FeatureExtractor<?> capturedFeatureExtractor() {
+    FeatureExtractor capturedFeatureExtractor() {
         return capturedFeatureExtractor;
+    }
+
+    /** Returns the feature format passed to the most recent {@link #load} call, or {@code null}. */
+    @Nullable
+    FeatureFormat capturedFeatureFormat() {
+        return capturedFeatureFormat;
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public <F, T extends Comparable<T>> CrfTagger<F, T> load(
+    public <T extends Comparable<T>> CrfTagger<T> load(
             Path modelPath,
-            FeatureExtractor<F> featureExtractor,
+            FeatureExtractor featureExtractor,
+            FeatureFormat featureFormat,
             TagProvider<T> tagProvider,
             Tokenizer tokenizer
     ) throws IOException {
         capturedFeatureExtractor = featureExtractor;
+        capturedFeatureFormat = featureFormat;
         if (failure instanceof IOException ioException) {
             throw ioException;
         }
         if (failure != null) {
             throw (RuntimeException) failure;
         }
-        return (CrfTagger<F, T>) Objects.requireNonNull(tagger, "a returning loader must have a tagger");
+        return (CrfTagger<T>) Objects.requireNonNull(tagger, "a returning loader must have a tagger");
     }
 
     @Override

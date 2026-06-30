@@ -108,10 +108,10 @@ class AnnotatorIntegrationTest {
         ByteArrayInputStream stdin = new ByteArrayInputStream(scriptedInput.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", stdin, stdout, StandardCharsets.UTF_8)) {
-            TerminalTaggingInterface<String, String> ui = TerminalTaggingInterface.<String, String>builder()
-                    .tagProvider(TAG_PROVIDER).terminal(terminal).build();
-            Annotator<String, String> annotator = Annotator.<String, String>builder().tagProvider(TAG_PROVIDER)
-                    .taggingInterface(ui).terminal(terminal).tokenizer(new WhitespaceTokenizer()).build();
+            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder().tagProvider(TAG_PROVIDER)
+                    .terminal(terminal).build();
+            Annotator<String> annotator = Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
+                    .terminal(terminal).tokenizer(new WhitespaceTokenizer()).build();
             annotator.annotate(inputFile, outputFile);
         }
     }

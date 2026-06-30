@@ -22,7 +22,9 @@ import cc.mallet.types.*;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
+import org.coordinatekit.crf.core.spi.CrfServices;
 import org.coordinatekit.crf.core.train.CrfTrainer;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.NullMarked;
@@ -50,30 +52,34 @@ import java.util.stream.Stream;
  *
  * <pre>
  * <code>
- * FeatureExtractor&lt;String&gt; extractor = ...;
+ * FeatureExtractor extractor = ...;
  * TagProvider&lt;String&gt; tagProvider = new StringTagProvider("O");
  * TrainingDataSequencer&lt;String&gt; sequencer = new XmlTrainingDataSequencer&lt;&gt;(tagProvider);
  *
- * MalletCrfTrainer&lt;String, String&gt; trainer = new MalletCrfTrainer&lt;&gt;(
+ * MalletCrfTrainer&lt;String&gt; trainer = new MalletCrfTrainer&lt;&gt;(
  *     extractor, tagProvider, sequencer
  * );
  * trainer.train(Path.of("training.xml"), Path.of("model.ser"));
  * </code>
  * </pre>
  *
- * @param <F> the type of features produced by the feature extractor
  * @param <T> the type of tags used for sequence labeling
  * @see MalletCrfTrainerConfiguration
  * @see CrfTrainer
  */
 @NullMarked
-public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer {
+public class MalletCrfTrainer<T extends Comparable<T>> implements CrfTrainer {
     private static final Logger logger = LoggerFactory.getLogger(MalletCrfTrainer.class);
 
     /**
      * The feature extractor for converting tokens to feature sets during training.
      */
-    protected final FeatureExtractor<F> featureExtractor;
+    protected final FeatureExtractor featureExtractor;
+
+    /**
+     * The format that renders each structured feature to the flat string the model's alphabet stores.
+     */
+    protected final FeatureFormat featureFormat;
 
     /**
      * The tag provider defining available tags and their encoding/decoding.
@@ -91,14 +97,15 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
     protected final MalletCrfTrainerConfiguration configuration;
 
     /**
-     * Creates a new trainer with the specified components and default configuration.
+     * Creates a new trainer with the specified components and default configuration, defaulting the
+     * feature format to {@link CrfServices#featureFormat()}.
      *
      * @param featureExtractor the feature extractor for converting tokens to feature sets
      * @param tagProvider the tag provider defining available tags and encoding
      * @param trainingDataSequencer the sequencer for reading training data
      */
     public MalletCrfTrainer(
-            FeatureExtractor<F> featureExtractor,
+            FeatureExtractor featureExtractor,
             TagProvider<T> tagProvider,
             TrainingDataSequencer<T> trainingDataSequencer
     ) {
@@ -106,7 +113,8 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
     }
 
     /**
-     * Creates a new trainer with the specified components and configuration.
+     * Creates a new trainer with the specified components and configuration, defaulting the feature
+     * format to {@link CrfServices#featureFormat()}.
      *
      * @param featureExtractor the feature extractor for converting tokens to feature sets
      * @param tagProvider the tag provider defining available tags and encoding
@@ -114,12 +122,32 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
      * @param config the training configuration parameters
      */
     public MalletCrfTrainer(
-            FeatureExtractor<F> featureExtractor,
+            FeatureExtractor featureExtractor,
+            TagProvider<T> tagProvider,
+            TrainingDataSequencer<T> trainingDataSequencer,
+            MalletCrfTrainerConfiguration config
+    ) {
+        this(featureExtractor, CrfServices.featureFormat(), tagProvider, trainingDataSequencer, config);
+    }
+
+    /**
+     * Creates a new trainer with the specified components, feature format, and configuration.
+     *
+     * @param featureExtractor the feature extractor for converting tokens to feature sets
+     * @param featureFormat the format rendering each feature to the alphabet entry the model stores
+     * @param tagProvider the tag provider defining available tags and encoding
+     * @param trainingDataSequencer the sequencer for reading training data
+     * @param config the training configuration parameters
+     */
+    public MalletCrfTrainer(
+            FeatureExtractor featureExtractor,
+            FeatureFormat featureFormat,
             TagProvider<T> tagProvider,
             TrainingDataSequencer<T> trainingDataSequencer,
             MalletCrfTrainerConfiguration config
     ) {
         this.featureExtractor = featureExtractor;
+        this.featureFormat = featureFormat;
         this.tagProvider = tagProvider;
         this.trainingDataSequencer = trainingDataSequencer;
         this.configuration = config;
@@ -215,7 +243,8 @@ public class MalletCrfTrainer<F, T extends Comparable<T>> implements CrfTrainer 
 
         for (int i = 0; i < sequenceLength; i++) {
             var tokenFeatures = featureTrainingSequence.get(i).features();
-            int[] featureIndices = tokenFeatures.stream().mapToInt(f -> dataAlphabet.lookupIndex(f, true)).toArray();
+            int[] featureIndices = tokenFeatures.stream()
+                    .mapToInt(feature -> dataAlphabet.lookupIndex(featureFormat.render(feature), true)).toArray();
             featureVectors[i] = new FeatureVector(dataAlphabet, featureIndices);
         }
 

@@ -24,6 +24,7 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.Nullable;
@@ -45,9 +46,12 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MalletCrfTrainerTest {
-    private static final FeatureExtractor<String> SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
+    private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
-        return Set.of("LENGTH=" + token.length(), "LOWER=" + token.toLowerCase(Locale.getDefault()));
+        return Set.of(
+                Features.of("LENGTH", String.valueOf(token.length())),
+                Features.of("LOWER", token.toLowerCase(Locale.getDefault()))
+        );
     };
     private static final StringTagProvider TAG_PROVIDER = new StringTagProvider("0");
     private static final StringTagProvider TAG_PROVIDER_WITH_TAGS = new StringTagProvider(
@@ -256,8 +260,8 @@ class MalletCrfTrainerTest {
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static <F, T extends Comparable<T>> MalletCrfTrainer<F, T> createMalletCrfTrainer(
-            FeatureExtractor<F> featureExtractor,
+    private static <T extends Comparable<T>> MalletCrfTrainer<T> createMalletCrfTrainer(
+            FeatureExtractor featureExtractor,
             TagProvider<T> tagProvider,
             TrainingDataSequencer<T> trainingDataSequencer,
             @Nullable MalletCrfTrainerConfiguration configuration
@@ -267,7 +271,7 @@ class MalletCrfTrainerTest {
                 : new MalletCrfTrainer<>(featureExtractor, tagProvider, trainingDataSequencer);
     }
 
-    private InstanceList createTrainingInstanceList(MalletCrfTrainer<String, String> trainer) {
+    private InstanceList createTrainingInstanceList(MalletCrfTrainer<String> trainer) {
         Alphabet dataAlphabet = new Alphabet();
         LabelAlphabet targetAlphabet = new LabelAlphabet();
 
@@ -371,7 +375,7 @@ class MalletCrfTrainerTest {
                         getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
                 )
         ).toList();
-        MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER)
@@ -428,7 +432,7 @@ class MalletCrfTrainerTest {
         var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
 
-        MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
@@ -471,7 +475,7 @@ class MalletCrfTrainerTest {
                         ConllOutputConfiguration.builder().outputDirectory(conllOutputDir).iterationInterval(10).build()
                 ).modelOutputEnabled(false).build();
 
-        MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
@@ -500,7 +504,7 @@ class MalletCrfTrainerTest {
                         ModelOutputConfiguration.builder().outputDirectory(modelOutputDir).iterationInterval(10).build()
                 ).build();
 
-        MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
@@ -524,7 +528,7 @@ class MalletCrfTrainerTest {
         MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder().iterations(5)
                 .trainingFraction(1.0).conllOutputEnabled(false).modelOutputEnabled(false).build();
 
-        MalletCrfTrainer<String, String> trainer = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
@@ -566,14 +570,14 @@ class MalletCrfTrainerTest {
         MalletCrfTrainerConfiguration config2 = MalletCrfTrainerConfiguration.builder().iterations(1)
                 .trainingFraction(0.6).randomSeed(123).conllOutputEnabled(false).modelOutputEnabled(false).build();
 
-        MalletCrfTrainer<String, String> trainer1 = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer1 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
                 config1
         );
 
-        MalletCrfTrainer<String, String> trainer2 = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer2 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
@@ -597,14 +601,14 @@ class MalletCrfTrainerTest {
         MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().iterations(1)
                 .trainingFraction(0.6).randomSeed(42).conllOutputEnabled(false).modelOutputEnabled(false).build();
 
-        MalletCrfTrainer<String, String> trainer1 = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer1 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),
                 config
         );
 
-        MalletCrfTrainer<String, String> trainer2 = new MalletCrfTrainer<>(
+        MalletCrfTrainer<String> trainer2 = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
                 new XmlTrainingData<>(TAG_PROVIDER),

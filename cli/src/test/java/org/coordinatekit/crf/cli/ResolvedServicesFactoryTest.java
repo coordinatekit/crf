@@ -33,6 +33,7 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -71,12 +72,12 @@ import java.util.stream.Stream;
  * by {@link ResolvedServicesTest}.
  */
 class ResolvedServicesFactoryTest {
-    private static final FeatureExtractor<String> FEATURE_EXTRACTOR = (sequence, position) -> Set.of();
-    private static final FeatureExtractor<String> FULL_EXTRACTOR = (sequence, position) -> Set
-            .of("VERBOSE_" + sequence.get(position).token());
-    private static final FeatureExtractor<String> KEY_EXTRACTOR = (sequence, position) -> Set
-            .of("KEY_" + sequence.get(position).token());
-    private static final CrfTagger<String, String> TAGGER = input -> {
+    private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> Set.of();
+    private static final FeatureExtractor FULL_EXTRACTOR = (sequence, position) -> Set
+            .of(Features.of("VERBOSE_" + sequence.get(position).token()));
+    private static final FeatureExtractor KEY_EXTRACTOR = (sequence, position) -> Set
+            .of(Features.of("KEY_" + sequence.get(position).token()));
+    private static final CrfTagger<String> TAGGER = input -> {
         throw new UnsupportedOperationException("not used");
     };
     private static final CrfTaggerLoader TAGGER_LOADER = TestCrfTaggerLoader.returning(TAGGER);
@@ -100,14 +101,22 @@ class ResolvedServicesFactoryTest {
         return AnnotatorConfiguration.builder().input(Path.of("in.txt")).output(Path.of("out.xml")).build();
     }
 
-    private static void assertRoutedToViews(AnnotatorSequence<String, String> presented) {
+    private static void assertRoutedToViews(AnnotatorSequence<String> presented) {
         assertEquals(
-                List.of(Set.of("KEY_the"), Set.of("KEY_quick"), Set.of("KEY_brown")),
+                List.of(
+                        Set.of(Features.of("KEY_the")),
+                        Set.of(Features.of("KEY_quick")),
+                        Set.of(Features.of("KEY_brown"))
+                ),
                 presented.tokens().stream().map(AnnotatorToken::features).toList(),
                 "the key feature extractor must reach the key view"
         );
         assertEquals(
-                List.of(Set.of("VERBOSE_the"), Set.of("VERBOSE_quick"), Set.of("VERBOSE_brown")),
+                List.of(
+                        Set.of(Features.of("VERBOSE_the")),
+                        Set.of(Features.of("VERBOSE_quick")),
+                        Set.of(Features.of("VERBOSE_brown"))
+                ),
                 presented.tokens().stream().map(AnnotatorToken::verboseFeatures).toList(),
                 "the full feature extractor must reach the verbose view"
         );
@@ -266,11 +275,11 @@ class ResolvedServicesFactoryTest {
     }
 
     /** A tagging interface that records the presented sequence and exits to end the loop. */
-    private static final class CapturingTaggingInterface implements TaggingInterface<String, String> {
-        private final List<AnnotatorSequence<String, String>> presented = new ArrayList<>();
+    private static final class CapturingTaggingInterface implements TaggingInterface<String> {
+        private final List<AnnotatorSequence<String>> presented = new ArrayList<>();
 
         @Override
-        public TaggingResult<String> present(AnnotatorSequence<String, String> sequence) {
+        public TaggingResult<String> present(AnnotatorSequence<String> sequence) {
             presented.add(sequence);
             return taggingResult(EXIT, List.of());
         }

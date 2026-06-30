@@ -64,11 +64,11 @@ class XPathFeatureExtractorTest {
     record ExtractAtParameters(
             String name,
             boolean caseSensitive,
-            @Nullable String notPresentFeature,
-            @Nullable String presentFeature,
+            @Nullable Feature notPresentFeature,
+            @Nullable Feature presentFeature,
             List<String> tokens,
             int position,
-            Set<String> expectedResult
+            Set<Feature> expectedResult
     ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
@@ -76,62 +76,62 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "caseSensitive_returnsNotPresentFeatureWhenNotFound",
                         true,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("hello", "world"),
                         0,
-                        Set.of("NOT_CONJUNCTION")
+                        Set.of(Features.of("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseSensitive_returnsPresentFeatureWhenFound",
                         true,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("hello", "and", "world"),
                         1,
-                        Set.of("CONJUNCTION")
+                        Set.of(Features.of("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseSensitive_doesNotMatchDifferentCase",
                         true,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("AND"),
                         0,
-                        Set.of("NOT_CONJUNCTION")
+                        Set.of(Features.of("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_matchesDifferentCase",
                         false,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("AND"),
                         0,
-                        Set.of("CONJUNCTION")
+                        Set.of(Features.of("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_matchesMixedCase",
                         false,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("AnD"),
                         0,
-                        Set.of("CONJUNCTION")
+                        Set.of(Features.of("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_returnsNotPresentFeatureWhenNotFound",
                         false,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("hello"),
                         0,
-                        Set.of("NOT_CONJUNCTION")
+                        Set.of(Features.of("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "nullNotPresentFeature_returnsEmptySetWhenNotFound",
                         true,
                         null,
-                        "CONJUNCTION",
+                        Features.of("CONJUNCTION"),
                         List.of("hello"),
                         0,
                         Set.of()
@@ -139,7 +139,7 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "nullPresentFeature_returnsEmptySetWhenFound",
                         true,
-                        "NOT_CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
                         null,
                         List.of("and"),
                         0,
@@ -148,11 +148,11 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "returnsCorrectFeatureAtDifferentPositions",
                         true,
-                        "NOT_CONJUNCTION",
-                        "CONJUNCTION",
+                        Features.of("NOT_CONJUNCTION"),
+                        Features.of("CONJUNCTION"),
                         List.of("hello", "but", "world", "or", "foo"),
                         3,
-                        Set.of("CONJUNCTION")
+                        Set.of(Features.of("CONJUNCTION"))
                 )
         );
     }
@@ -161,14 +161,14 @@ class XPathFeatureExtractorTest {
     @ParameterizedTest
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
-        XPathFeatureExtractor<String> extractor = XPathFeatureExtractor
-                .<String>builder(classpathResource("english_conjunctions.xml").get(), "/conjunctions/conjunction")
+        XPathFeatureExtractor extractor = XPathFeatureExtractor
+                .builder(classpathResource("english_conjunctions.xml").get(), "/conjunctions/conjunction")
                 .caseSensitive(parameters.caseSensitive()).notPresentFeature(parameters.notPresentFeature())
                 .presentFeature(parameters.presentFeature()).build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //
-        Set<String> actual = extractor.extractAt(sequence, parameters.position());
+        Set<Feature> actual = extractor.extractAt(sequence, parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);

@@ -41,21 +41,19 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * PositionFeatureExtractor&lt;String&gt; extractor = PositionFeatureExtractor.&lt;String&gt;builder().firstFeature("FIRST")
- *         .lastFeature("LAST").positionFromStartFeatureMapper(pos -> "POS_" + pos).build();
+ * PositionFeatureExtractor extractor = PositionFeatureExtractor.builder().firstFeature(Features.of("FIRST"))
+ *         .lastFeature(Features.of("LAST")).positionFromStartFeatureMapper(pos -> Features.of("POS_" + pos)).build();
  * </code>
  * </pre>
- *
- * @param <F> the type of features produced by this extractor
  */
 @NullMarked
-public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
-    private final @Nullable F firstFeature;
-    private final @Nullable F lastFeature;
-    private final @Nullable Function<Integer, F> positionFromEndFeatureMapper;
-    private final @Nullable Function<Integer, F> positionFromStartFeatureMapper;
+public class PositionFeatureExtractor implements FeatureExtractor {
+    private final @Nullable Feature firstFeature;
+    private final @Nullable Feature lastFeature;
+    private final @Nullable Function<Integer, Feature> positionFromEndFeatureMapper;
+    private final @Nullable Function<Integer, Feature> positionFromStartFeatureMapper;
 
-    private PositionFeatureExtractor(Builder<F> builder) {
+    private PositionFeatureExtractor(Builder builder) {
         this.firstFeature = builder.firstFeature;
         this.lastFeature = builder.lastFeature;
         this.positionFromEndFeatureMapper = builder.positionFromEndFeatureMapper;
@@ -63,13 +61,13 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
     }
 
     @Override
-    public Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
         if (firstFeature == null && lastFeature == null && positionFromEndFeatureMapper == null
                 && positionFromStartFeatureMapper == null) {
             return Set.of();
         }
 
-        Set<F> features = new HashSet<>();
+        Set<Feature> features = new HashSet<>();
 
         if (position == 0 && firstFeature != null) {
             features.add(firstFeature);
@@ -93,23 +91,20 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
     /**
      * Creates a new builder for {@link PositionFeatureExtractor}.
      *
-     * @param <F> the type of feature produced by the extractor
      * @return a new builder instance
      */
-    public static <F> Builder<F> builder() {
-        return new Builder<>();
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
      * Builder for {@link PositionFeatureExtractor}.
-     *
-     * @param <F> the type of feature produced by the extractor
      */
-    public static final class Builder<F> {
-        private @Nullable F firstFeature;
-        private @Nullable F lastFeature;
-        private @Nullable Function<Integer, F> positionFromEndFeatureMapper;
-        private @Nullable Function<Integer, F> positionFromStartFeatureMapper;
+    public static final class Builder {
+        private @Nullable Feature firstFeature;
+        private @Nullable Feature lastFeature;
+        private @Nullable Function<Integer, Feature> positionFromEndFeatureMapper;
+        private @Nullable Function<Integer, Feature> positionFromStartFeatureMapper;
 
         private Builder() {}
 
@@ -119,7 +114,7 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param firstFeature the feature to emit at position 0, or {@code null} for no feature
          * @return this builder
          */
-        public Builder<F> firstFeature(@Nullable F firstFeature) {
+        public Builder firstFeature(@Nullable Feature firstFeature) {
             this.firstFeature = firstFeature;
             return this;
         }
@@ -130,7 +125,7 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param lastFeature the feature to emit at the last position, or {@code null} for no feature
          * @return this builder
          */
-        public Builder<F> lastFeature(@Nullable F lastFeature) {
+        public Builder lastFeature(@Nullable Feature lastFeature) {
             this.lastFeature = lastFeature;
             return this;
         }
@@ -146,7 +141,7 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
          *        no features
          * @return this builder
          */
-        public Builder<F> positionFromEndFeatureMapper(@Nullable Function<Integer, F> positionFromEndFeatureMapper) {
+        public Builder positionFromEndFeatureMapper(@Nullable Function<Integer, Feature> positionFromEndFeatureMapper) {
             this.positionFromEndFeatureMapper = positionFromEndFeatureMapper;
             return this;
         }
@@ -162,8 +157,8 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
          *        for no features
          * @return this builder
          */
-        public Builder<F> positionFromStartFeatureMapper(
-                @Nullable Function<Integer, F> positionFromStartFeatureMapper
+        public Builder positionFromStartFeatureMapper(
+                @Nullable Function<Integer, Feature> positionFromStartFeatureMapper
         ) {
             this.positionFromStartFeatureMapper = positionFromStartFeatureMapper;
             return this;
@@ -174,8 +169,8 @@ public class PositionFeatureExtractor<F> implements FeatureExtractor<F> {
          *
          * @return a new {@link PositionFeatureExtractor} instance
          */
-        public PositionFeatureExtractor<F> build() {
-            return new PositionFeatureExtractor<>(this);
+        public PositionFeatureExtractor build() {
+            return new PositionFeatureExtractor(this);
         }
     }
 }

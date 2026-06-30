@@ -29,12 +29,12 @@ import java.util.Set;
  * <p>
  * Implementations define how features are computed for each token based on its context within the
  * sequence. Features typically capture properties such as token prefixes/suffixes, character
- * patterns, neighboring tokens, and domain-specific attributes.
- *
- * @param <F> the type of features produced by this extractor
+ * patterns, neighboring tokens, and domain-specific attributes. Each feature is a structured
+ * {@link Feature}; the only place a feature becomes the model's flat string is the
+ * {@link FeatureFormat} edge, never here.
  */
 @NullMarked
-public interface FeatureExtractor<F> {
+public interface FeatureExtractor {
 
     /**
      * Extracts features for all tokens in a sequence.
@@ -46,16 +46,16 @@ public interface FeatureExtractor<F> {
      * @param sequence the input sequence of tokens
      * @return a new sequence with features attached to each token
      */
-    default Sequence<FeaturePositionedToken<F>> extract(Sequence<? extends PositionedToken> sequence) {
+    default Sequence<FeaturePositionedToken> extract(Sequence<? extends PositionedToken> sequence) {
         List<String> tokens = new ArrayList<>();
-        List<Set<F>> featureSequences = new ArrayList<>();
+        List<Set<Feature>> featureSequences = new ArrayList<>();
 
         for (int i = 0; i < sequence.size(); i++) {
             tokens.add(sequence.get(i).token());
             featureSequences.add(extractAt(sequence, i));
         }
 
-        return new FeatureSequence<>(tokens, featureSequences);
+        return new FeatureSequence(tokens, featureSequences);
     }
 
     /**
@@ -70,7 +70,7 @@ public interface FeatureExtractor<F> {
      * @param position the zero-based index of the token to extract features for
      * @return the set of features for the token at the given position
      */
-    Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position);
+    Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position);
 
     /**
      * Extracts features for all tokens in a training sequence, preserving tag information.
@@ -84,12 +84,12 @@ public interface FeatureExtractor<F> {
      * @param sequence the input training sequence with tagged tokens
      * @return a new sequence with features and tags attached to each token
      */
-    default <T> Sequence<FeatureTrainingPositionedToken<F, T>> extractTraining(
+    default <T> Sequence<FeatureTrainingPositionedToken<T>> extractTraining(
             Sequence<? extends TrainingPositionedToken<T>> sequence
     ) {
         List<String> tokens = new ArrayList<>();
         List<T> tags = new ArrayList<>();
-        List<Set<F>> featureSequences = new ArrayList<>();
+        List<Set<Feature>> featureSequences = new ArrayList<>();
 
         for (int i = 0; i < sequence.size(); i++) {
             tokens.add(sequence.get(i).token());
