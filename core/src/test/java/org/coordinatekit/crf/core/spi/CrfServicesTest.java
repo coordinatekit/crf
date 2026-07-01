@@ -52,10 +52,7 @@ import java.util.stream.Stream;
 class CrfServicesTest {
     record EmptyParameters(String name, Supplier<Optional<?>> accessor) {}
 
-    record ExplicitWinsParameters(
-            String name,
-            Function<FeatureExtractor<String>, Optional<FeatureExtractor<String>>> resolver
-    ) {}
+    record ExplicitWinsParameters(String name, Function<FeatureExtractor, Optional<FeatureExtractor>> resolver) {}
 
     record SelectExceptionParameters(String name, Executable action, Class<? extends Exception> expectedClass) {}
 
@@ -77,10 +74,10 @@ class CrfServicesTest {
     @ParameterizedTest
     void explicitWins(ExplicitWinsParameters parameters) {
         // ARRANGE //
-        FeatureExtractor<String> featureExtractor = (sequence, position) -> Set.of();
+        FeatureExtractor featureExtractor = (sequence, position) -> Set.of();
 
         // ACT //
-        Optional<FeatureExtractor<String>> result = parameters.resolver().apply(featureExtractor);
+        Optional<FeatureExtractor> result = parameters.resolver().apply(featureExtractor);
 
         // ASSERT //
         assertSame(featureExtractor, result.orElseThrow(), parameters.name() + " explicit should win");
@@ -126,9 +123,10 @@ class CrfServicesTest {
     private static CrfTaggerLoader namedLoader(String name) {
         return new CrfTaggerLoader() {
             @Override
-            public <F, T extends Comparable<T>> CrfTagger<F, T> load(
+            public <T extends Comparable<T>> CrfTagger<T> load(
                     Path modelPath,
-                    FeatureExtractor<F> featureExtractor,
+                    FeatureExtractor featureExtractor,
+                    FeatureFormat featureFormat,
                     TagProvider<T> tagProvider,
                     Tokenizer tokenizer
             ) {

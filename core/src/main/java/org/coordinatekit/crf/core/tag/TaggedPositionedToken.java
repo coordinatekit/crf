@@ -28,13 +28,12 @@ import java.util.SortedSet;
  * This interface extends {@link FeaturePositionedToken} to add tag score information, representing
  * a token after the model has tagged it.
  *
- * @param <F> the type of features associated with this token
  * @param <T> the type of tag (label) associated with this token
  * @see FeaturePositionedToken
  * @see TaggedSequence
  */
 @NullMarked
-public interface TaggedPositionedToken<F, T extends Comparable<T>> extends FeaturePositionedToken<F> {
+public interface TaggedPositionedToken<T extends Comparable<T>> extends FeaturePositionedToken {
     /**
      * Returns the highest-scoring tag for this token.
      *

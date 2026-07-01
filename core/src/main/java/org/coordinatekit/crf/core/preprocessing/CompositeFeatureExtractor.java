@@ -33,24 +33,22 @@ import java.util.*;
  *
  * <pre>
  * <code>
- * CompositeFeatureExtractor&lt;String&gt; extractor = CompositeFeatureExtractor.of(
+ * CompositeFeatureExtractor extractor = CompositeFeatureExtractor.of(
  *         lengthExtractor, caseExtractor, prefixExtractor
  * );
  * </code>
  * </pre>
- *
- * @param <F> the type of feature produced by the extractors
  */
 @NullMarked
-public class CompositeFeatureExtractor<F> implements FeatureExtractor<F> {
-    private final List<FeatureExtractor<F>> extractors;
+public class CompositeFeatureExtractor implements FeatureExtractor {
+    private final List<FeatureExtractor> extractors;
 
     /**
      * Creates a new composite feature extractor with the specified extractors.
      *
      * @param extractors the collection of feature extractors to combine
      */
-    private CompositeFeatureExtractor(Collection<? extends FeatureExtractor<F>> extractors) {
+    private CompositeFeatureExtractor(Collection<? extends FeatureExtractor> extractors) {
         this.extractors = List.copyOf(extractors);
     }
 
@@ -58,18 +56,16 @@ public class CompositeFeatureExtractor<F> implements FeatureExtractor<F> {
      * Creates a new composite feature extractor from the specified extractors.
      *
      * @param extractors the feature extractors to combine
-     * @param <F> the type of feature produced by the extractors
      * @return a new composite feature extractor
      */
-    @SafeVarargs
-    public static <F> CompositeFeatureExtractor<F> of(FeatureExtractor<F>... extractors) {
-        return new CompositeFeatureExtractor<>(List.of(extractors));
+    public static CompositeFeatureExtractor of(FeatureExtractor... extractors) {
+        return new CompositeFeatureExtractor(List.of(extractors));
     }
 
     @Override
-    public Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        Set<F> features = new HashSet<>();
-        for (FeatureExtractor<F> extractor : extractors) {
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        Set<Feature> features = new HashSet<>();
+        for (FeatureExtractor extractor : extractors) {
             features.addAll(extractor.extractAt(sequence, position));
         }
         return Collections.unmodifiableSet(features);

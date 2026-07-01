@@ -35,12 +35,11 @@ import java.util.List;
  * {@link AnnotatorModels#annotatorSequence(int, int, List, TagProvider) annotatorSequence(...,
  * tokens, tagProvider)} for the no-tagger path.
  *
- * @param <F> the feature type
  * @param <T> the tag type
  * @see AnnotatorModels#annotatorSequence(int, int, Sequence)
  * @see AnnotatorModels#annotatorSequence(int, int, List, TagProvider)
  */
-public interface AnnotatorSequence<F, T extends Comparable<T>> {
+public interface AnnotatorSequence<T extends Comparable<T>> {
     /**
      * Returns which display-feature sources this sequence carries, derived from which feature
      * extractors were configured. {@link FeatureAvailability#keyAvailable() Key} availability backs the
@@ -85,7 +84,7 @@ public interface AnnotatorSequence<F, T extends Comparable<T>> {
      *
      * @return the tokens
      */
-    List<AnnotatorToken<F, T>> tokens();
+    List<AnnotatorToken<T>> tokens();
 
     /**
      * Returns the total number of sequences in the overall annotation batch.

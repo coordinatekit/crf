@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
@@ -30,10 +31,9 @@ import java.util.Set;
  * {@link #alternativeTagScores() alternativeTagScores} may be {@code null} when no model produced a
  * prediction for that token (or tag).
  *
- * @param <F> the feature type
  * @param <T> the tag type
  */
-public interface AnnotatorToken<F, T extends Comparable<T>> {
+public interface AnnotatorToken<T extends Comparable<T>> {
     /**
      * Returns the map from tag to score for the edit screen, in canonical iteration order: tags with a
      * non-null score first (sorted by score descending), then tags with a {@code null} score, with the
@@ -50,7 +50,7 @@ public interface AnnotatorToken<F, T extends Comparable<T>> {
      *
      * @return the key display features, empty when unconfigured
      */
-    Set<F> features();
+    Set<Feature> features();
 
     /**
      * Returns the starting confidence value, or {@code null} when no model produced a confidence.
@@ -82,5 +82,5 @@ public interface AnnotatorToken<F, T extends Comparable<T>> {
      *
      * @return the verbose display features, empty when unconfigured
      */
-    Set<F> verboseFeatures();
+    Set<Feature> verboseFeatures();
 }

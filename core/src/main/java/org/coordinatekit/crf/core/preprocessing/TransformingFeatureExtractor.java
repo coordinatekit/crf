@@ -34,29 +34,27 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * TransformingFeatureExtractor&lt;String&gt; extractor = new TransformingFeatureExtractor&lt;&gt;(
- *         token -> Set.of("LENGTH=" + token.length(), "LOWER=" + token.toLowerCase())
+ * TransformingFeatureExtractor extractor = new TransformingFeatureExtractor(
+ *         token -> Set.of(Features.of("LENGTH", "" + token.length()), Features.of("LOWER", token.toLowerCase()))
  * );
  * </code>
  * </pre>
- *
- * @param <F> the type of feature produced by the extractor
  */
 @NullMarked
-public class TransformingFeatureExtractor<F> implements FeatureExtractor<F> {
-    private final Function<String, Set<F>> transformer;
+public class TransformingFeatureExtractor implements FeatureExtractor {
+    private final Function<String, Set<Feature>> transformer;
 
     /**
      * Creates a new transforming feature extractor with the specified transformation function.
      *
      * @param transformer a function that takes a token string and returns a set of features
      */
-    public TransformingFeatureExtractor(Function<String, Set<F>> transformer) {
+    public TransformingFeatureExtractor(Function<String, Set<Feature>> transformer) {
         this.transformer = transformer;
     }
 
     @Override
-    public Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
         return transformer.apply(sequence.get(position).token());
     }
 }

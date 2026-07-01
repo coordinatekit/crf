@@ -63,16 +63,15 @@ final class TaggingSession<T> {
      *
      * @param sequence the sequence being presented
      * @param featureViewState the sticky feature-view state shared across sequences
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new session
      */
-    static <F, T extends Comparable<T>> TaggingSession<T> startingFrom(
-            AnnotatorSequence<F, T> sequence,
+    static <T extends Comparable<T>> TaggingSession<T> startingFrom(
+            AnnotatorSequence<T> sequence,
             FeatureViewState featureViewState
     ) {
         List<T> currentTags = new ArrayList<>(sequence.tokens().size());
-        for (AnnotatorToken<F, T> token : sequence.tokens()) {
+        for (AnnotatorToken<T> token : sequence.tokens()) {
             currentTags.add(token.initialTag());
         }
         return new TaggingSession<>(currentTags, sequence.featureAvailability(), featureViewState);

@@ -18,6 +18,9 @@ package org.coordinatekit.crf.annotator.terminal;
 import org.coordinatekit.crf.annotator.AnnotatorModels;
 import org.coordinatekit.crf.annotator.AnnotatorSequence;
 import org.coordinatekit.crf.annotator.FeatureAvailability;
+import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -70,7 +73,7 @@ class TaggingViewModelsTest {
     @ParameterizedTest
     void footerPrompt(FooterPromptParameters parameters) {
         // ARRANGE //
-        AnnotatorSequence<String, String> sequence = sequenceWith(parameters.availability());
+        AnnotatorSequence<String> sequence = sequenceWith(parameters.availability());
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -78,6 +81,7 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 parameters.effectiveView(),
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 null,
                 null
@@ -144,9 +148,10 @@ class TaggingViewModelsTest {
     @ParameterizedTest
     void sequenceViewModel__featureRows(FeatureRowsParameters parameters) {
         // ARRANGE //
-        List<Set<String>> key = List.of(Set.of("CAP"), Set.of("ANIMAL", "LOWER"));
-        List<Set<String>> verbose = List.of(Set.of("WINDOW"), Set.of("ANIMAL"));
-        AnnotatorSequence<String, String> sequence = taggedSequence(key, verbose);
+        List<Set<Feature>> key = List
+                .of(Set.of(Features.of("CAP")), Set.of(Features.of("ANIMAL"), Features.of("LOWER")));
+        List<Set<Feature>> verbose = List.of(Set.of(Features.of("WINDOW")), Set.of(Features.of("ANIMAL")));
+        AnnotatorSequence<String> sequence = taggedSequence(key, verbose);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -154,6 +159,7 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 parameters.effectiveView(),
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 null,
                 null
@@ -183,8 +189,8 @@ class TaggingViewModelsTest {
     @Test
     void sequenceViewModel__formatsPlaceholdersForEmptyFeaturesAndAbsentConfidence() {
         // ARRANGE //
-        AnnotatorSequence<String, String> sequence = AnnotatorModels
-                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of("CAP"), Set.of()), null);
+        AnnotatorSequence<String> sequence = AnnotatorModels
+                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of(Features.of("CAP")), Set.of()), null);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -192,6 +198,7 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 FeatureView.KEY,
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 null,
                 null
@@ -207,7 +214,7 @@ class TaggingViewModelsTest {
     @Test
     void sequenceViewModel__buildsTokenRowsWithLowConfidenceFlag() {
         // ARRANGE //
-        AnnotatorSequence<String, String> sequence = taggedSequence(null, null);
+        AnnotatorSequence<String> sequence = taggedSequence(null, null);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -215,6 +222,7 @@ class TaggingViewModelsTest {
                 initialTagsOf(sequence),
                 FeatureView.NONE,
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 null,
                 null
@@ -237,7 +245,7 @@ class TaggingViewModelsTest {
         // ARRANGE //
         // Initial tags are the top-scoring tags: token 1 = DT (0.9), token 2 = NN (0.5). Editing
         // token 1 to NN diverges from its initial tag; token 2 keeps its initial tag.
-        AnnotatorSequence<String, String> sequence = taggedSequence(null, null);
+        AnnotatorSequence<String> sequence = taggedSequence(null, null);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -245,6 +253,7 @@ class TaggingViewModelsTest {
                 List.of("NN", "NN"),
                 FeatureView.NONE,
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 null,
                 null
@@ -260,7 +269,7 @@ class TaggingViewModelsTest {
     @ParameterizedTest
     void sequenceViewModel__totalLikelihoodText(TotalLikelihoodParameters parameters) {
         // ARRANGE //
-        AnnotatorSequence<String, String> sequence = taggedSequence(null, null);
+        AnnotatorSequence<String> sequence = taggedSequence(null, null);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -268,6 +277,7 @@ class TaggingViewModelsTest {
                 parameters.currentTags(),
                 FeatureView.NONE,
                 TAG_PROVIDER,
+                new DefaultFeatureFormat(),
                 0.80,
                 parameters.currentTotal(),
                 parameters.originalTotal()
@@ -300,7 +310,7 @@ class TaggingViewModelsTest {
     @Test
     void editScreen__listsCandidateTagsInCanonicalOrder() {
         // ARRANGE //
-        AnnotatorSequence<String, String> sequence = AnnotatorModels
+        AnnotatorSequence<String> sequence = AnnotatorModels
                 .annotatorSequence(1, 1, List.of("the", "fox"), TAG_PROVIDER);
 
         // ACT //
@@ -321,13 +331,13 @@ class TaggingViewModelsTest {
         assertEquals(List.of("DT", "NN", "VB"), editScreen.candidateTags());
     }
 
-    private static AnnotatorSequence<String, String> taggedSequence(
-            @Nullable List<Set<String>> key,
-            @Nullable List<Set<String>> verbose
+    private static AnnotatorSequence<String> taggedSequence(
+            @Nullable List<Set<Feature>> key,
+            @Nullable List<Set<Feature>> verbose
     ) {
         Map<String, Double> firstScores = scoreMap("DT", 0.9, "NN", 0.1);
         Map<String, Double> secondScores = scoreMap("NN", 0.5, "VB", 0.5);
-        TaggedSequence<String, String> tagged = new TaggedSequence<>(
+        TaggedSequence<String> tagged = new TaggedSequence<>(
                 TOKENS,
                 List.of(Set.of(), Set.of()),
                 List.of(firstScores, secondScores)

@@ -64,16 +64,16 @@ final class ResolvedServicesFactory {
     // The production path: builds the terminal-bound tagging interface, then delegates the extractor
     // routing to the package-private seam below.
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Annotator<?, ?> annotator(
+    private static Annotator<?> annotator(
             ResolvedServices resolvedServices,
-            @Nullable CrfTagger<?, ?> tagger,
+            @Nullable CrfTagger<?> tagger,
             Terminal terminal,
             double threshold
     ) {
         warnIfMissingFeatureExtractor(resolvedServices, tagger, terminal);
         TagProvider tagProvider = resolvedServices.tagProvider();
         TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
-                .terminal(terminal).threshold(threshold).build();
+                .terminal(terminal).threshold(threshold).featureFormat(resolvedServices.featureFormat()).build();
         return annotator(resolvedServices, tagger, terminal, taggingInterface);
     }
 
@@ -87,11 +87,11 @@ final class ResolvedServicesFactory {
      * interface to observe which extractor reaches which view.
      */
     // The services are discovered independently, so their feature and tag types cannot be proven to
-    // agree at compile time; the builders are driven raw and the result is returned as Annotator<?, ?>.
+    // agree at compile time; the builders are driven raw and the result is returned as Annotator<?>.
     @SuppressWarnings({"rawtypes", "unchecked"})
-    static Annotator<?, ?> annotator(
+    static Annotator<?> annotator(
             ResolvedServices resolvedServices,
-            @Nullable CrfTagger<?, ?> tagger,
+            @Nullable CrfTagger<?> tagger,
             Terminal terminal,
             TaggingInterface taggingInterface
     ) {
@@ -116,23 +116,23 @@ final class ResolvedServicesFactory {
             @Nullable Path modelPath
     ) {
         ResolvedServices resolvedServices = servicesBuilder.resolve();
-        CrfTagger<?, ?> tagger = resolvedServices.loadTagger(modelPath);
+        CrfTagger<?> tagger = resolvedServices.loadTagger(modelPath);
         return (configuration, terminal) -> annotator(resolvedServices, tagger, terminal, configuration.threshold());
     }
 
     // See annotator(...): the production path builds the tagging interface, then delegates the
     // extractor routing to the package-private seam below.
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static RetokenizeReviewer<?, ?> reviewer(
+    private static RetokenizeReviewer<?> reviewer(
             ResolvedServices resolvedServices,
-            @Nullable CrfTagger<?, ?> tagger,
+            @Nullable CrfTagger<?> tagger,
             Terminal terminal,
             double threshold
     ) {
         warnIfMissingFeatureExtractor(resolvedServices, tagger, terminal);
         TagProvider tagProvider = resolvedServices.tagProvider();
         TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
-                .terminal(terminal).threshold(threshold).build();
+                .terminal(terminal).threshold(threshold).featureFormat(resolvedServices.featureFormat()).build();
         return reviewer(resolvedServices, tagger, terminal, taggingInterface);
     }
 
@@ -147,9 +147,9 @@ final class ResolvedServicesFactory {
      */
     // See annotator(...): the same erasure gap applies to the reviewer's services.
     @SuppressWarnings({"rawtypes", "unchecked"})
-    static RetokenizeReviewer<?, ?> reviewer(
+    static RetokenizeReviewer<?> reviewer(
             ResolvedServices resolvedServices,
-            @Nullable CrfTagger<?, ?> tagger,
+            @Nullable CrfTagger<?> tagger,
             Terminal terminal,
             TaggingInterface taggingInterface
     ) {
@@ -175,7 +175,7 @@ final class ResolvedServicesFactory {
             @Nullable Path modelPath
     ) {
         ResolvedServices resolvedServices = servicesBuilder.resolve();
-        CrfTagger<?, ?> tagger = resolvedServices.loadTagger(modelPath);
+        CrfTagger<?> tagger = resolvedServices.loadTagger(modelPath);
         return (configuration, terminal) -> reviewer(resolvedServices, tagger, terminal, configuration.threshold());
     }
 
@@ -194,7 +194,7 @@ final class ResolvedServicesFactory {
      */
     private static void warnIfMissingFeatureExtractor(
             ResolvedServices resolvedServices,
-            @Nullable CrfTagger<?, ?> tagger,
+            @Nullable CrfTagger<?> tagger,
             Terminal terminal
     ) {
         if (tagger != null && resolvedServices.fullFeatureExtractor() == null) {

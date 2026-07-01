@@ -33,16 +33,15 @@ import java.util.stream.Stream;
  * both training and inference to provide the CRF model with the information needed to make
  * predictions.
  *
- * @param <F> the type of features associated with tokens in this sequence
  * @see FeaturePositionedToken
  * @see Sequence
  */
 @NullMarked
-public class FeatureSequence<F> implements Sequence<FeaturePositionedToken<F>> {
-    private record FeatureSequenceToken<F> (int position, String token, Set<F> features)
-            implements FeaturePositionedToken<F> {}
+public class FeatureSequence implements Sequence<FeaturePositionedToken> {
+    private record FeatureSequenceToken(int position, String token, Set<Feature> features)
+            implements FeaturePositionedToken {}
 
-    private final List<FeaturePositionedToken<F>> tokens;
+    private final List<FeaturePositionedToken> tokens;
 
     /**
      * Constructs a new feature sequence from the given tokens and features.
@@ -57,7 +56,7 @@ public class FeatureSequence<F> implements Sequence<FeaturePositionedToken<F>> {
      *         not match the number of features
      * @throws IndexOutOfBoundsException if the lists have different sizes
      */
-    public FeatureSequence(List<String> tokens, List<Set<F>> features) {
+    public FeatureSequence(List<String> tokens, List<Set<Feature>> features) {
         if (tokens.size() != features.size()) {
             throw new IllegalArgumentException(
                     String.format(
@@ -71,13 +70,13 @@ public class FeatureSequence<F> implements Sequence<FeaturePositionedToken<F>> {
         }
 
         this.tokens = IntStream.range(0, tokens.size())
-                .<FeaturePositionedToken<F>>mapToObj(
-                        index -> new FeatureSequenceToken<>(index, tokens.get(index), Set.copyOf(features.get(index)))
+                .<FeaturePositionedToken>mapToObj(
+                        index -> new FeatureSequenceToken(index, tokens.get(index), Set.copyOf(features.get(index)))
                 ).toList();
     }
 
     @Override
-    public FeaturePositionedToken<F> get(int position) {
+    public FeaturePositionedToken get(int position) {
         return tokens.get(position);
     }
 
@@ -87,12 +86,12 @@ public class FeatureSequence<F> implements Sequence<FeaturePositionedToken<F>> {
     }
 
     @Override
-    public Stream<FeaturePositionedToken<F>> stream() {
+    public Stream<FeaturePositionedToken> stream() {
         return tokens.stream();
     }
 
     @Override
-    public Iterator<FeaturePositionedToken<F>> iterator() {
+    public Iterator<FeaturePositionedToken> iterator() {
         return tokens.iterator();
     }
 }

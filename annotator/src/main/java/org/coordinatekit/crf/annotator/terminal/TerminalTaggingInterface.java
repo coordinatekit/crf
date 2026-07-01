@@ -21,6 +21,8 @@ import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.spi.CrfServices;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.Nullable;
 
@@ -47,13 +49,13 @@ import static org.coordinatekit.crf.annotator.terminal.TaggingViewModels.sequenc
  * {@link TagProvider}'s {@link TagProvider#tags() tags} set is non-empty so that the edit screen
  * has at least one tag to offer.
  *
- * @param <F> the feature type carried on the annotator sequence
  * @param <T> the tag type
  * @see Builder
  */
-public final class TerminalTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
+public final class TerminalTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
     private final EditInputParser editInputParser;
     private final EditScreenRenderer editScreenRenderer;
+    private final FeatureFormat featureFormat;
     private final FeatureViewState featureViewState;
     private final InputParser inputParser;
     private final TerminalScreen screen;
@@ -66,9 +68,10 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
      *
      * @param builder the builder holding the tag provider, terminal, and display settings
      */
-    private TerminalTaggingInterface(Builder<F, T> builder) {
+    private TerminalTaggingInterface(Builder<T> builder) {
         this.tagProvider = Objects.requireNonNull(builder.tagProvider, "tagProvider must be set");
         this.threshold = builder.threshold;
+        this.featureFormat = builder.featureFormat != null ? builder.featureFormat : CrfServices.featureFormat();
         this.screen = new TerminalScreen(Objects.requireNonNull(builder.terminal, "terminal must be set"));
         this.featureViewState = new FeatureViewState();
         this.inputParser = new InputParser();
@@ -80,11 +83,10 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
     /**
      * Returns a new builder for {@link TerminalTaggingInterface}.
      *
-     * @param <F> the feature type carried on the annotator sequence
      * @param <T> the tag type
      * @return a new builder with default values
      */
-    public static <F, T extends Comparable<T>> Builder<F, T> builder() {
+    public static <T extends Comparable<T>> Builder<T> builder() {
         return new Builder<>();
     }
 
@@ -99,7 +101,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
      *         each token
      */
     @Override
-    public TaggingResult<T> present(AnnotatorSequence<F, T> sequence) {
+    public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
         Objects.requireNonNull(sequence, "sequence must not be null");
 
         TaggingSession<T> session = TaggingSession.startingFrom(sequence, featureViewState);
@@ -113,6 +115,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
                     currentTags,
                     session.effectiveFeatureView(),
                     tagProvider,
+                    featureFormat,
                     threshold,
                     currentTotal,
                     originalTotal
@@ -154,7 +157,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
      * @param session the session owning the tagging state
      * @param position the zero-based index of the token under edit
      */
-    private void editToken(AnnotatorSequence<F, T> sequence, TaggingSession<T> session, int position) {
+    private void editToken(AnnotatorSequence<T> sequence, TaggingSession<T> session, int position) {
         EditScreen<T> editScreen = editScreen(sequence, position, tagProvider);
         T previousTag = session.currentTags().get(position);
         while (true) {
@@ -187,12 +190,14 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
      * <p>
      * {@link #tagProvider(TagProvider)} and {@link #terminal(Terminal)} are required. The other setters
      * carry sensible defaults: {@link #maxTokenDisplayWidth(int) maxTokenDisplayWidth} defaults to
-     * {@code 30}, and {@link #threshold(double) threshold} defaults to {@code 0.80}.
+     * {@code 30}, {@link #threshold(double) threshold} defaults to {@code 0.80}, and the
+     * {@link #featureFormat(FeatureFormat) featureFormat} defaults to
+     * {@link CrfServices#featureFormat()}.
      *
-     * @param <F> the feature type carried on the annotator sequence
      * @param <T> the tag type
      */
-    public static final class Builder<F, T extends Comparable<T>> {
+    public static final class Builder<T extends Comparable<T>> {
+        private @Nullable FeatureFormat featureFormat;
         private int maxTokenDisplayWidth = 30;
         private @Nullable TagProvider<T> tagProvider;
         private @Nullable Terminal terminal;
@@ -207,7 +212,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
          * @throws IllegalStateException if {@link #tagProvider(TagProvider)} or {@link #terminal(Terminal)}
          *         have not been set, or if the supplied {@link TagProvider#tags()} set is empty
          */
-        public TerminalTaggingInterface<F, T> build() {
+        public TerminalTaggingInterface<T> build() {
             if (tagProvider == null) {
                 throw new IllegalStateException("tagProvider must be set");
             }
@@ -221,6 +226,20 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
         }
 
         /**
+         * Sets the feature format used to render each structured feature to its displayed string. Defaults
+         * to {@link CrfServices#featureFormat()} — the single registered format, or the built-in fallback.
+         * The display renders features through this format and never sees the model's flat strings
+         * otherwise.
+         *
+         * @param featureFormat the feature format, must not be null
+         * @return this builder
+         */
+        public Builder<T> featureFormat(FeatureFormat featureFormat) {
+            this.featureFormat = Objects.requireNonNull(featureFormat, "featureFormat must not be null");
+            return this;
+        }
+
+        /**
          * Sets the maximum display width (in terminal cells) used for the token column on the sequence
          * screen.
          *
@@ -228,7 +247,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
          * @return this builder
          * @throws IllegalArgumentException if {@code maxTokenDisplayWidth} is not positive
          */
-        public Builder<F, T> maxTokenDisplayWidth(int maxTokenDisplayWidth) {
+        public Builder<T> maxTokenDisplayWidth(int maxTokenDisplayWidth) {
             if (maxTokenDisplayWidth <= 0) {
                 throw new IllegalArgumentException(
                         "maxTokenDisplayWidth must be positive, got: " + maxTokenDisplayWidth
@@ -245,7 +264,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
          * @param tagProvider the tag provider, must not be null
          * @return this builder
          */
-        public Builder<F, T> tagProvider(TagProvider<T> tagProvider) {
+        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
             this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
             return this;
         }
@@ -257,7 +276,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
          * @param terminal the terminal, must not be null
          * @return this builder
          */
-        public Builder<F, T> terminal(Terminal terminal) {
+        public Builder<T> terminal(Terminal terminal) {
             this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
             return this;
         }
@@ -272,7 +291,7 @@ public final class TerminalTaggingInterface<F, T extends Comparable<T>> implemen
          * @throws IllegalArgumentException if {@code threshold} is outside {@code [0.0, 1.0]} or is
          *         {@code NaN}
          */
-        public Builder<F, T> threshold(double threshold) {
+        public Builder<T> threshold(double threshold) {
             if (Double.isNaN(threshold) || threshold < 0.0 || threshold > 1.0) {
                 throw new IllegalArgumentException("threshold must be in [0.0, 1.0], got: " + threshold);
             }

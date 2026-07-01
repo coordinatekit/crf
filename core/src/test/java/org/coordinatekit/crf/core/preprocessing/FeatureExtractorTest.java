@@ -30,26 +30,35 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FeatureExtractorTest {
-    private static final FeatureExtractor<String> SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
+    private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
-        return Set.of("LENGTH=" + token.length(), "LOWER=" + token.toLowerCase(Locale.ROOT));
+        return Set.of(
+                Features.of("LENGTH", String.valueOf(token.length())),
+                Features.of("LOWER", token.toLowerCase(Locale.ROOT))
+        );
     };
 
-    record ExtractParameters(List<String> tokens, List<Set<String>> expectedFeatures) {}
+    record ExtractParameters(List<String> tokens, List<Set<Feature>> expectedFeatures) {}
 
     static Stream<ExtractParameters> extractProvider() {
         return Stream.of(
-                new ExtractParameters(List.of("Hello"), List.of(Set.of("LENGTH=5", "LOWER=hello"))),
+                new ExtractParameters(
+                        List.of("Hello"),
+                        List.of(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")))
+                ),
                 new ExtractParameters(
                         List.of("Hello", "World"),
-                        List.of(Set.of("LENGTH=5", "LOWER=hello"), Set.of("LENGTH=5", "LOWER=world"))
+                        List.of(
+                                Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")),
+                                Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "world"))
+                        )
                 ),
                 new ExtractParameters(
                         List.of("A", "BB", "CCC"),
                         List.of(
-                                Set.of("LENGTH=1", "LOWER=a"),
-                                Set.of("LENGTH=2", "LOWER=bb"),
-                                Set.of("LENGTH=3", "LOWER=ccc")
+                                Set.of(Features.of("LENGTH", "1"), Features.of("LOWER", "a")),
+                                Set.of(Features.of("LENGTH", "2"), Features.of("LOWER", "bb")),
+                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "ccc"))
                         )
                 )
         );
@@ -59,7 +68,7 @@ class FeatureExtractorTest {
     @MethodSource("extractProvider")
     void extract(ExtractParameters parameters) {
         Sequence<PositionedToken> input = new InputSequence(parameters.tokens());
-        Sequence<FeaturePositionedToken<String>> result = SIMPLE_FEATURE_EXTRACTOR.extract(input);
+        Sequence<FeaturePositionedToken> result = SIMPLE_FEATURE_EXTRACTOR.extract(input);
 
         assertEquals(parameters.tokens().size(), result.size());
         for (int i = 0; i < result.size(); i++) {
@@ -79,27 +88,30 @@ class FeatureExtractorTest {
         }
     }
 
-    record ExtractTrainingParameters(List<String> tokens, List<String> tags, List<Set<String>> expectedFeatures) {}
+    record ExtractTrainingParameters(List<String> tokens, List<String> tags, List<Set<Feature>> expectedFeatures) {}
 
     static Stream<ExtractTrainingParameters> extractTrainingProvider() {
         return Stream.of(
                 new ExtractTrainingParameters(
                         List.of("Hello"),
                         List.of("GREETING"),
-                        List.of(Set.of("LENGTH=5", "LOWER=hello"))
+                        List.of(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")))
                 ),
                 new ExtractTrainingParameters(
                         List.of("New", "York"),
                         List.of("CITY", "CITY"),
-                        List.of(Set.of("LENGTH=3", "LOWER=new"), Set.of("LENGTH=4", "LOWER=york"))
+                        List.of(
+                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "new")),
+                                Set.of(Features.of("LENGTH", "4"), Features.of("LOWER", "york"))
+                        )
                 ),
                 new ExtractTrainingParameters(
                         List.of("123", "Main", "St"),
                         List.of("NUMBER", "STREET", "SUFFIX"),
                         List.of(
-                                Set.of("LENGTH=3", "LOWER=123"),
-                                Set.of("LENGTH=4", "LOWER=main"),
-                                Set.of("LENGTH=2", "LOWER=st")
+                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "123")),
+                                Set.of(Features.of("LENGTH", "4"), Features.of("LOWER", "main")),
+                                Set.of(Features.of("LENGTH", "2"), Features.of("LOWER", "st"))
                         )
                 )
         );
@@ -110,8 +122,7 @@ class FeatureExtractorTest {
     void extractTraining(ExtractTrainingParameters parameters) {
         Sequence<TrainingPositionedToken<String>> input = TrainingSequence
                 .ofTokens(parameters.tokens(), parameters.tags());
-        Sequence<FeatureTrainingPositionedToken<String, String>> result = SIMPLE_FEATURE_EXTRACTOR
-                .extractTraining(input);
+        Sequence<FeatureTrainingPositionedToken<String>> result = SIMPLE_FEATURE_EXTRACTOR.extractTraining(input);
 
         assertEquals(parameters.tokens().size(), result.size());
         for (int i = 0; i < result.size(); i++) {

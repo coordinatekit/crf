@@ -28,16 +28,15 @@ import java.util.Set;
  * along with the set of features extracted for it during preprocessing. Features are used by the
  * CRF model to make predictions about token labels.
  *
- * @param <F> the type of features associated with this token
  * @see PositionedToken
  * @see FeatureSequence
  */
 @NullMarked
-public interface FeaturePositionedToken<F> extends PositionedToken {
+public interface FeaturePositionedToken extends PositionedToken {
     /**
      * Returns the set of features extracted for this token.
      *
      * @return an unmodifiable set of features for this token
      */
-    Set<F> features();
+    Set<Feature> features();
 }

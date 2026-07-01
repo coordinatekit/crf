@@ -17,6 +17,7 @@ package org.coordinatekit.crf.annotator;
 
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.jspecify.annotations.Nullable;
@@ -54,16 +55,15 @@ public final class AnnotatorModels {
      * @param sequenceNumber the 1-based position of this sequence within the overall annotation batch
      * @param totalSequences the total number of sequences in the overall annotation batch
      * @param taggedSequence the tagger's output for the sequence
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1} or
      *         {@code totalSequences < sequenceNumber}
      */
-    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+    public static <T extends Comparable<T>> AnnotatorSequence<T> annotatorSequence(
             int sequenceNumber,
             int totalSequences,
-            Sequence<TaggedPositionedToken<F, T>> taggedSequence
+            Sequence<TaggedPositionedToken<T>> taggedSequence
     ) {
         return annotatorSequence(sequenceNumber, totalSequences, taggedSequence, null, null);
     }
@@ -80,14 +80,13 @@ public final class AnnotatorModels {
      * @param tokens the tokens of the sequence
      * @param tagProvider the tag provider, whose {@link TagProvider#tags() tags} set defines the tag
      *        space offered on the edit screen
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1},
      *         {@code totalSequences < sequenceNumber}, {@code tokens} is empty, or
      *         {@code tagProvider.tags()} is empty
      */
-    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+    public static <T extends Comparable<T>> AnnotatorSequence<T> annotatorSequence(
             int sequenceNumber,
             int totalSequences,
             List<String> tokens,
@@ -111,19 +110,18 @@ public final class AnnotatorModels {
      * @param features the per-token key display features, or {@code null} when not configured
      * @param verboseFeatures the per-token verbose display features, or {@code null} when not
      *        configured
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1},
      *         {@code totalSequences < sequenceNumber}, or either list's size differs from the token
      *         count
      */
-    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+    public static <T extends Comparable<T>> AnnotatorSequence<T> annotatorSequence(
             int sequenceNumber,
             int totalSequences,
-            Sequence<TaggedPositionedToken<F, T>> taggedSequence,
-            @Nullable List<Set<F>> features,
-            @Nullable List<Set<F>> verboseFeatures
+            Sequence<TaggedPositionedToken<T>> taggedSequence,
+            @Nullable List<Set<Feature>> features,
+            @Nullable List<Set<Feature>> verboseFeatures
     ) {
         return annotatorSequence(sequenceNumber, totalSequences, taggedSequence, features, verboseFeatures, null);
     }
@@ -159,19 +157,18 @@ public final class AnnotatorModels {
      *        configured
      * @param probabilityFunction the function scoring arbitrary taggings of the sequence, or
      *        {@code null} when no model backs the sequence
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1},
      *         {@code totalSequences < sequenceNumber}, {@code taggedSequence} is empty, or either
      *         list's size differs from the token count
      */
-    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+    public static <T extends Comparable<T>> AnnotatorSequence<T> annotatorSequence(
             int sequenceNumber,
             int totalSequences,
-            Sequence<TaggedPositionedToken<F, T>> taggedSequence,
-            @Nullable List<Set<F>> features,
-            @Nullable List<Set<F>> verboseFeatures,
+            Sequence<TaggedPositionedToken<T>> taggedSequence,
+            @Nullable List<Set<Feature>> features,
+            @Nullable List<Set<Feature>> verboseFeatures,
             @Nullable ToDoubleFunction<List<T>> probabilityFunction
     ) {
         Objects.requireNonNull(taggedSequence, "taggedSequence must not be null");
@@ -181,9 +178,9 @@ public final class AnnotatorModels {
         }
         validateDisplayFeatures(features, verboseFeatures, taggedSequence.size());
 
-        List<AnnotatorToken<F, T>> tokens = new ArrayList<>(taggedSequence.size());
+        List<AnnotatorToken<T>> tokens = new ArrayList<>(taggedSequence.size());
         int index = 0;
-        for (TaggedPositionedToken<F, T> token : taggedSequence) {
+        for (TaggedPositionedToken<T> token : taggedSequence) {
             SortedSet<TagScore<T>> tagScores = token.tagScores();
             Map<T, @Nullable Double> scoreMap = new LinkedHashMap<>();
             for (TagScore<T> tagScore : tagScores) {
@@ -233,20 +230,19 @@ public final class AnnotatorModels {
      * @param features the per-token key display features, or {@code null} when not configured
      * @param verboseFeatures the per-token verbose display features, or {@code null} when not
      *        configured
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return a new annotator sequence
      * @throws IllegalArgumentException if {@code sequenceNumber < 1},
      *         {@code totalSequences < sequenceNumber}, {@code tokens} is empty,
      *         {@code tagProvider.tags()} is empty, or either list's size differs from the token count
      */
-    public static <F, T extends Comparable<T>> AnnotatorSequence<F, T> annotatorSequence(
+    public static <T extends Comparable<T>> AnnotatorSequence<T> annotatorSequence(
             int sequenceNumber,
             int totalSequences,
             List<String> tokens,
             TagProvider<T> tagProvider,
-            @Nullable List<Set<F>> features,
-            @Nullable List<Set<F>> verboseFeatures
+            @Nullable List<Set<Feature>> features,
+            @Nullable List<Set<Feature>> verboseFeatures
     ) {
         Objects.requireNonNull(tokens, "tokens must not be null");
         Objects.requireNonNull(tagProvider, "tagProvider must not be null");
@@ -265,7 +261,7 @@ public final class AnnotatorModels {
         for (T tag : availableTags) {
             nullScoreMap.put(tag, null);
         }
-        List<AnnotatorToken<F, T>> annotatorTokens = new ArrayList<>(tokens.size());
+        List<AnnotatorToken<T>> annotatorTokens = new ArrayList<>(tokens.size());
         for (int index = 0; index < tokens.size(); index++) {
             annotatorTokens.add(
                     new DefaultAnnotatorToken<>(
@@ -318,13 +314,13 @@ public final class AnnotatorModels {
         return Collections.unmodifiableMap(ordered);
     }
 
-    private static <F> Set<F> displayFeaturesAt(@Nullable List<Set<F>> features, int index) {
+    private static Set<Feature> displayFeaturesAt(@Nullable List<Set<Feature>> features, int index) {
         return features != null ? Set.copyOf(features.get(index)) : Set.of();
     }
 
-    private static <F> void validateDisplayFeatures(
-            @Nullable List<Set<F>> features,
-            @Nullable List<Set<F>> verboseFeatures,
+    private static void validateDisplayFeatures(
+            @Nullable List<Set<Feature>> features,
+            @Nullable List<Set<Feature>> verboseFeatures,
             int tokenCount
     ) {
         if (features != null && features.size() != tokenCount) {
@@ -353,13 +349,13 @@ public final class AnnotatorModels {
         }
     }
 
-    private record DefaultAnnotatorSequence<F, T extends Comparable<T>> (
+    private record DefaultAnnotatorSequence<T extends Comparable<T>> (
             int sequenceNumber,
             int totalSequences,
-            List<AnnotatorToken<F, T>> tokens,
+            List<AnnotatorToken<T>> tokens,
             FeatureAvailability featureAvailability,
             @Nullable ToDoubleFunction<List<T>> probabilityFunction
-    ) implements AnnotatorSequence<F, T> {
+    ) implements AnnotatorSequence<T> {
         private DefaultAnnotatorSequence {
             tokens = List.copyOf(tokens);
         }
@@ -370,14 +366,14 @@ public final class AnnotatorModels {
         }
     }
 
-    private record DefaultAnnotatorToken<F, T extends Comparable<T>> (
+    private record DefaultAnnotatorToken<T extends Comparable<T>> (
             String token,
-            Set<F> features,
+            Set<Feature> features,
             T initialTag,
             @Nullable Double initialConfidence,
             Map<T, @Nullable Double> alternativeTagScores,
-            Set<F> verboseFeatures
-    ) implements AnnotatorToken<F, T> {
+            Set<Feature> verboseFeatures
+    ) implements AnnotatorToken<T> {
         private DefaultAnnotatorToken {
             alternativeTagScores = canonicallyOrderedScoreMap(alternativeTagScores);
         }

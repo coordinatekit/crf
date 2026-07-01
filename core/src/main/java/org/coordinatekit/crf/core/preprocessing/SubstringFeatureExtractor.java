@@ -34,21 +34,19 @@ import java.util.function.Function;
  *
  * <pre>
  * <code>
- * SubstringFeatureExtractor&lt;String&gt; extractor = SubstringFeatureExtractor.&lt;String&gt;builder(s -> "PREFIX_" + s)
+ * SubstringFeatureExtractor extractor = SubstringFeatureExtractor.builder(s -> Features.of("PREFIX_" + s))
  *         .length(3).ending(false).includeIfLessThanLength(true).build();
  * </code>
  * </pre>
- *
- * @param <F> the type of features produced by this extractor
  */
 @NullMarked
-public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
+public class SubstringFeatureExtractor implements FeatureExtractor {
     private final boolean ending;
-    private final Function<String, F> featureMapper;
+    private final Function<String, Feature> featureMapper;
     private final boolean includeIfLessThanLength;
     private final int length;
 
-    private SubstringFeatureExtractor(Builder<F> builder) {
+    private SubstringFeatureExtractor(Builder builder) {
         this.ending = builder.ending;
         this.featureMapper = builder.featureMapper;
         this.includeIfLessThanLength = builder.includeIfLessThanLength;
@@ -56,7 +54,7 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
     }
 
     @Override
-    public Set<F> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
         String token = sequence.get(position).token();
 
         if (!includeIfLessThanLength && token.length() < length) {
@@ -80,25 +78,22 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
      * Creates a new builder with the specified feature mapper function.
      *
      * @param featureMapper the function to map substrings to features
-     * @param <F> the type of feature produced by the extractor
      * @return a new builder instance
      */
-    public static <F> Builder<F> builder(Function<String, F> featureMapper) {
-        return new Builder<>(featureMapper);
+    public static Builder builder(Function<String, Feature> featureMapper) {
+        return new Builder(featureMapper);
     }
 
     /**
      * Builder for {@link SubstringFeatureExtractor}.
-     *
-     * @param <F> the type of feature produced by the extractor
      */
-    public static final class Builder<F> {
-        private final Function<String, F> featureMapper;
+    public static final class Builder {
+        private final Function<String, Feature> featureMapper;
         private boolean ending = false;
         private boolean includeIfLessThanLength = true;
         private int length = 2;
 
-        private Builder(Function<String, F> featureMapper) {
+        private Builder(Function<String, Feature> featureMapper) {
             this.featureMapper = featureMapper;
         }
 
@@ -111,7 +106,7 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param ending {@code true} for suffix extraction, {@code false} for prefix extraction
          * @return this builder
          */
-        public Builder<F> ending(boolean ending) {
+        public Builder ending(boolean ending) {
             this.ending = ending;
             return this;
         }
@@ -129,7 +124,7 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
          * @param includeIfLessThanLength {@code true} to include short tokens, {@code false} to skip them
          * @return this builder
          */
-        public Builder<F> includeIfLessThanLength(boolean includeIfLessThanLength) {
+        public Builder includeIfLessThanLength(boolean includeIfLessThanLength) {
             this.includeIfLessThanLength = includeIfLessThanLength;
             return this;
         }
@@ -144,7 +139,7 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
          * @return this builder
          * @throws IllegalArgumentException if length is less than 1
          */
-        public Builder<F> length(int length) {
+        public Builder length(int length) {
             if (length < 1) {
                 throw new IllegalArgumentException("length must be at least 1");
             }
@@ -157,8 +152,8 @@ public class SubstringFeatureExtractor<F> implements FeatureExtractor<F> {
          *
          * @return a new {@link SubstringFeatureExtractor} instance
          */
-        public SubstringFeatureExtractor<F> build() {
-            return new SubstringFeatureExtractor<>(this);
+        public SubstringFeatureExtractor build() {
+            return new SubstringFeatureExtractor(this);
         }
     }
 }

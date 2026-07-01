@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.tag;
 
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,10 +35,10 @@ class TaggedSequenceTest {
 
     record SequenceParameters(
             List<String> tokens,
-            List<Set<String>> features,
+            List<Set<Feature>> features,
             List<Map<String, Double>> tagScores,
             List<String> expectedTokens,
-            List<Set<String>> expectedFeatures,
+            List<Set<Feature>> expectedFeatures,
             List<String> expectedBestTags,
             List<List<String>> expectedTags,
             List<List<String>> expectedFirstTwoTags,
@@ -48,10 +50,10 @@ class TaggedSequenceTest {
         return Stream.of(
                 new SequenceParameters(
                         List.of("Hello"),
-                        List.of(Set.of("f1")),
+                        List.of(Set.of(Features.of("f1"))),
                         List.of(Map.of("TAG", 0.5, "ANOTHER_TAG", 0.5)),
                         List.of("Hello"),
-                        List.of(Set.of("f1")),
+                        List.of(Set.of(Features.of("f1"))),
                         List.of("ANOTHER_TAG"),
                         List.of(List.of("ANOTHER_TAG", "TAG")),
                         List.of(List.of("ANOTHER_TAG", "TAG")),
@@ -60,14 +62,14 @@ class TaggedSequenceTest {
                 ),
                 new SequenceParameters(
                         List.of("Hello", "world", "!"),
-                        List.of(Set.of("f1"), Set.of("f2"), Set.of("f3")),
+                        List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2")), Set.of(Features.of("f3"))),
                         List.of(
                                 Map.of("NOUN", 0.2, "INTERJECTION", 0.75, "VERB", 0.05),
                                 Map.of("NOUN", 0.7),
                                 Map.of("PUNCT", 0.9)
                         ),
                         List.of("Hello", "world", "!"),
-                        List.of(Set.of("f1"), Set.of("f2"), Set.of("f3")),
+                        List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2")), Set.of(Features.of("f3"))),
                         List.of("INTERJECTION", "NOUN", "PUNCT"),
                         List.of(List.of("INTERJECTION", "NOUN", "VERB"), List.of("NOUN"), List.of("PUNCT")),
                         List.of(List.of("INTERJECTION", "NOUN"), List.of("NOUN"), List.of("PUNCT")),
@@ -91,7 +93,7 @@ class TaggedSequenceTest {
                         "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)",
                         () -> new TaggedSequence<>(
                                 List.of("Hello"),
-                                List.of(Set.of("f1"), Set.of("f2")),
+                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"))),
                                 List.of(Map.of("GREETING", 1.0d))
                         )
                 ),
@@ -100,7 +102,7 @@ class TaggedSequenceTest {
                         "The number of tag scores must be equal to the number of tokens. (tokens: 1, tag scores: 2)",
                         () -> new TaggedSequence<>(
                                 List.of("Hello"),
-                                List.of(Set.of("f1")),
+                                List.of(Set.of(Features.of("f1"))),
                                 List.of(Map.of("GREETING", 1d), Map.of("SALUTATION", 1d))
                         )
                 ),
@@ -116,11 +118,11 @@ class TaggedSequenceTest {
     void get() {
         var sequence = new TaggedSequence<>(
                 List.of("Hello"),
-                List.of(Set.of("f1")),
+                List.of(Set.of(Features.of("f1"))),
                 List.of(Map.of("TAG", 0.5, "ANOTHER_TAG", 0.5))
         );
 
-        assertIterableEquals(Set.of("f1"), sequence.get(0).features());
+        assertIterableEquals(Set.of(Features.of("f1")), sequence.get(0).features());
         assertEquals(0, sequence.get(0).position());
         assertEquals("ANOTHER_TAG", sequence.get(0).tag());
         assertIterableEquals(List.of("ANOTHER_TAG", "TAG"), sequence.get(0).tag(0));
@@ -131,7 +133,11 @@ class TaggedSequenceTest {
 
     @Test
     void get__throwsOnInvalidIndex() {
-        var sequence = new TaggedSequence<>(List.of("Hello"), List.of(Set.of("f1")), List.of(Map.of("TAG", 0.5)));
+        var sequence = new TaggedSequence<>(
+                List.of("Hello"),
+                List.of(Set.of(Features.of("f1"))),
+                List.of(Map.of("TAG", 0.5))
+        );
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
@@ -143,7 +149,7 @@ class TaggedSequenceTest {
         var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
 
         var actualBestTags = new ArrayList<String>();
-        var actualFeatures = new ArrayList<Set<String>>();
+        var actualFeatures = new ArrayList<Set<Feature>>();
         var actualFirstTwoTags = new ArrayList<List<String>>();
         var actualPositions = new ArrayList<Integer>();
         var actualTags = new ArrayList<List<String>>();

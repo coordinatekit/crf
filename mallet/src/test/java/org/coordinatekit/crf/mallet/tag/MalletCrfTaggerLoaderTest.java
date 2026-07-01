@@ -51,6 +51,7 @@ class MalletCrfTaggerLoaderTest {
                 () -> loader.load(
                         Path.of("does-not-exist.crf"),
                         PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                        PartsOfSpeechModel.INSTANCE.featureFormat(),
                         PartsOfSpeechModel.INSTANCE.tagProvider(),
                         new WhitespaceTokenizer()
                 )
@@ -63,16 +64,17 @@ class MalletCrfTaggerLoaderTest {
         MalletCrfTaggerLoader loader = new MalletCrfTaggerLoader();
 
         // ACT //
-        CrfTagger<?, ?> tagger = loader.load(
+        CrfTagger<?> tagger = loader.load(
                 PartsOfSpeechModel.INSTANCE.modelPath(),
                 PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                PartsOfSpeechModel.INSTANCE.featureFormat(),
                 PartsOfSpeechModel.INSTANCE.tagProvider(),
                 new WhitespaceTokenizer()
         );
 
         // ASSERT //
         assertNotNull(tagger);
-        TaggedTokenization<?, ?> tagged = tagger.tag("They quickly opened the door");
+        TaggedTokenization<?> tagged = tagger.tag("They quickly opened the door");
         assertTrue(tagged.taggedSequence().size() > 0, "the loaded tagger should label the input");
     }
 

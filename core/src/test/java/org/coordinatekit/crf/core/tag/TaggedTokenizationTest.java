@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.core.tag;
 
 import org.coordinatekit.crf.core.Sequence;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.junit.jupiter.api.Test;
@@ -36,10 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TaggedTokenizationTest {
-    private static TaggedSequence<String, String> taggedSequence(List<String> tokens) {
+    private static TaggedSequence<String> taggedSequence(List<String> tokens) {
         return new TaggedSequence<>(
                 tokens,
-                tokens.stream().map(t -> Set.of("f_" + t)).toList(),
+                tokens.stream().map(t -> Set.of(Features.of("f_" + t))).toList(),
                 tokens.stream().map(t -> Map.of("TAG", 1.0)).toList()
         );
     }
@@ -58,13 +59,13 @@ class TaggedTokenizationTest {
     @Test
     void accessors__returnConstructorArguments() {
         // ARRANGE //
-        Sequence<TaggedPositionedToken<String, String>> tagged = taggedSequence(List.of("Brown", "Fox"));
+        Sequence<TaggedPositionedToken<String>> tagged = taggedSequence(List.of("Brown", "Fox"));
         Tokenization tokenization = tokenization(token("Brown"), excluded(" "), token("Fox"), excluded("!"));
 
         ToDoubleFunction<List<String>> probabilityFunction = tags -> tags.size() / 2.0;
 
         // ACT //
-        TaggedTokenization<String, String> result = TaggedTokenizations.of(tagged, tokenization, probabilityFunction);
+        TaggedTokenization<String> result = TaggedTokenizations.of(tagged, tokenization, probabilityFunction);
 
         // ASSERT //
         assertSame(tagged, result.taggedSequence());
@@ -131,10 +132,10 @@ class TaggedTokenizationTest {
     @Test
     void probabilityOf__delegatesToFunction() {
         // ARRANGE //
-        Sequence<TaggedPositionedToken<String, String>> tagged = taggedSequence(List.of("Brown", "Fox"));
+        Sequence<TaggedPositionedToken<String>> tagged = taggedSequence(List.of("Brown", "Fox"));
         Tokenization tokenization = tokenization(token("Brown"), excluded(" "), token("Fox"), excluded("!"));
         ToDoubleFunction<List<String>> probabilityFunction = tags -> tags.size() / 2.0;
-        TaggedTokenization<String, String> result = TaggedTokenizations.of(tagged, tokenization, probabilityFunction);
+        TaggedTokenization<String> result = TaggedTokenizations.of(tagged, tokenization, probabilityFunction);
 
         // ACT + ASSERT //
         assertEquals(1.0, result.probabilityOf(List.of("DET", "NOUN")), "probabilityOf delegates to the function");

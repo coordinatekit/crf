@@ -16,6 +16,7 @@
 package org.coordinatekit.crf.core.tag;
 
 import org.coordinatekit.crf.core.Sequence;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Comparator;
@@ -38,11 +39,10 @@ import java.util.stream.Stream;
  * their scores from the CRF model. This allows access to both the most likely tag and alternative
  * tags with their associated probabilities.
  *
- * @param <F> the type of features associated with each token
  * @param <T> the type of tags assigned to tokens must be comparable for ordering
  */
 @NullMarked
-public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<TaggedPositionedToken<F, T>> {
+public class TaggedSequence<T extends Comparable<T>> implements Sequence<TaggedPositionedToken<T>> {
     private record TaggedSequenceTagScore<T extends Comparable<T>> (T tag, double score) implements TagScore<T> {
         @Override
         public int compareTo(TagScore<T> that) {
@@ -51,12 +51,12 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
         }
     }
 
-    private record TaggedSequenceToken<F, T extends Comparable<T>> (
+    private record TaggedSequenceToken<T extends Comparable<T>> (
             int position,
             String token,
-            Set<F> features,
+            Set<Feature> features,
             SortedSet<TagScore<T>> tagScores
-    ) implements TaggedPositionedToken<F, T> {
+    ) implements TaggedPositionedToken<T> {
         @Override
         public T tag() {
             return tagScores().first().tag();
@@ -74,7 +74,7 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
         }
     }
 
-    private final List<TaggedPositionedToken<F, T>> tokens;
+    private final List<TaggedPositionedToken<T>> tokens;
 
     /**
      * Creates a new tagged sequence from parallel lists of tokens, features, and tag scores.
@@ -88,7 +88,7 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
      * @param tagScores the list of tag-to-score mappings, one per token
      * @throws IllegalArgumentException if the lists have different sizes or if the token list is empty
      */
-    public TaggedSequence(List<String> tokens, List<Set<F>> features, List<Map<T, Double>> tagScores) {
+    public TaggedSequence(List<String> tokens, List<Set<Feature>> features, List<Map<T, Double>> tagScores) {
         if (tokens.size() != features.size()) {
             throw new IllegalArgumentException(
                     String.format(
@@ -110,7 +110,7 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
         }
 
         this.tokens = IntStream.range(0, tokens.size())
-                .<TaggedPositionedToken<F, T>>mapToObj(
+                .<TaggedPositionedToken<T>>mapToObj(
                         index -> new TaggedSequenceToken<>(
                                 index,
                                 tokens.get(index),
@@ -123,12 +123,12 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
     }
 
     @Override
-    public TaggedPositionedToken<F, T> get(int position) {
+    public TaggedPositionedToken<T> get(int position) {
         return tokens.get(position);
     }
 
     @Override
-    public Iterator<TaggedPositionedToken<F, T>> iterator() {
+    public Iterator<TaggedPositionedToken<T>> iterator() {
         return tokens.iterator();
     }
 
@@ -138,7 +138,7 @@ public class TaggedSequence<F, T extends Comparable<T>> implements Sequence<Tagg
     }
 
     @Override
-    public Stream<TaggedPositionedToken<F, T>> stream() {
+    public Stream<TaggedPositionedToken<T>> stream() {
         return tokens.stream();
     }
 }

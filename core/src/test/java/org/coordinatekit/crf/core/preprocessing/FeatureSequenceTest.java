@@ -32,27 +32,35 @@ class FeatureSequenceTest {
 
     record SequenceParameters(
             List<String> tokens,
-            List<Set<String>> features,
+            List<Set<Feature>> features,
             List<String> expectedTokens,
             List<Integer> expectedPositions,
-            List<Set<String>> expectedFeatures
+            List<Set<Feature>> expectedFeatures
     ) {}
 
     static Stream<SequenceParameters> sequenceProvider() {
         return Stream.of(
                 new SequenceParameters(
                         List.of("Hello"),
-                        List.of(Set.of("f1", "f2")),
+                        List.of(Set.of(Features.of("f1"), Features.of("f2"))),
                         List.of("Hello"),
                         List.of(0),
-                        List.of(Set.of("f1", "f2"))
+                        List.of(Set.of(Features.of("f1"), Features.of("f2")))
                 ),
                 new SequenceParameters(
                         List.of("Hello", "world", "!"),
-                        List.of(Set.of("f1"), Set.of("f2", "f3"), Set.of("f4")),
+                        List.of(
+                                Set.of(Features.of("f1")),
+                                Set.of(Features.of("f2"), Features.of("f3")),
+                                Set.of(Features.of("f4"))
+                        ),
                         List.of("Hello", "world", "!"),
                         List.of(0, 1, 2),
-                        List.of(Set.of("f1"), Set.of("f2", "f3"), Set.of("f4"))
+                        List.of(
+                                Set.of(Features.of("f1")),
+                                Set.of(Features.of("f2"), Features.of("f3")),
+                                Set.of(Features.of("f4"))
+                        )
                 )
         );
     }
@@ -69,28 +77,31 @@ class FeatureSequenceTest {
                 new ExceptionParameters(
                         IllegalArgumentException.class,
                         "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)",
-                        () -> new FeatureSequence<>(List.of("Hello"), List.of(Set.of("f1"), Set.of("f2")))
+                        () -> new FeatureSequence(
+                                List.of("Hello"),
+                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2")))
+                        )
                 ),
                 new ExceptionParameters(
                         IllegalArgumentException.class,
                         "There must be one or more tokens provided to a feature sequence.",
-                        () -> new FeatureSequence<>(List.of(), List.of())
+                        () -> new FeatureSequence(List.of(), List.of())
                 )
         );
     }
 
     @Test
     void get() {
-        var sequence = new FeatureSequence<>(List.of("Hello"), List.of(Set.of("f1")));
+        var sequence = new FeatureSequence(List.of("Hello"), List.of(Set.of(Features.of("f1"))));
 
-        assertIterableEquals(Set.of("f1"), sequence.get(0).features());
+        assertIterableEquals(Set.of(Features.of("f1")), sequence.get(0).features());
         assertEquals(0, sequence.get(0).position());
         assertEquals("Hello", sequence.get(0).token());
     }
 
     @Test
     void get__throwsOnInvalidIndex() {
-        var sequence = new FeatureSequence<>(List.of("Hello"), List.of(Set.of("f1")));
+        var sequence = new FeatureSequence(List.of("Hello"), List.of(Set.of(Features.of("f1"))));
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
@@ -99,9 +110,9 @@ class FeatureSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void iterator(SequenceParameters parameters) {
-        var sequence = new FeatureSequence<>(parameters.tokens(), parameters.features());
+        var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
-        var actualFeatures = new ArrayList<Set<String>>();
+        var actualFeatures = new ArrayList<Set<Feature>>();
         var actualPositions = new ArrayList<Integer>();
         var actualTokens = new ArrayList<String>();
 
@@ -119,7 +130,7 @@ class FeatureSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void size(SequenceParameters parameters) {
-        var sequence = new FeatureSequence<>(parameters.tokens(), parameters.features());
+        var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
         assertEquals(parameters.tokens().size(), sequence.size());
     }
@@ -127,7 +138,7 @@ class FeatureSequenceTest {
     @ParameterizedTest
     @MethodSource("sequenceProvider")
     void stream(SequenceParameters parameters) {
-        var sequence = new FeatureSequence<>(parameters.tokens(), parameters.features());
+        var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
         assertIterableEquals(
                 parameters.expectedFeatures(),

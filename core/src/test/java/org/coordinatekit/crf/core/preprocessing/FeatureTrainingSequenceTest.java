@@ -33,11 +33,11 @@ class FeatureTrainingSequenceTest {
     record SequenceParameters(
             List<String> tokens,
             List<String> tags,
-            List<Set<String>> features,
+            List<Set<Feature>> features,
             List<String> expectedTokens,
             List<Integer> expectedPositions,
             List<String> expectedTags,
-            List<Set<String>> expectedFeatures
+            List<Set<Feature>> expectedFeatures
     ) {}
 
     static Stream<SequenceParameters> sequenceProvider() {
@@ -45,20 +45,28 @@ class FeatureTrainingSequenceTest {
                 new SequenceParameters(
                         List.of("Hello"),
                         List.of("GREETING"),
-                        List.of(Set.of("f1", "f2")),
+                        List.of(Set.of(Features.of("f1"), Features.of("f2"))),
                         List.of("Hello"),
                         List.of(0),
                         List.of("GREETING"),
-                        List.of(Set.of("f1", "f2"))
+                        List.of(Set.of(Features.of("f1"), Features.of("f2")))
                 ),
                 new SequenceParameters(
                         List.of("Hello", "world", "!"),
                         List.of("GREETING", "NOUN", "PUNCT"),
-                        List.of(Set.of("f1"), Set.of("f2", "f3"), Set.of("f4")),
+                        List.of(
+                                Set.of(Features.of("f1")),
+                                Set.of(Features.of("f2"), Features.of("f3")),
+                                Set.of(Features.of("f4"))
+                        ),
                         List.of("Hello", "world", "!"),
                         List.of(0, 1, 2),
                         List.of("GREETING", "NOUN", "PUNCT"),
-                        List.of(Set.of("f1"), Set.of("f2", "f3"), Set.of("f4"))
+                        List.of(
+                                Set.of(Features.of("f1")),
+                                Set.of(Features.of("f2"), Features.of("f3")),
+                                Set.of(Features.of("f4"))
+                        )
                 )
         );
     }
@@ -78,7 +86,7 @@ class FeatureTrainingSequenceTest {
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING", "SALUTATION"),
-                                List.of(Set.of("f1"))
+                                List.of(Set.of(Features.of("f1")))
                         )
                 ),
                 new ExceptionParameters(
@@ -87,7 +95,7 @@ class FeatureTrainingSequenceTest {
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING"),
-                                List.of(Set.of("f1"), Set.of("f2"))
+                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2")))
                         )
                 ),
                 new ExceptionParameters(
@@ -100,9 +108,13 @@ class FeatureTrainingSequenceTest {
 
     @Test
     void get() {
-        var sequence = new FeatureTrainingSequence<>(List.of("Hello"), List.of("GREETING"), List.of(Set.of("f1")));
+        var sequence = new FeatureTrainingSequence<>(
+                List.of("Hello"),
+                List.of("GREETING"),
+                List.of(Set.of(Features.of("f1")))
+        );
 
-        assertIterableEquals(Set.of("f1"), sequence.get(0).features());
+        assertIterableEquals(Set.of(Features.of("f1")), sequence.get(0).features());
         assertEquals(0, sequence.get(0).position());
         assertEquals("GREETING", sequence.get(0).tag());
         assertEquals("Hello", sequence.get(0).token());
@@ -110,7 +122,11 @@ class FeatureTrainingSequenceTest {
 
     @Test
     void get__throwsOnInvalidIndex() {
-        var sequence = new FeatureTrainingSequence<>(List.of("Hello"), List.of("NOUN"), List.of(Set.of("f1")));
+        var sequence = new FeatureTrainingSequence<>(
+                List.of("Hello"),
+                List.of("NOUN"),
+                List.of(Set.of(Features.of("f1")))
+        );
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
@@ -121,7 +137,7 @@ class FeatureTrainingSequenceTest {
     void iterator(SequenceParameters parameters) {
         var sequence = new FeatureTrainingSequence<>(parameters.tokens(), parameters.tags(), parameters.features());
 
-        var actualFeatures = new ArrayList<Set<String>>();
+        var actualFeatures = new ArrayList<Set<Feature>>();
         var actualPositions = new ArrayList<Integer>();
         var actualTags = new ArrayList<String>();
         var actualTokens = new ArrayList<String>();

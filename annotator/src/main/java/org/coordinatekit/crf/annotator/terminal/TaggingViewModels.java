@@ -19,6 +19,8 @@ import org.coordinatekit.crf.annotator.AnnotatorSequence;
 import org.coordinatekit.crf.annotator.AnnotatorToken;
 import org.coordinatekit.crf.annotator.FeatureAvailability;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -50,18 +52,17 @@ final class TaggingViewModels {
      *
      * @param token the token whose features are shown
      * @param effectiveView the active feature view
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return the features to display
      */
-    private static <F, T extends Comparable<T>> Set<F> displayedFeatures(
-            AnnotatorToken<F, T> token,
+    private static <T extends Comparable<T>> Set<Feature> displayedFeatures(
+            AnnotatorToken<T> token,
             FeatureView effectiveView
     ) {
         if (effectiveView == FeatureView.KEY) {
             return token.features();
         }
-        Set<F> union = new HashSet<>(token.features());
+        Set<Feature> union = new HashSet<>(token.features());
         union.addAll(token.verboseFeatures());
         return union;
     }
@@ -75,16 +76,15 @@ final class TaggingViewModels {
      * @param sequence the sequence being annotated
      * @param position the zero-based index of the token under edit
      * @param tagProvider the tag provider used to render tags
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return the edit screen
      */
-    static <F, T extends Comparable<T>> EditScreen<T> editScreen(
-            AnnotatorSequence<F, T> sequence,
+    static <T extends Comparable<T>> EditScreen<T> editScreen(
+            AnnotatorSequence<T> sequence,
             int position,
             TagProvider<T> tagProvider
     ) {
-        AnnotatorToken<F, T> token = sequence.tokens().get(position);
+        AnnotatorToken<T> token = sequence.tokens().get(position);
         String tokenLine = "Token " + formatCount(position + 1) + " of " + formatCount(sequence.tokens().size()) + ": "
                 + token.token();
         List<EditViewModel.TagRow> tagRows = new ArrayList<>(token.alternativeTagScores().size());
@@ -170,17 +170,21 @@ final class TaggingViewModels {
 
     /**
      * Formats {@code features} as a sorted, comma-separated string, or returns the
-     * {@value TerminalDisplay#NULL_VALUE_PLACEHOLDER} placeholder when the set is empty.
+     * {@value TerminalDisplay#NULL_VALUE_PLACEHOLDER} placeholder when the set is empty. Each feature
+     * is rendered through {@code featureFormat} first, then the rendered strings are sorted — sorting
+     * the rendered text rather than the features preserves the historical lexicographic display order,
+     * which {@link org.coordinatekit.crf.core.preprocessing.Features#naturalOrder()} would not (it
+     * orders by offset first).
      *
      * @param features the features to format
-     * @param <F> the feature type
+     * @param featureFormat the format rendering each feature to its displayed string
      * @return the formatted feature list
      */
-    private static <F> String formatFeatures(Set<F> features) {
+    private static String formatFeatures(Set<Feature> features, FeatureFormat featureFormat) {
         if (features.isEmpty()) {
             return NULL_VALUE_PLACEHOLDER;
         }
-        return features.stream().map(String::valueOf).sorted().collect(Collectors.joining(FEATURE_SEPARATOR));
+        return features.stream().map(featureFormat::render).sorted().collect(Collectors.joining(FEATURE_SEPARATOR));
     }
 
     /**
@@ -209,11 +213,10 @@ final class TaggingViewModels {
      * followed by its tokens joined with spaces.
      *
      * @param sequence the sequence to describe
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return the header line
      */
-    private static <F, T extends Comparable<T>> String sequenceHeaderLine(AnnotatorSequence<F, T> sequence) {
+    private static <T extends Comparable<T>> String sequenceHeaderLine(AnnotatorSequence<T> sequence) {
         return "Sequence " + formatCount(sequence.sequenceNumber()) + " of " + formatCount(sequence.totalSequences())
                 + ": " + sequence.tokens().stream().map(AnnotatorToken::token).collect(Collectors.joining(" "));
     }
@@ -239,29 +242,30 @@ final class TaggingViewModels {
      * @param currentTags the tag currently assigned to each token, in token order
      * @param effectiveView the feature view in effect for the sequence
      * @param tagProvider the tag provider used to render tags
+     * @param featureFormat the format rendering each feature to its displayed string
      * @param threshold the confidence threshold below which a row is flagged low-confidence
      * @param currentTotal the total likelihood of {@code currentTags}, or {@code null} when no scorer
      *        is available (no model)
      * @param originalTotal the total likelihood of the sequence's initial tags, or {@code null} when no
      *        scorer is available (no model)
-     * @param <F> the feature type
      * @param <T> the tag type
      * @return the sequence view model
      */
-    static <F, T extends Comparable<T>> TaggingViewModel sequenceViewModel(
-            AnnotatorSequence<F, T> sequence,
+    static <T extends Comparable<T>> TaggingViewModel sequenceViewModel(
+            AnnotatorSequence<T> sequence,
             List<T> currentTags,
             FeatureView effectiveView,
             TagProvider<T> tagProvider,
+            FeatureFormat featureFormat,
             double threshold,
             @Nullable Double currentTotal,
             @Nullable Double originalTotal
     ) {
-        List<AnnotatorToken<F, T>> tokens = sequence.tokens();
+        List<AnnotatorToken<T>> tokens = sequence.tokens();
         List<TaggingViewModel.TokenRow> tokenRows = new ArrayList<>(tokens.size());
         boolean tagsChanged = false;
         for (int index = 0; index < tokens.size(); index++) {
-            AnnotatorToken<F, T> token = tokens.get(index);
+            AnnotatorToken<T> token = tokens.get(index);
             T currentTag = currentTags.get(index);
             boolean changed = !currentTag.equals(token.initialTag());
             tagsChanged |= changed;
@@ -282,12 +286,12 @@ final class TaggingViewModels {
         if (effectiveView != FeatureView.NONE) {
             featureRows = new ArrayList<>(tokens.size());
             for (int index = 0; index < tokens.size(); index++) {
-                AnnotatorToken<F, T> token = tokens.get(index);
+                AnnotatorToken<T> token = tokens.get(index);
                 featureRows.add(
                         new TaggingViewModel.FeatureRow(
                                 String.valueOf(index + 1),
                                 token.token(),
-                                formatFeatures(displayedFeatures(token, effectiveView))
+                                formatFeatures(displayedFeatures(token, effectiveView), featureFormat)
                         )
                 );
             }

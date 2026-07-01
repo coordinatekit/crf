@@ -23,16 +23,15 @@ package org.coordinatekit.crf.annotator;
  * that input into a {@link TaggingResult}. The orchestrator (a higher layer) is responsible for
  * deciding which sequences to present and what to do with each result.
  *
- * @param <F> the feature type carried on the annotator sequence
  * @param <T> the tag type
  * @see org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface
  */
-public interface TaggingInterface<F, T extends Comparable<T>> {
+public interface TaggingInterface<T extends Comparable<T>> {
     /**
      * Presents the given sequence to the user and returns the chosen action.
      *
      * @param sequence the sequence to present
      * @return the outcome of the user's interaction
      */
-    TaggingResult<T> present(AnnotatorSequence<F, T> sequence);
+    TaggingResult<T> present(AnnotatorSequence<T> sequence);
 }

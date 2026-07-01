@@ -32,8 +32,7 @@ import org.jspecify.annotations.NullMarked;
  * discovery on the interface's fully-qualified name and offers no other way to distinguish two
  * providers of the same interface.
  *
- * @param <F> the type of features produced by this extractor
  * @see KeyFeatureExtractor
  */
 @NullMarked
-public interface FullFeatureExtractor<F> extends FeatureExtractor<F> {}
+public interface FullFeatureExtractor extends FeatureExtractor {}

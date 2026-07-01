@@ -37,6 +37,8 @@ import org.coordinatekit.crf.annotator.AnnotatorTestSupport;
 import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
@@ -95,10 +97,10 @@ class TerminalTaggingInterfaceTest {
 
     record ActionParameters(
             String name,
-            Supplier<AnnotatorSequence<String, PartOfSpeech>> sequenceSupplier,
+            Supplier<AnnotatorSequence<PartOfSpeech>> sequenceSupplier,
             String input,
             TaggingAction expectedAction,
-            Function<AnnotatorSequence<String, PartOfSpeech>, List<PartOfSpeech>> expectedFinalTags
+            Function<AnnotatorSequence<PartOfSpeech>, List<PartOfSpeech>> expectedFinalTags
     ) {}
 
     record BuilderExceptionParameters(
@@ -110,7 +112,7 @@ class TerminalTaggingInterfaceTest {
 
     record FeaturesViewContentParameters(
             String name,
-            Supplier<AnnotatorSequence<String, PartOfSpeech>> sequenceSupplier,
+            Supplier<AnnotatorSequence<PartOfSpeech>> sequenceSupplier,
             String input,
             List<String> expectedRowPatterns,
             List<String> forbiddenSubstrings
@@ -118,14 +120,14 @@ class TerminalTaggingInterfaceTest {
 
     record FeaturesViewHeadingParameters(
             String name,
-            Supplier<AnnotatorSequence<String, PartOfSpeech>> sequenceSupplier,
+            Supplier<AnnotatorSequence<PartOfSpeech>> sequenceSupplier,
             String input,
             long expectedHeadingCount
     ) {}
 
     record FooterPromptParameters(
             String name,
-            Supplier<AnnotatorSequence<String, PartOfSpeech>> sequenceSupplier,
+            Supplier<AnnotatorSequence<PartOfSpeech>> sequenceSupplier,
             String input,
             String expectedPrompt
     ) {}
@@ -253,14 +255,14 @@ class TerminalTaggingInterfaceTest {
                 ),
                 new BuilderExceptionParameters(
                         "buildWithoutTerminal",
-                        () -> TerminalTaggingInterface.<String, PartOfSpeech>builder()
+                        () -> TerminalTaggingInterface.<PartOfSpeech>builder()
                                 .tagProvider(new PartOfSpeechTagProvider()).build(),
                         IllegalStateException.class,
                         "terminal must be set"
                 ),
                 new BuilderExceptionParameters("buildWithEmptyTags", () -> {
                     try (Terminal terminal = quietTerminal()) {
-                        TerminalTaggingInterface.<String, PartOfSpeech>builder().tagProvider(emptyTagProvider())
+                        TerminalTaggingInterface.<PartOfSpeech>builder().tagProvider(emptyTagProvider())
                                 .terminal(terminal).build();
                     }
                 }, IllegalStateException.class, "tagProvider.tags() must not be empty")
@@ -579,7 +581,7 @@ class TerminalTaggingInterfaceTest {
         int maxWidth = 10;
         String longToken = "extraordinarily";
         var tokens = List.of(longToken, "normal");
-        var features = List.<Set<String>>of(Set.of(), Set.of());
+        var features = List.<Set<Feature>>of(Set.of(), Set.of());
         Map<PartOfSpeech, Double> scores = new LinkedHashMap<>();
         scores.put(PartOfSpeech.Determiner, 0.95);
         scores.put(PartOfSpeech.Adjective, 0.03);
@@ -665,19 +667,21 @@ class TerminalTaggingInterfaceTest {
      * The verbose set for "fox" repeats the key feature {@code ANIMAL} so the all-features view
      * exercises key/verbose union deduplication.
      */
-    private static AnnotatorSequence<String, PartOfSpeech> featureAnnotatorSequence(
+    private static AnnotatorSequence<PartOfSpeech> featureAnnotatorSequence(
             boolean includeKey,
             boolean includeVerbose
     ) {
         List<String> tokens = List.of("The", "fox", ".");
-        List<Set<String>> embeddedFeatures = List.of(Set.of(), Set.of(), Set.of());
+        List<Set<Feature>> embeddedFeatures = List.of(Set.of(), Set.of(), Set.of());
         Map<PartOfSpeech, Double> firstScores = scoreMap(PartOfSpeech.Determiner, 0.9, PartOfSpeech.Adjective, 0.1);
         Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
         Map<PartOfSpeech, Double> thirdScores = scoreMap(PartOfSpeech.Noun, 0.6, PartOfSpeech.Adverb, 0.4);
         var tagged = new TaggedSequence<>(tokens, embeddedFeatures, List.of(firstScores, secondScores, thirdScores));
-        List<Set<String>> features = includeKey ? List.of(Set.of("CAP"), Set.of("LOWER", "ANIMAL"), Set.of()) : null;
-        List<Set<String>> verboseFeatures = includeVerbose
-                ? List.of(Set.of("WINDOW_NEXT_fox"), Set.of("ANIMAL"), Set.of("PUNCT"))
+        List<Set<Feature>> features = includeKey
+                ? List.of(Set.of(Features.of("CAP")), Set.of(Features.of("LOWER"), Features.of("ANIMAL")), Set.of())
+                : null;
+        List<Set<Feature>> verboseFeatures = includeVerbose ? List
+                .of(Set.of(Features.of("WINDOW_NEXT_fox")), Set.of(Features.of("ANIMAL")), Set.of(Features.of("PUNCT")))
                 : null;
         return annotatorSequence(1, 1, tagged, features, verboseFeatures);
     }
@@ -699,36 +703,34 @@ class TerminalTaggingInterfaceTest {
         return output.substring(headingIndex, end);
     }
 
-    private static List<PartOfSpeech> initialTagsWithSecondTokenSwapped(
-            AnnotatorSequence<String, PartOfSpeech> sequence
-    ) {
+    private static List<PartOfSpeech> initialTagsWithSecondTokenSwapped(AnnotatorSequence<PartOfSpeech> sequence) {
         List<PartOfSpeech> tags = new ArrayList<>(initialTagsOf(sequence));
         List<PartOfSpeech> canonicalTags = List.copyOf(sequence.tokens().get(1).alternativeTagScores().keySet());
         tags.set(1, canonicalTags.get(1));
         return tags;
     }
 
-    private static AnnotatorSequence<String, PartOfSpeech> noModelAnnotatorSequence() {
+    private static AnnotatorSequence<PartOfSpeech> noModelAnnotatorSequence() {
         List<String> tokens = List.of("The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", ".");
         return annotatorSequence(1, 1, tokens, new PartOfSpeechTagProvider());
     }
 
-    private InteractionResult run(String input, AnnotatorSequence<String, PartOfSpeech> sequence) throws Exception {
+    private InteractionResult run(String input, AnnotatorSequence<PartOfSpeech> sequence) throws Exception {
         return run(input, sequence, builder -> builder.maxTokenDisplayWidth(30));
     }
 
     private InteractionResult run(
             String input,
-            AnnotatorSequence<String, PartOfSpeech> sequence,
-            Consumer<TerminalTaggingInterface.Builder<String, PartOfSpeech>> customize
+            AnnotatorSequence<PartOfSpeech> sequence,
+            Consumer<TerminalTaggingInterface.Builder<PartOfSpeech>> customize
     ) throws Exception {
         ByteArrayInputStream in = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            TerminalTaggingInterface.Builder<String, PartOfSpeech> builder = TerminalTaggingInterface
-                    .<String, PartOfSpeech>builder().tagProvider(new PartOfSpeechTagProvider()).terminal(terminal);
+            TerminalTaggingInterface.Builder<PartOfSpeech> builder = TerminalTaggingInterface.<PartOfSpeech>builder()
+                    .tagProvider(new PartOfSpeechTagProvider()).terminal(terminal);
             customize.accept(builder);
-            TerminalTaggingInterface<String, PartOfSpeech> ui = builder.build();
+            TerminalTaggingInterface<PartOfSpeech> ui = builder.build();
             TaggingResult<PartOfSpeech> result = ui.present(sequence);
             terminal.flush();
             return new InteractionResult(result, out.toString(StandardCharsets.UTF_8));
@@ -739,15 +741,15 @@ class TerminalTaggingInterfaceTest {
      * Presents every sequence against a single interface instance, so feature-view state carries from
      * one sequence to the next. Returns the last sequence's result alongside the combined output.
      */
-    private InteractionResult runSequences(String input, List<AnnotatorSequence<String, PartOfSpeech>> sequences)
+    private InteractionResult runSequences(String input, List<AnnotatorSequence<PartOfSpeech>> sequences)
             throws Exception {
         ByteArrayInputStream in = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            TerminalTaggingInterface<String, PartOfSpeech> ui = TerminalTaggingInterface.<String, PartOfSpeech>builder()
+            TerminalTaggingInterface<PartOfSpeech> ui = TerminalTaggingInterface.<PartOfSpeech>builder()
                     .tagProvider(new PartOfSpeechTagProvider()).terminal(terminal).maxTokenDisplayWidth(30).build();
             TaggingResult<PartOfSpeech> result = null;
-            for (AnnotatorSequence<String, PartOfSpeech> sequence : sequences) {
+            for (AnnotatorSequence<PartOfSpeech> sequence : sequences) {
                 result = ui.present(sequence);
             }
             terminal.flush();
@@ -764,16 +766,16 @@ class TerminalTaggingInterfaceTest {
         return output.substring(0, end + SEQUENCE_PROMPT.length());
     }
 
-    private static AnnotatorSequence<String, PartOfSpeech> simpleAnnotatorSequence() {
+    private static AnnotatorSequence<PartOfSpeech> simpleAnnotatorSequence() {
         List<String> tokens = List.of("The", "fox");
-        List<Set<String>> features = List.of(Set.of(), Set.of());
+        List<Set<Feature>> features = List.of(Set.of(), Set.of());
         Map<PartOfSpeech, Double> firstScores = scoreMap(PartOfSpeech.Determiner, 0.9, PartOfSpeech.Adjective, 0.1);
         Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
         var tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
         return annotatorSequence(1, 1, tagged);
     }
 
-    private static AnnotatorSequence<String, PartOfSpeech> withModelAnnotatorSequence() {
+    private static AnnotatorSequence<PartOfSpeech> withModelAnnotatorSequence() {
         return annotatorSequence(1, 1, withModelTaggedSequence());
     }
 
@@ -782,13 +784,13 @@ class TerminalTaggingInterfaceTest {
      * {@code probabilityFunction}, so {@link AnnotatorSequence#probabilityOf(List)} drives the
      * total-likelihood line.
      */
-    private static AnnotatorSequence<String, PartOfSpeech> withModelScorerSequence(
+    private static AnnotatorSequence<PartOfSpeech> withModelScorerSequence(
             ToDoubleFunction<List<PartOfSpeech>> probabilityFunction
     ) {
         return annotatorSequence(1, 1, withModelTaggedSequence(), null, null, probabilityFunction);
     }
 
-    private static TaggedSequence<String, PartOfSpeech> withModelTaggedSequence() {
+    private static TaggedSequence<PartOfSpeech> withModelTaggedSequence() {
         List<String> tokens = List.of("The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", ".");
         List<PartOfSpeech> topTags = List.of(
                 PartOfSpeech.Determiner,
@@ -802,7 +804,7 @@ class TerminalTaggingInterfaceTest {
                 PartOfSpeech.Noun,
                 PartOfSpeech.Noun
         );
-        List<Set<String>> features = new ArrayList<>();
+        List<Set<Feature>> features = new ArrayList<>();
         List<Map<PartOfSpeech, Double>> tagScores = new ArrayList<>();
         for (int index = 0; index < tokens.size(); index++) {
             features.add(Set.of());

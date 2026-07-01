@@ -18,6 +18,7 @@ package org.coordinatekit.crf.annotator;
 import org.coordinatekit.crf.annotator.AnnotatorTestSupport.PunctuationTokenizer;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.StringTagProvider;
+import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Segments;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
@@ -86,22 +87,21 @@ class RetokenizeReviewerTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "no_tagProvider",
-                        () -> RetokenizeReviewer.<String, String>builder()
-                                .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal())
-                                .tokenizer(new PunctuationTokenizer()).build(),
+                        () -> RetokenizeReviewer.<String>builder().taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal()).tokenizer(new PunctuationTokenizer()).build(),
                         IllegalStateException.class,
                         "tagProvider must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_taggingInterface",
-                        () -> RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER)
-                                .terminal(quietTerminal()).tokenizer(new PunctuationTokenizer()).build(),
+                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).terminal(quietTerminal())
+                                .tokenizer(new PunctuationTokenizer()).build(),
                         IllegalStateException.class,
                         "taggingInterface must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_terminal",
-                        () -> RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER)
+                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
                                 .taggingInterface(new ScriptedTaggingInterface<>())
                                 .tokenizer(new PunctuationTokenizer()).build(),
                         IllegalStateException.class,
@@ -109,14 +109,14 @@ class RetokenizeReviewerTest {
                 ),
                 new BuilderExceptionParameters(
                         "no_tokenizer",
-                        () -> RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER)
+                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
                                 .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal()).build(),
                         IllegalStateException.class,
                         "tokenizer must be set"
                 ),
                 new BuilderExceptionParameters(
                         "empty_tags",
-                        () -> RetokenizeReviewer.<String, String>builder().tagProvider(new StringTagProvider("NN"))
+                        () -> RetokenizeReviewer.<String>builder().tagProvider(new StringTagProvider("NN"))
                                 .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal())
                                 .tokenizer(new PunctuationTokenizer()).build(),
                         IllegalStateException.class,
@@ -142,7 +142,7 @@ class RetokenizeReviewerTest {
                 words(List.of("a", "lazy", "dog"), List.of("DT", "NN", "NN"))
         );
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
@@ -175,7 +175,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeThreeMisaligned(tempDirectory);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(exit());
 
         // ACT //
@@ -199,7 +199,7 @@ class RetokenizeReviewerTest {
         Path outputFile = tempDirectory.resolve("output.xml");
         Files.createFile(outputFile);
         assertEquals(0, Files.size(outputFile), "precondition: the output file starts empty");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
@@ -217,7 +217,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeMixedInput(tempDirectory);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "VB", "NN"));
 
         // ACT //
@@ -243,7 +243,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("Smith,", "Jones"), List.of("NN", "NN")));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "VB", "NN"));
 
         // ACT //
@@ -275,7 +275,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("Smith,", "Jones"), List.of("NN", "NN")));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(skip());
 
         // ACT //
@@ -296,7 +296,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("Smith,", "Jones"), List.of("NN", "NN")));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "NN", "NN"));
 
         // ACT //
@@ -305,7 +305,7 @@ class RetokenizeReviewerTest {
         }
 
         // ASSERT //
-        AnnotatorSequence<String, String> presented = tagging.presented.getFirst();
+        AnnotatorSequence<String> presented = tagging.presented.getFirst();
         assertEquals(
                 List.of("NN", "NN", "NN"),
                 initialTagsOf(presented),
@@ -333,7 +333,7 @@ class RetokenizeReviewerTest {
 
         // ACT & ASSERT //
         try (Terminal terminal = quietTerminal()) {
-            RetokenizeReviewer<String, String> reviewer = reviewerWith(new ScriptedTaggingInterface<>(), terminal);
+            RetokenizeReviewer<String> reviewer = reviewerWith(new ScriptedTaggingInterface<>(), terminal);
             ReviewPreconditionException exception = assertThrows(
                     ReviewPreconditionException.class,
                     () -> reviewer.review(inputFile, outputFile)
@@ -347,7 +347,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeThreeMisaligned(tempDirectory);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(exit());
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
 
@@ -371,7 +371,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeMixedInput(tempDirectory);
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "VB", "NN"));
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
 
@@ -397,18 +397,17 @@ class RetokenizeReviewerTest {
         FixedTagger tagger = new FixedTagger(
                 Map.of("Smith, Jones", List.of(Map.of("NN", 1.0), Map.of("VB", 1.0), Map.of("DT", 1.0)))
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN", "VB", "DT"));
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).tagger(tagger)
-                    .taggingInterface(tagging).terminal(terminal).tokenizer(new PunctuationTokenizer()).build()
-                    .review(inputFile, outputFile);
+            RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).tagger(tagger).taggingInterface(tagging)
+                    .terminal(terminal).tokenizer(new PunctuationTokenizer()).build().review(inputFile, outputFile);
         }
 
         // ASSERT //
-        AnnotatorSequence<String, String> presented = tagging.presented.getFirst();
+        AnnotatorSequence<String> presented = tagging.presented.getFirst();
         assertEquals(
                 List.of("Smith", ",", "Jones"),
                 presentedTokens(presented),
@@ -433,14 +432,14 @@ class RetokenizeReviewerTest {
                 Map.of("Smith, Jones", List.of(Map.of("NN", 1.0))),
                 wholeSurfaceTokenizer()
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("NN"));
 
         // ACT & ASSERT //
         try (Terminal terminal = quietTerminal()) {
-            RetokenizeReviewer<String, String> reviewer = RetokenizeReviewer.<String, String>builder()
-                    .tagProvider(TAG_PROVIDER).tagger(tagger).taggingInterface(tagging).terminal(terminal)
-                    .tokenizer(new PunctuationTokenizer()).build();
+            RetokenizeReviewer<String> reviewer = RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
+                    .tagger(tagger).taggingInterface(tagging).terminal(terminal).tokenizer(new PunctuationTokenizer())
+                    .build();
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
                     () -> reviewer.review(inputFile, outputFile)
@@ -471,15 +470,14 @@ class RetokenizeReviewerTest {
                 ),
                 commaRejectingTokenizer()
         );
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         tagging.results.add(accept("DT", "NN", "NN"));
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
 
         // ACT //
         try (Terminal terminal = capturingTerminal(captured)) {
-            RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).tagger(tagger)
-                    .taggingInterface(tagging).terminal(terminal).tokenizer(new PunctuationTokenizer()).build()
-                    .review(inputFile, outputFile);
+            RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).tagger(tagger).taggingInterface(tagging)
+                    .terminal(terminal).tokenizer(new PunctuationTokenizer()).build().review(inputFile, outputFile);
             terminal.flush();
         }
 
@@ -517,7 +515,7 @@ class RetokenizeReviewerTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("what?"), List.of("NN")));
         Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String, String> tagging = new ScriptedTaggingInterface<>();
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
 
         // ACT //
@@ -564,15 +562,12 @@ class RetokenizeReviewerTest {
         return taggingResult(EXIT, List.of());
     }
 
-    private static List<String> presentedTokens(AnnotatorSequence<String, String> sequence) {
+    private static List<String> presentedTokens(AnnotatorSequence<String> sequence) {
         return sequence.tokens().stream().map(AnnotatorToken::token).toList();
     }
 
-    private static RetokenizeReviewer<String, String> reviewerWith(
-            TaggingInterface<String, String> tagging,
-            Terminal terminal
-    ) {
-        return RetokenizeReviewer.<String, String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+    private static RetokenizeReviewer<String> reviewerWith(TaggingInterface<String> tagging, Terminal terminal) {
+        return RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
                 .terminal(terminal).tokenizer(new PunctuationTokenizer()).build();
     }
 
@@ -612,7 +607,7 @@ class RetokenizeReviewerTest {
      * A tagger with canned per-token tag scores keyed by surface, tokenized by
      * {@link PunctuationTokenizer}.
      */
-    private static final class FixedTagger implements CrfTagger<String, String> {
+    private static final class FixedTagger implements CrfTagger<String> {
         private final Map<String, List<Map<String, Double>>> tagScoresBySurface;
         private final Tokenizer tokenizer;
 
@@ -626,24 +621,24 @@ class RetokenizeReviewerTest {
         }
 
         @Override
-        public TaggedTokenization<String, String> tag(String input) {
+        public TaggedTokenization<String> tag(String input) {
             List<Map<String, Double>> tagScores = tagScoresBySurface.get(input);
             if (tagScores == null) {
                 throw new AssertionError("FixedTagger has no scripted response for input: " + input);
             }
             Tokenization tokenization = tokenizer.tokenize(input);
             List<String> tokens = tokenization.sequence().stream().map(PositionedToken::token).toList();
-            List<Set<String>> features = tokens.stream().map(unused -> Set.<String>of()).toList();
+            List<Set<Feature>> features = tokens.stream().map(unused -> Set.<Feature>of()).toList();
             return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScores), tokenization, tags -> 0.0);
         }
     }
 
-    private static final class ScriptedTaggingInterface<F, T extends Comparable<T>> implements TaggingInterface<F, T> {
-        final List<AnnotatorSequence<F, T>> presented = new ArrayList<>();
+    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
+        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
         final Deque<TaggingResult<T>> results = new ArrayDeque<>();
 
         @Override
-        public TaggingResult<T> present(AnnotatorSequence<F, T> sequence) {
+        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
             presented.add(sequence);
             if (results.isEmpty()) {
                 throw new AssertionError(
