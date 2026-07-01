@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import java.util.Comparator;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,10 +30,59 @@ import org.jspecify.annotations.Nullable;
  * {@code name=value} pairs) lives in {@link FeatureFormat}, not here; this type carries the parts
  * as data so the pipeline never touches strings.
  *
+ * <p>
+ * Features are compared by {@link #offset()} first, then {@link #name()}, then {@link #value()}
+ * with {@code null} ordered first. This is the deterministic order the pipeline uses when
+ * serializing a feature set.
+ *
  * @see Features
  * @see FeatureFormat
  */
-public interface Feature {
+public final class Feature implements Comparable<Feature> {
+    private static final Comparator<Feature> NATURAL_ORDER = Comparator.comparingInt(Feature::offset)
+            .thenComparing(Feature::name)
+            .thenComparing(Feature::value, Comparator.nullsFirst(Comparator.naturalOrder()));
+
+    private final String name;
+    private final int offset;
+    private final @Nullable String value;
+
+    Feature(int offset, String name, @Nullable String value) {
+        this.offset = offset;
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.value = value;
+    }
+
+    @Override
+    public int compareTo(Feature other) {
+        return NATURAL_ORDER.compare(this, other);
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (!(object instanceof Feature other)) {
+            return false;
+        }
+        return offset == other.offset && name.equals(other.name) && Objects.equals(value, other.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(offset, name, value);
+    }
+
+    /**
+     * Returns the feature name.
+     *
+     * @return the feature name, never {@code null}
+     */
+    public String name() {
+        return name;
+    }
+
     /**
      * Returns the window offset this feature was extracted from, relative to the current token.
      *
@@ -41,22 +92,23 @@ public interface Feature {
      *
      * @return the window offset
      */
-    int offset();
+    public int offset() {
+        return offset;
+    }
 
-    /**
-     * Returns the feature name.
-     *
-     * @return the feature name, never {@code null}
-     */
-    String name();
+    @Override
+    public String toString() {
+        return "Feature[offset=" + offset + ", name=" + name + ", value=" + value + "]";
+    }
 
     /**
      * Returns the feature value, or {@code null} when the feature is a bare name with no value.
      *
      * @return the feature value, or {@code null}
      */
-    @Nullable
-    String value();
+    public @Nullable String value() {
+        return value;
+    }
 
     /**
      * Returns a copy of this feature with its offset replaced by {@code offset}.
@@ -68,5 +120,7 @@ public interface Feature {
      * @param offset the new window offset
      * @return a feature equal to this one but with the given offset
      */
-    Feature withOffset(int offset);
+    public Feature withOffset(int offset) {
+        return new Feature(offset, name, value);
+    }
 }

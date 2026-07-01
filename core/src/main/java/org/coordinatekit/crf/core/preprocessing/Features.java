@@ -32,10 +32,6 @@ import org.jspecify.annotations.Nullable;
  * @see Feature
  */
 public final class Features {
-    private static final Comparator<Feature> NATURAL_ORDER = Comparator.comparingInt(Feature::offset)
-            .thenComparing(Feature::name)
-            .thenComparing(Feature::value, Comparator.nullsFirst(Comparator.naturalOrder()));
-
     private Features() {
         throw new UnsupportedOperationException("Features is a utility class");
     }
@@ -45,14 +41,14 @@ public final class Features {
      * {@link Feature#name()}, then {@link Feature#value()} with {@code null} ordered first.
      *
      * <p>
-     * This is the framework's order for putting a feature set into a deterministic sequence; it is a
-     * {@link Comparator} rather than a {@link Comparable} contract on {@link Feature} so the order is
-     * consistent across every implementation and implementers need not supply it.
+     * This is the framework's order for putting a feature set into a deterministic sequence. It
+     * delegates to {@link Feature}'s own {@link Comparable} contract; the comparator form remains for
+     * callers that need a {@link Comparator} instance.
      *
      * @return the natural feature comparator
      */
     public static Comparator<Feature> naturalOrder() {
-        return NATURAL_ORDER;
+        return Comparator.naturalOrder();
     }
 
     /**
@@ -76,7 +72,7 @@ public final class Features {
      */
     public static Feature of(String name, @Nullable String value) {
         Objects.requireNonNull(name, "name must not be null");
-        return new DefaultFeature(0, name, value);
+        return new Feature(0, name, value);
     }
 
     /**
@@ -104,12 +100,5 @@ public final class Features {
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(value, "value must not be null");
         return of(name.name(), value.name());
-    }
-
-    private record DefaultFeature(int offset, String name, @Nullable String value) implements Feature {
-        @Override
-        public Feature withOffset(int offset) {
-            return new DefaultFeature(offset, name, value);
-        }
     }
 }
