@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.tag;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class TaggedTokenizationTest {
     private static TaggedSequence<String> taggedSequence(List<String> tokens) {
         return new TaggedSequence<>(
                 tokens,
-                tokens.stream().map(t -> Set.of(Features.of("f_" + t))).toList(),
+                tokens.stream().map(t -> Set.of(createFeature("f_" + t))).toList(),
                 tokens.stream().map(t -> Map.of("TAG", 1.0)).toList()
         );
     }

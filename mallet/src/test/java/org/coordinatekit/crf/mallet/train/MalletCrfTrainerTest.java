@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.mallet.train;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
@@ -24,7 +25,6 @@ import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.Nullable;
@@ -49,8 +49,8 @@ class MalletCrfTrainerTest {
     private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
-                Features.of("LENGTH", String.valueOf(token.length())),
-                Features.of("LOWER", token.toLowerCase(Locale.getDefault()))
+                createFeatureWithValue("LENGTH", String.valueOf(token.length())),
+                createFeatureWithValue("LOWER", token.toLowerCase(Locale.getDefault()))
         );
     };
     private static final StringTagProvider TAG_PROVIDER = new StringTagProvider("0");

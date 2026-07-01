@@ -15,13 +15,13 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingSequenceWriter;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.Segments;
@@ -217,8 +217,8 @@ public final class AnnotatorTestSupport {
      */
     public static AnnotatorSequence<String> sequenceWith(FeatureAvailability availability) {
         List<String> tokens = List.of("the", "fox");
-        List<Set<Feature>> key = List.of(Set.of(Features.of("k0")), Set.of(Features.of("k1")));
-        List<Set<Feature>> verbose = List.of(Set.of(Features.of("v0")), Set.of(Features.of("v1")));
+        List<Set<Feature>> key = List.of(Set.of(createFeature("k0")), Set.of(createFeature("k1")));
+        List<Set<Feature>> verbose = List.of(Set.of(createFeature("v0")), Set.of(createFeature("v1")));
         return switch (availability) {
             case NONE -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, null, null);
             case KEY_ONLY -> AnnotatorModels.annotatorSequence(1, 1, tokens, TAG_PROVIDER, key, null);

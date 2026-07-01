@@ -15,10 +15,10 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;
@@ -110,8 +110,8 @@ class AnnotatorSequenceTest {
     ) {}
 
     private static final List<Set<Feature>> KEY_FEATURES = List
-            .of(Set.of(Features.of("k1")), Set.of(Features.of("k2a"), Features.of("k2b")));
-    private static final List<Set<Feature>> VERBOSE_FEATURES = List.of(Set.of(Features.of("v1")), Set.of());
+            .of(Set.of(createFeature("k1")), Set.of(createFeature("k2a"), createFeature("k2b")));
+    private static final List<Set<Feature>> VERBOSE_FEATURES = List.of(Set.of(createFeature("v1")), Set.of());
 
     static Stream<DefensiveCopyParameters> annotatorSequence__defensivelyCopiesFeatureInputs() {
         return Stream.of(
@@ -143,17 +143,17 @@ class AnnotatorSequenceTest {
     @ParameterizedTest
     void annotatorSequence__defensivelyCopiesFeatureInputs(DefensiveCopyParameters parameters) {
         // ARRANGE //
-        List<Set<Feature>> features = new ArrayList<>(List.of(new HashSet<>(Set.of(Features.of("k1")))));
-        List<Set<Feature>> verboseFeatures = new ArrayList<>(List.of(new HashSet<>(Set.of(Features.of("v1")))));
+        List<Set<Feature>> features = new ArrayList<>(List.of(new HashSet<>(Set.of(createFeature("k1")))));
+        List<Set<Feature>> verboseFeatures = new ArrayList<>(List.of(new HashSet<>(Set.of(createFeature("v1")))));
         AnnotatorSequence<TestTag> sequence = parameters.factory().apply(features, verboseFeatures);
 
         // ACT //
-        features.getFirst().add(Features.of("late"));
-        verboseFeatures.getFirst().add(Features.of("late"));
+        features.getFirst().add(createFeature("late"));
+        verboseFeatures.getFirst().add(createFeature("late"));
 
         // ASSERT //
-        assertEquals(Set.of(Features.of("k1")), sequence.tokens().getFirst().features());
-        assertEquals(Set.of(Features.of("v1")), sequence.tokens().getFirst().verboseFeatures());
+        assertEquals(Set.of(createFeature("k1")), sequence.tokens().getFirst().features());
+        assertEquals(Set.of(createFeature("v1")), sequence.tokens().getFirst().verboseFeatures());
     }
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
@@ -196,7 +196,7 @@ class AnnotatorSequenceTest {
                                 1,
                                 1,
                                 singleTokenTaggedSequence(),
-                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"))),
+                                List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2"))),
                                 null
                         ),
                         IllegalArgumentException.class,
@@ -208,8 +208,8 @@ class AnnotatorSequenceTest {
                                 1,
                                 1,
                                 singleTokenTaggedSequence(),
-                                List.of(Set.of(Features.of("f1"))),
-                                List.of(Set.of(Features.of("v1")), Set.of(Features.of("v2")))
+                                List.of(Set.of(createFeature("f1"))),
+                                List.of(Set.of(createFeature("v1")), Set.of(createFeature("v2")))
                         ),
                         IllegalArgumentException.class,
                         "verboseFeatures must have one entry per token, got: verboseFeatures=2, tokens=1"
@@ -269,7 +269,7 @@ class AnnotatorSequenceTest {
                                 1,
                                 List.of("a"),
                                 provider,
-                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"))),
+                                List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2"))),
                                 null
                         ),
                         IllegalArgumentException.class,
@@ -282,8 +282,8 @@ class AnnotatorSequenceTest {
                                 1,
                                 List.of("a"),
                                 provider,
-                                List.of(Set.of(Features.of("f1"))),
-                                List.of(Set.of(Features.of("v1")), Set.of(Features.of("v2")))
+                                List.of(Set.of(createFeature("f1"))),
+                                List.of(Set.of(createFeature("v1")), Set.of(createFeature("v2")))
                         ),
                         IllegalArgumentException.class,
                         "verboseFeatures must have one entry per token, got: verboseFeatures=2, tokens=1"
@@ -505,7 +505,8 @@ class AnnotatorSequenceTest {
     void withTagger__copiesFromTaggedSequence() {
         // ARRANGE //
         List<String> tokens = List.of("the", "fox");
-        List<Set<Feature>> features = List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2"), Features.of("f3")));
+        List<Set<Feature>> features = List
+                .of(Set.of(createFeature("f1")), Set.of(createFeature("f2"), createFeature("f3")));
         Map<TestTag, Double> firstScores = scoreMap(TestTag.ALPHA, 0.7, TestTag.BETA, 0.2, TestTag.GAMMA, 0.1);
         Map<TestTag, Double> secondScores = scoreMap(TestTag.BETA, 0.6, TestTag.GAMMA, 0.3, TestTag.ALPHA, 0.1);
         TaggedSequence<TestTag> tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
@@ -593,12 +594,12 @@ class AnnotatorSequenceTest {
                 ),
                 new ImmutabilityParameters(
                         "features_add",
-                        () -> immutableFeaturedSequence().tokens().getFirst().features().add(Features.of("extra"))
+                        () -> immutableFeaturedSequence().tokens().getFirst().features().add(createFeature("extra"))
                 ),
                 new ImmutabilityParameters(
                         "verboseFeatures_add",
                         () -> immutableFeaturedSequence().tokens().getFirst().verboseFeatures()
-                                .add(Features.of("extra"))
+                                .add(createFeature("extra"))
                 )
         );
     }
@@ -657,8 +658,8 @@ class AnnotatorSequenceTest {
                 1,
                 List.of("a"),
                 new TestTagProvider(TestTag.values()),
-                List.of(Set.of(Features.of("k1"))),
-                List.of(Set.of(Features.of("v1")))
+                List.of(Set.of(createFeature("k1"))),
+                List.of(Set.of(createFeature("v1")))
         );
     }
 
@@ -673,7 +674,7 @@ class AnnotatorSequenceTest {
     private static TaggedSequence<TestTag> twoTokenTaggedSequence() {
         return new TaggedSequence<>(
                 List.of("the", "fox"),
-                List.of(Set.of(Features.of("e1")), Set.of(Features.of("e2"))),
+                List.of(Set.of(createFeature("e1")), Set.of(createFeature("e2"))),
                 List.of(Map.of(TestTag.ALPHA, 1.0), Map.of(TestTag.BETA, 1.0))
         );
     }

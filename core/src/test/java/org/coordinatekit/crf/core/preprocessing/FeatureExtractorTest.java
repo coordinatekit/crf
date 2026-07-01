@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
@@ -33,8 +34,8 @@ class FeatureExtractorTest {
     private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
-                Features.of("LENGTH", String.valueOf(token.length())),
-                Features.of("LOWER", token.toLowerCase(Locale.ROOT))
+                createFeatureWithValue("LENGTH", String.valueOf(token.length())),
+                createFeatureWithValue("LOWER", token.toLowerCase(Locale.ROOT))
         );
     };
 
@@ -44,21 +45,21 @@ class FeatureExtractorTest {
         return Stream.of(
                 new ExtractParameters(
                         List.of("Hello"),
-                        List.of(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")))
+                        List.of(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")))
                 ),
                 new ExtractParameters(
                         List.of("Hello", "World"),
                         List.of(
-                                Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")),
-                                Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "world"))
+                                Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")),
+                                Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "world"))
                         )
                 ),
                 new ExtractParameters(
                         List.of("A", "BB", "CCC"),
                         List.of(
-                                Set.of(Features.of("LENGTH", "1"), Features.of("LOWER", "a")),
-                                Set.of(Features.of("LENGTH", "2"), Features.of("LOWER", "bb")),
-                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "ccc"))
+                                Set.of(createFeatureWithValue("LENGTH", "1"), createFeatureWithValue("LOWER", "a")),
+                                Set.of(createFeatureWithValue("LENGTH", "2"), createFeatureWithValue("LOWER", "bb")),
+                                Set.of(createFeatureWithValue("LENGTH", "3"), createFeatureWithValue("LOWER", "ccc"))
                         )
                 )
         );
@@ -95,23 +96,23 @@ class FeatureExtractorTest {
                 new ExtractTrainingParameters(
                         List.of("Hello"),
                         List.of("GREETING"),
-                        List.of(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")))
+                        List.of(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")))
                 ),
                 new ExtractTrainingParameters(
                         List.of("New", "York"),
                         List.of("CITY", "CITY"),
                         List.of(
-                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "new")),
-                                Set.of(Features.of("LENGTH", "4"), Features.of("LOWER", "york"))
+                                Set.of(createFeatureWithValue("LENGTH", "3"), createFeatureWithValue("LOWER", "new")),
+                                Set.of(createFeatureWithValue("LENGTH", "4"), createFeatureWithValue("LOWER", "york"))
                         )
                 ),
                 new ExtractTrainingParameters(
                         List.of("123", "Main", "St"),
                         List.of("NUMBER", "STREET", "SUFFIX"),
                         List.of(
-                                Set.of(Features.of("LENGTH", "3"), Features.of("LOWER", "123")),
-                                Set.of(Features.of("LENGTH", "4"), Features.of("LOWER", "main")),
-                                Set.of(Features.of("LENGTH", "2"), Features.of("LOWER", "st"))
+                                Set.of(createFeatureWithValue("LENGTH", "3"), createFeatureWithValue("LOWER", "123")),
+                                Set.of(createFeatureWithValue("LENGTH", "4"), createFeatureWithValue("LOWER", "main")),
+                                Set.of(createFeatureWithValue("LENGTH", "2"), createFeatureWithValue("LOWER", "st"))
                         )
                 )
         );

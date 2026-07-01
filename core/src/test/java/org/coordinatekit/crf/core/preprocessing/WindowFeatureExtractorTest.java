@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import org.coordinatekit.crf.core.InputSequence;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WindowFeatureExtractorTest {
     private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
-            .of(Features.of("TOKEN", seq.get(pos).token()));
+            .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
     private static WindowFeatureExtractor extractor(int before, int after, boolean includeCurrent) {
         return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).windowBefore(before).windowAfter(after)
@@ -43,7 +44,10 @@ class WindowFeatureExtractorTest {
     private static WindowFeatureExtractor multipleFeaturesExtractor() {
         FeatureExtractor multiFeatureExtractor = (seq, pos) -> {
             String token = seq.get(pos).token();
-            return Set.of(Features.of("TOKEN", token), Features.of("LENGTH", String.valueOf(token.length())));
+            return Set.of(
+                    createFeatureWithValue("TOKEN", token),
+                    createFeatureWithValue("LENGTH", String.valueOf(token.length()))
+            );
         };
 
         return WindowFeatureExtractor.builder(multiFeatureExtractor).build();
@@ -99,9 +103,9 @@ class WindowFeatureExtractorTest {
                         List.of("a", "b", "c"),
                         1,
                         Set.of(
-                                Features.of("TOKEN", "b"),
-                                Features.of("TOKEN", "a").withOffset(-1),
-                                Features.of("TOKEN", "c").withOffset(1)
+                                createFeatureWithValue("TOKEN", "b"),
+                                createFeatureWithValue("TOKEN", "a").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "c").withOffset(1)
                         )
                 ),
                 new ExtractAtParameters(
@@ -109,21 +113,27 @@ class WindowFeatureExtractorTest {
                         extractor(1, 1, false),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of(Features.of("TOKEN", "a").withOffset(-1), Features.of("TOKEN", "c").withOffset(1))
+                        Set.of(
+                                createFeatureWithValue("TOKEN", "a").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "c").withOffset(1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "startOfSequence_currentAndNext",
                         defaultExtractor(),
                         List.of("a", "b", "c"),
                         0,
-                        Set.of(Features.of("TOKEN", "a"), Features.of("TOKEN", "b").withOffset(1))
+                        Set.of(createFeatureWithValue("TOKEN", "a"), createFeatureWithValue("TOKEN", "b").withOffset(1))
                 ),
                 new ExtractAtParameters(
                         "endOfSequence_currentAndPrevious",
                         defaultExtractor(),
                         List.of("a", "b", "c"),
                         2,
-                        Set.of(Features.of("TOKEN", "c"), Features.of("TOKEN", "b").withOffset(-1))
+                        Set.of(
+                                createFeatureWithValue("TOKEN", "c"),
+                                createFeatureWithValue("TOKEN", "b").withOffset(-1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "largerWindow_multipleNeighbors",
@@ -131,11 +141,11 @@ class WindowFeatureExtractorTest {
                         List.of("a", "b", "c", "d", "e"),
                         2,
                         Set.of(
-                                Features.of("TOKEN", "c"),
-                                Features.of("TOKEN", "b").withOffset(-1),
-                                Features.of("TOKEN", "a").withOffset(-2),
-                                Features.of("TOKEN", "d").withOffset(1),
-                                Features.of("TOKEN", "e").withOffset(2)
+                                createFeatureWithValue("TOKEN", "c"),
+                                createFeatureWithValue("TOKEN", "b").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "a").withOffset(-2),
+                                createFeatureWithValue("TOKEN", "d").withOffset(1),
+                                createFeatureWithValue("TOKEN", "e").withOffset(2)
                         )
                 ),
                 new ExtractAtParameters(
@@ -144,9 +154,9 @@ class WindowFeatureExtractorTest {
                         List.of("a", "b", "c"),
                         1,
                         Set.of(
-                                Features.of("TOKEN", "b"),
-                                Features.of("TOKEN", "a").withOffset(-1),
-                                Features.of("TOKEN", "c").withOffset(1)
+                                createFeatureWithValue("TOKEN", "b"),
+                                createFeatureWithValue("TOKEN", "a").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "c").withOffset(1)
                         )
                 ),
                 new ExtractAtParameters(
@@ -154,21 +164,24 @@ class WindowFeatureExtractorTest {
                         extractor(0, 1, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of(Features.of("TOKEN", "b"), Features.of("TOKEN", "c").withOffset(1))
+                        Set.of(createFeatureWithValue("TOKEN", "b"), createFeatureWithValue("TOKEN", "c").withOffset(1))
                 ),
                 new ExtractAtParameters(
                         "zeroWindowAfter_currentAndBefore",
                         extractor(1, 0, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of(Features.of("TOKEN", "b"), Features.of("TOKEN", "a").withOffset(-1))
+                        Set.of(
+                                createFeatureWithValue("TOKEN", "b"),
+                                createFeatureWithValue("TOKEN", "a").withOffset(-1)
+                        )
                 ),
                 new ExtractAtParameters(
                         "zeroWindowBoth_currentOnly",
                         extractor(0, 0, true),
                         List.of("a", "b", "c"),
                         1,
-                        Set.of(Features.of("TOKEN", "b"))
+                        Set.of(createFeatureWithValue("TOKEN", "b"))
                 ),
                 new ExtractAtParameters(
                         "zeroWindowBoth_excludeCurrent_empty",
@@ -182,7 +195,7 @@ class WindowFeatureExtractorTest {
                         defaultExtractor(),
                         List.of("alone"),
                         0,
-                        Set.of(Features.of("TOKEN", "alone"))
+                        Set.of(createFeatureWithValue("TOKEN", "alone"))
                 ),
                 new ExtractAtParameters(
                         "singleToken_excludeCurrent_empty",
@@ -197,10 +210,10 @@ class WindowFeatureExtractorTest {
                         List.of("a", "b", "c", "d", "e"),
                         2,
                         Set.of(
-                                Features.of("TOKEN", "c"),
-                                Features.of("TOKEN", "b").withOffset(-1),
-                                Features.of("TOKEN", "a").withOffset(-2),
-                                Features.of("TOKEN", "d").withOffset(1)
+                                createFeatureWithValue("TOKEN", "c"),
+                                createFeatureWithValue("TOKEN", "b").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "a").withOffset(-2),
+                                createFeatureWithValue("TOKEN", "d").withOffset(1)
                         )
                 ),
                 new ExtractAtParameters(
@@ -209,9 +222,9 @@ class WindowFeatureExtractorTest {
                         List.of("a", "b", "c", "d", "e"),
                         2,
                         Set.of(
-                                Features.of("TOKEN", "c"),
-                                Features.of("TOKEN", "b").withOffset(-1),
-                                Features.of("TOKEN", "d").withOffset(1)
+                                createFeatureWithValue("TOKEN", "c"),
+                                createFeatureWithValue("TOKEN", "b").withOffset(-1),
+                                createFeatureWithValue("TOKEN", "d").withOffset(1)
                         )
                 ),
                 new ExtractAtParameters(
@@ -220,10 +233,10 @@ class WindowFeatureExtractorTest {
                         List.of("hi", "there"),
                         0,
                         Set.of(
-                                Features.of("TOKEN", "hi"),
-                                Features.of("LENGTH", "2"),
-                                Features.of("TOKEN", "there").withOffset(1),
-                                Features.of("LENGTH", "5").withOffset(1)
+                                createFeatureWithValue("TOKEN", "hi"),
+                                createFeatureWithValue("LENGTH", "2"),
+                                createFeatureWithValue("TOKEN", "there").withOffset(1),
+                                createFeatureWithValue("LENGTH", "5").withOffset(1)
                         )
                 )
         );

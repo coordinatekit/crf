@@ -15,12 +15,12 @@
  */
 package org.coordinatekit.crf.annotator.terminal;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.annotator.AnnotatorModels;
 import org.coordinatekit.crf.annotator.AnnotatorSequence;
 import org.coordinatekit.crf.annotator.FeatureAvailability;
 import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -149,8 +149,8 @@ class TaggingViewModelsTest {
     void sequenceViewModel__featureRows(FeatureRowsParameters parameters) {
         // ARRANGE //
         List<Set<Feature>> key = List
-                .of(Set.of(Features.of("CAP")), Set.of(Features.of("ANIMAL"), Features.of("LOWER")));
-        List<Set<Feature>> verbose = List.of(Set.of(Features.of("WINDOW")), Set.of(Features.of("ANIMAL")));
+                .of(Set.of(createFeature("CAP")), Set.of(createFeature("ANIMAL"), createFeature("LOWER")));
+        List<Set<Feature>> verbose = List.of(Set.of(createFeature("WINDOW")), Set.of(createFeature("ANIMAL")));
         AnnotatorSequence<String> sequence = taggedSequence(key, verbose);
 
         // ACT //
@@ -190,7 +190,7 @@ class TaggingViewModelsTest {
     void sequenceViewModel__formatsPlaceholdersForEmptyFeaturesAndAbsentConfidence() {
         // ARRANGE //
         AnnotatorSequence<String> sequence = AnnotatorModels
-                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of(Features.of("CAP")), Set.of()), null);
+                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of(createFeature("CAP")), Set.of()), null);
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(

@@ -58,8 +58,8 @@ import java.util.stream.Stream;
  * <code>
  * XPathFeatureExtractor extractor = XPathFeatureExtractor
  *         .builder(getClass().getResourceAsStream("conjunctions.xml"), "/conjunctions/conjunction")
- *         .caseSensitive(false).presentFeature(Features.of("CONJUNCTION"))
- *         .notPresentFeature(Features.of("NOT_CONJUNCTION")).build();
+ *         .caseSensitive(false).presentFeature(createFeature("CONJUNCTION"))
+ *         .notPresentFeature(createFeature("NOT_CONJUNCTION")).build();
  * </code>
  * </pre>
  */

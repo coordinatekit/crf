@@ -173,8 +173,9 @@ final class TaggingViewModels {
      * {@value TerminalDisplay#NULL_VALUE_PLACEHOLDER} placeholder when the set is empty. Each feature
      * is rendered through {@code featureFormat} first, then the rendered strings are sorted — sorting
      * the rendered text rather than the features preserves the historical lexicographic display order,
-     * which {@link org.coordinatekit.crf.core.preprocessing.Features#naturalOrder()} would not (it
-     * orders by offset first).
+     * which
+     * {@link org.coordinatekit.crf.core.preprocessing.Feature#compareTo(org.coordinatekit.crf.core.preprocessing.Feature)}
+     * would not (it orders by offset first).
      *
      * @param features the features to format
      * @param featureFormat the format rendering each feature to its displayed string

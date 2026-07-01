@@ -35,7 +35,13 @@ import org.jspecify.annotations.Nullable;
  * with {@code null} ordered first. This is the deterministic order the pipeline uses when
  * serializing a feature set.
  *
- * @see Features
+ * <p>
+ * Every feature is created by {@link #createFeature(String)} or
+ * {@link #createFeatureWithValue(String, String)} at offset {@code 0} (the current token); the
+ * window component is stamped later with {@link #withOffset(int)}. The {@link Enum} overloads are a
+ * convenience for callers whose names and values are enum constants, resolving each via
+ * {@link Enum#name()}. Callers should statically import these factory methods.
+ *
  * @see FeatureFormat
  */
 public final class Feature implements Comparable<Feature> {
@@ -47,7 +53,7 @@ public final class Feature implements Comparable<Feature> {
     private final int offset;
     private final @Nullable String value;
 
-    Feature(int offset, String name, @Nullable String value) {
+    private Feature(int offset, String name, @Nullable String value) {
         this.offset = offset;
         this.name = Objects.requireNonNull(name, "name must not be null");
         this.value = value;
@@ -56,6 +62,84 @@ public final class Feature implements Comparable<Feature> {
     @Override
     public int compareTo(Feature other) {
         return NATURAL_ORDER.compare(this, other);
+    }
+
+    /**
+     * Creates a feature with the given name and no value, at offset {@code 0}.
+     *
+     * @param name the feature name
+     * @return a new feature with a null value
+     * @throws NullPointerException if {@code name} is null
+     */
+    public static Feature createFeature(String name) {
+        return createFeatureWithValue(name, (String) null);
+    }
+
+    /**
+     * Creates a feature whose name is {@code name.name()} and no value, at offset {@code 0}.
+     *
+     * @param name the feature name as an enum constant
+     * @return a new feature with a null value
+     * @throws NullPointerException if {@code name} is null
+     */
+    public static Feature createFeature(Enum<?> name) {
+        Objects.requireNonNull(name, "name must not be null");
+        return createFeature(name.name());
+    }
+
+    /**
+     * Creates a feature with the given name and value, at offset {@code 0}.
+     *
+     * @param name the feature name
+     * @param value the feature value, or {@code null} for a bare name
+     * @return a new feature
+     * @throws NullPointerException if {@code name} is null
+     */
+    public static Feature createFeatureWithValue(String name, @Nullable String value) {
+        Objects.requireNonNull(name, "name must not be null");
+        return new Feature(0, name, value);
+    }
+
+    /**
+     * Creates a feature with the given name and whose value is {@code value.name()}, at offset
+     * {@code 0}.
+     *
+     * @param name the feature name
+     * @param value the feature value as an enum constant
+     * @return a new feature
+     * @throws NullPointerException if {@code name} or {@code value} is null
+     */
+    public static Feature createFeatureWithValue(String name, Enum<?> value) {
+        Objects.requireNonNull(value, "value must not be null");
+        return createFeatureWithValue(name, value.name());
+    }
+
+    /**
+     * Creates a feature whose name is {@code name.name()} and the given value, at offset {@code 0}.
+     *
+     * @param name the feature name as an enum constant
+     * @param value the feature value, or {@code null} for a bare name
+     * @return a new feature
+     * @throws NullPointerException if {@code name} is null
+     */
+    public static Feature createFeatureWithValue(Enum<?> name, @Nullable String value) {
+        Objects.requireNonNull(name, "name must not be null");
+        return createFeatureWithValue(name.name(), value);
+    }
+
+    /**
+     * Creates a feature whose name is {@code name.name()} and value is {@code value.name()}, at offset
+     * {@code 0}.
+     *
+     * @param name the feature name as an enum constant
+     * @param value the feature value as an enum constant
+     * @return a new feature
+     * @throws NullPointerException if {@code name} or {@code value} is null
+     */
+    public static Feature createFeatureWithValue(Enum<?> name, Enum<?> value) {
+        Objects.requireNonNull(name, "name must not be null");
+        Objects.requireNonNull(value, "value must not be null");
+        return createFeatureWithValue(name.name(), value.name());
     }
 
     @Override

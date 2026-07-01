@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
@@ -41,23 +42,23 @@ class PatternMatchingFeatureExtractorTest {
         return Stream.of(
                 new ExtractAtParameters(
                         "matching_token_returns_matched_feature",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
                                 .build(),
                         List.of("HELLO"),
                         0,
-                        Set.of(Features.of("IS_CAPS"))
+                        Set.of(createFeature("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "non_matching_token_returns_not_matched_feature",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(Features.of("NOT_CAPS"))
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(createFeature("NOT_CAPS"))
                                 .build(),
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("NOT_CAPS"))
+                        Set.of(createFeature("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "matching_token_with_null_matched_feature_returns_empty_set",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(Features.of("NOT_CAPS"))
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").notMatchedFeature(createFeature("NOT_CAPS"))
                                 .build(),
                         List.of("HELLO"),
                         0,
@@ -65,7 +66,7 @@ class PatternMatchingFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "non_matching_token_with_null_not_matched_feature_returns_empty_set",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
                                 .build(),
                         List.of("hello"),
                         0,
@@ -73,59 +74,60 @@ class PatternMatchingFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "case_sensitive_pattern_does_not_match_different_case",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+", true).matchedFeature(Features.of("IS_CAPS"))
-                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+", true).matchedFeature(createFeature("IS_CAPS"))
+                                .notMatchedFeature(createFeature("NOT_CAPS")).build(),
                         List.of("Hello"),
                         0,
-                        Set.of(Features.of("NOT_CAPS"))
+                        Set.of(createFeature("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "case_insensitive_pattern_matches_different_case",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+", false).matchedFeature(Features.of("IS_ALPHA"))
-                                .notMatchedFeature(Features.of("NOT_ALPHA")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+", false)
+                                .matchedFeature(createFeature("IS_ALPHA")).notMatchedFeature(createFeature("NOT_ALPHA"))
+                                .build(),
                         List.of("Hello"),
                         0,
-                        Set.of(Features.of("IS_ALPHA"))
+                        Set.of(createFeature("IS_ALPHA"))
                 ),
                 new ExtractAtParameters(
                         "builder_with_compiled_pattern",
                         PatternMatchingFeatureExtractor.builder(Pattern.compile("\\d+"))
-                                .matchedFeature(Features.of("IS_NUMBER")).build(),
+                                .matchedFeature(createFeature("IS_NUMBER")).build(),
                         List.of("123"),
                         0,
-                        Set.of(Features.of("IS_NUMBER"))
+                        Set.of(createFeature("IS_NUMBER"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_0",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
-                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
+                                .notMatchedFeature(createFeature("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         0,
-                        Set.of(Features.of("NOT_CAPS"))
+                        Set.of(createFeature("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_1",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
-                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
+                                .notMatchedFeature(createFeature("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         1,
-                        Set.of(Features.of("IS_CAPS"))
+                        Set.of(createFeature("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_2",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
-                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
+                                .notMatchedFeature(createFeature("NOT_CAPS")).build(),
                         List.of("hello", "WORLD", "foo"),
                         2,
-                        Set.of(Features.of("NOT_CAPS"))
+                        Set.of(createFeature("NOT_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "pattern_must_match_entire_token",
-                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(Features.of("IS_CAPS"))
-                                .notMatchedFeature(Features.of("NOT_CAPS")).build(),
+                        PatternMatchingFeatureExtractor.builder("[A-Z]+").matchedFeature(createFeature("IS_CAPS"))
+                                .notMatchedFeature(createFeature("NOT_CAPS")).build(),
                         List.of("HELLOworld"),
                         0,
-                        Set.of(Features.of("NOT_CAPS"))
+                        Set.of(createFeature("NOT_CAPS"))
                 )
         );
     }

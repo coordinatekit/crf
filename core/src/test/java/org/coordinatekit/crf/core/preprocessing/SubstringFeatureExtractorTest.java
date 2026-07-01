@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.core.InputSequence;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SubstringFeatureExtractorTest {
-    private static final Function<String, Feature> PREFIX_MAPPER = substring -> Features.of("PREFIX_" + substring);
-    private static final Function<String, Feature> SUFFIX_MAPPER = substring -> Features.of("SUFFIX_" + substring);
+    private static final Function<String, Feature> PREFIX_MAPPER = substring -> createFeature("PREFIX_" + substring);
+    private static final Function<String, Feature> SUFFIX_MAPPER = substring -> createFeature("SUFFIX_" + substring);
 
     record BuilderExceptionParameters(
             String name,
@@ -44,13 +45,13 @@ class SubstringFeatureExtractorTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "lengthZero",
-                        () -> SubstringFeatureExtractor.builder(Features::of).length(0),
+                        () -> SubstringFeatureExtractor.builder(Feature::createFeature).length(0),
                         IllegalArgumentException.class,
                         "length must be at least 1"
                 ),
                 new BuilderExceptionParameters(
                         "lengthNegative",
-                        () -> SubstringFeatureExtractor.builder(Features::of).length(-1),
+                        () -> SubstringFeatureExtractor.builder(Feature::createFeature).length(-1),
                         IllegalArgumentException.class,
                         "length must be at least 1"
                 )
@@ -88,7 +89,7 @@ class SubstringFeatureExtractorTest {
                         3,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("PREFIX_hel"))
+                        Set.of(createFeature("PREFIX_hel"))
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenEqualsLength",
@@ -98,7 +99,7 @@ class SubstringFeatureExtractorTest {
                         5,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("PREFIX_hello"))
+                        Set.of(createFeature("PREFIX_hello"))
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenShorterThanLength_includeTrue",
@@ -108,7 +109,7 @@ class SubstringFeatureExtractorTest {
                         10,
                         List.of("hi"),
                         0,
-                        Set.of(Features.of("PREFIX_hi"))
+                        Set.of(createFeature("PREFIX_hi"))
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenShorterThanLength_includeFalse",
@@ -128,7 +129,7 @@ class SubstringFeatureExtractorTest {
                         3,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("SUFFIX_llo"))
+                        Set.of(createFeature("SUFFIX_llo"))
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenEqualsLength",
@@ -138,7 +139,7 @@ class SubstringFeatureExtractorTest {
                         5,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("SUFFIX_hello"))
+                        Set.of(createFeature("SUFFIX_hello"))
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenShorterThanLength_includeTrue",
@@ -148,7 +149,7 @@ class SubstringFeatureExtractorTest {
                         10,
                         List.of("hi"),
                         0,
-                        Set.of(Features.of("SUFFIX_hi"))
+                        Set.of(createFeature("SUFFIX_hi"))
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenShorterThanLength_includeFalse",
@@ -168,7 +169,7 @@ class SubstringFeatureExtractorTest {
                         2,
                         List.of("alpha", "beta", "gamma"),
                         1,
-                        Set.of(Features.of("PREFIX_be"))
+                        Set.of(createFeature("PREFIX_be"))
                 ),
                 new ExtractAtParameters(
                         "defaultLength_extractsTwo",
@@ -178,57 +179,57 @@ class SubstringFeatureExtractorTest {
                         2,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("PREFIX_he"))
+                        Set.of(createFeature("PREFIX_he"))
                 ),
                 new ExtractAtParameters(
                         "lengthOne_extractsSingleChar",
-                        s -> Features.of("CHAR_" + s),
+                        s -> createFeature("CHAR_" + s),
                         false,
                         true,
                         1,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("CHAR_h"))
+                        Set.of(createFeature("CHAR_h"))
                 ),
                 new ExtractAtParameters(
                         "suffix_lengthOne_extractsLastChar",
-                        s -> Features.of("CHAR_" + s),
+                        s -> createFeature("CHAR_" + s),
                         true,
                         true,
                         1,
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("CHAR_o"))
+                        Set.of(createFeature("CHAR_o"))
                 ),
                 new ExtractAtParameters(
                         "prefix_exactBoundary_tokenEqualsLength",
-                        s -> Features.of("P_" + s),
+                        s -> createFeature("P_" + s),
                         false,
                         false,
                         3,
                         List.of("abc"),
                         0,
-                        Set.of(Features.of("P_abc"))
+                        Set.of(createFeature("P_abc"))
                 ),
                 new ExtractAtParameters(
                         "suffix_exactBoundary_tokenEqualsLength",
-                        s -> Features.of("S_" + s),
+                        s -> createFeature("S_" + s),
                         true,
                         false,
                         3,
                         List.of("abc"),
                         0,
-                        Set.of(Features.of("S_abc"))
+                        Set.of(createFeature("S_abc"))
                 ),
                 new ExtractAtParameters(
                         "multipleTokens_lastPosition",
-                        s -> Features.of("S_" + s),
+                        s -> createFeature("S_" + s),
                         true,
                         true,
                         2,
                         List.of("first", "second", "third"),
                         2,
-                        Set.of(Features.of("S_rd"))
+                        Set.of(createFeature("S_rd"))
                 )
         );
     }

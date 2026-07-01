@@ -15,53 +15,39 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Tests {@link Feature}: its accessors, {@link Feature#compareTo(Feature) natural ordering}, the
- * replace semantics of {@link Feature#withOffset(int)}, {@link Feature#toString()}, and the
- * {@code equals}/{@code hashCode} contract with each property varied in isolation. Instances are
- * built through the {@link Features} factory rather than the package-private constructor.
+ * Tests {@link Feature}: {@link Feature#compareTo(Feature) natural ordering}, the replace semantics
+ * of {@link Feature#withOffset(int)}, {@link Feature#toString()}, the {@code
+ * equals}/{@code hashCode} contract with each property varied in isolation, and the
+ * {@link Feature#createFeature(String)
+ * createFeature}/{@link Feature#createFeatureWithValue(String, String) createFeatureWithValue}
+ * factory overloads (including the enum convenience forms) with their null-argument guards.
  */
 class FeatureTest {
-    private static final Feature FEATURE = Features.of("TOKEN", "cat").withOffset(1);
-    private static final Feature FEATURE_SAME = Features.of("TOKEN", "cat").withOffset(1);
-    private static final Feature FEATURE_DIFFERENT_OFFSET = Features.of("TOKEN", "cat").withOffset(2);
-    private static final Feature FEATURE_DIFFERENT_NAME = Features.of("SHAPE", "cat").withOffset(1);
-    private static final Feature FEATURE_DIFFERENT_VALUE = Features.of("TOKEN", "dog").withOffset(1);
-    private static final Feature FEATURE_NULL_VALUE = Features.of("TOKEN").withOffset(1);
-
-    record AccessorsParameters(
-            String name,
-            Feature feature,
-            int expectedOffset,
-            String expectedName,
-            @Nullable String expectedValue
-    ) {}
-
-    static Stream<AccessorsParameters> accessors() {
-        return Stream.of(
-                new AccessorsParameters("with_value", FEATURE, 1, "TOKEN", "cat"),
-                new AccessorsParameters("null_value", FEATURE_NULL_VALUE, 1, "TOKEN", null)
-        );
+    private enum SampleName {
+        CAP, LOWER
     }
 
-    @MethodSource
-    @ParameterizedTest
-    void accessors(AccessorsParameters parameters) {
-        // ASSERT //
-        assertEquals(parameters.expectedOffset(), parameters.feature().offset(), parameters.name());
-        assertEquals(parameters.expectedName(), parameters.feature().name(), parameters.name());
-        assertEquals(parameters.expectedValue(), parameters.feature().value(), parameters.name());
-    }
+    private static final Feature FEATURE = createFeatureWithValue("TOKEN", "cat").withOffset(1);
+    private static final Feature FEATURE_SAME = createFeatureWithValue("TOKEN", "cat").withOffset(1);
+    private static final Feature FEATURE_DIFFERENT_OFFSET = createFeatureWithValue("TOKEN", "cat").withOffset(2);
+    private static final Feature FEATURE_DIFFERENT_NAME = createFeatureWithValue("SHAPE", "cat").withOffset(1);
+    private static final Feature FEATURE_DIFFERENT_VALUE = createFeatureWithValue("TOKEN", "dog").withOffset(1);
+    private static final Feature FEATURE_NULL_VALUE = createFeature("TOKEN").withOffset(1);
 
     record CompareToParameters(String name, Feature left, Feature right, int expectedSign) {}
 
@@ -135,20 +121,163 @@ class FeatureTest {
         assertNotEquals(FEATURE, "TOKEN=cat");
     }
 
+    record FactoryParameters(
+            String name,
+            Feature feature,
+            int expectedOffset,
+            String expectedName,
+            @Nullable String expectedValue
+    ) {}
+
+    static Stream<FactoryParameters> factory() {
+        return Stream.of(
+                new FactoryParameters("name_only", createFeature("CAP"), 0, "CAP", null),
+                new FactoryParameters("name_value", createFeatureWithValue("LENGTH", "3"), 0, "LENGTH", "3"),
+                new FactoryParameters("name_empty_value", createFeatureWithValue("X", ""), 0, "X", ""),
+                new FactoryParameters("enum_name", createFeature(SampleName.CAP), 0, "CAP", null),
+                new FactoryParameters(
+                        "enum_name_value",
+                        createFeatureWithValue(SampleName.CAP, SampleName.LOWER),
+                        0,
+                        "CAP",
+                        "LOWER"
+                ),
+                new FactoryParameters(
+                        "name_enum_value",
+                        createFeatureWithValue("LENGTH", SampleName.CAP),
+                        0,
+                        "LENGTH",
+                        "CAP"
+                ),
+                new FactoryParameters(
+                        "enum_name_string_value",
+                        createFeatureWithValue(SampleName.CAP, "3"),
+                        0,
+                        "CAP",
+                        "3"
+                ),
+                new FactoryParameters(
+                        "enum_name_null_string_value",
+                        createFeatureWithValue(SampleName.CAP, (String) null),
+                        0,
+                        "CAP",
+                        null
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void factory(FactoryParameters parameters) {
+        // ASSERT //
+        assertEquals(parameters.expectedOffset(), parameters.feature().offset(), parameters.name());
+        assertEquals(parameters.expectedName(), parameters.feature().name(), parameters.name());
+        assertEquals(parameters.expectedValue(), parameters.feature().value(), parameters.name());
+    }
+
+    @Test
+    void factory__enumResolvesViaName() {
+        // ASSERT //
+        assertEquals(createFeature("CAP"), createFeature(SampleName.CAP));
+        assertEquals(createFeatureWithValue("CAP", "LOWER"), createFeatureWithValue(SampleName.CAP, SampleName.LOWER));
+    }
+
+    record FactoryExceptionParameters(String name, Executable action, String expectedMessage) {}
+
+    @SuppressWarnings({"DataFlowIssue", "NullAway"})
+    static Stream<FactoryExceptionParameters> factory__exception() {
+        return Stream.of(
+                new FactoryExceptionParameters(
+                        "name_only",
+                        () -> createFeature((String) null),
+                        "name must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "name_value",
+                        () -> createFeatureWithValue((String) null, "1"),
+                        "name must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "enum_name",
+                        () -> createFeature((Enum<?>) null),
+                        "name must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "enum_value",
+                        () -> createFeatureWithValue(SampleName.CAP, (Enum<?>) null),
+                        "value must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "enum_name_enum_value_null_name",
+                        () -> createFeatureWithValue((Enum<?>) null, SampleName.CAP),
+                        "name must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "name_enum_value_null_name",
+                        () -> createFeatureWithValue((String) null, SampleName.CAP),
+                        "name must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "name_enum_value_null_value",
+                        () -> createFeatureWithValue("LENGTH", (Enum<?>) null),
+                        "value must not be null"
+                ),
+                new FactoryExceptionParameters(
+                        "enum_name_string_value_null_name",
+                        () -> createFeatureWithValue((Enum<?>) null, "3"),
+                        "name must not be null"
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void factory__exception(FactoryExceptionParameters parameters) {
+        // ACT //
+        NullPointerException exception = assertThrows(NullPointerException.class, parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
+    }
+
     @Test
     void testToString() {
         assertEquals("Feature[offset=1, name=TOKEN, value=cat]", FEATURE.toString());
         assertEquals("Feature[offset=1, name=TOKEN, value=null]", FEATURE_NULL_VALUE.toString());
     }
 
-    @Test
-    void withOffset() {
-        Feature shifted = FEATURE.withOffset(5);
+    record WithOffsetParameters(String name, Feature start, int offsetToApply, Feature expected) {}
 
-        // Replaces rather than accumulates: the prior offset of 1 is discarded.
-        assertEquals(5, shifted.offset());
-        assertEquals("TOKEN", shifted.name());
-        assertEquals("cat", shifted.value());
-        assertEquals(Features.of("TOKEN", "cat").withOffset(5), shifted);
+    static Stream<WithOffsetParameters> withOffset() {
+        return Stream.of(
+                new WithOffsetParameters(
+                        "null_value_remains",
+                        createFeature("CAP"),
+                        2,
+                        createFeature("CAP").withOffset(2)
+                ),
+                new WithOffsetParameters(
+                        "replaces_from_negative_offset",
+                        createFeatureWithValue("TOKEN", "517").withOffset(-1),
+                        3,
+                        createFeatureWithValue("TOKEN", "517").withOffset(3)
+                ),
+                new WithOffsetParameters(
+                        "replaces_from_positive_offset",
+                        FEATURE,
+                        5,
+                        createFeatureWithValue("TOKEN", "cat").withOffset(5)
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void withOffset(WithOffsetParameters parameters) {
+        // ACT //
+        Feature shifted = parameters.start().withOffset(parameters.offsetToApply());
+
+        // ASSERT //
+        assertEquals(parameters.expected(), shifted, parameters.name());
     }
 }

@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.annotator.terminal;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.initialTagsOf;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
@@ -38,7 +39,6 @@ import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;
@@ -677,12 +677,14 @@ class TerminalTaggingInterfaceTest {
         Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
         Map<PartOfSpeech, Double> thirdScores = scoreMap(PartOfSpeech.Noun, 0.6, PartOfSpeech.Adverb, 0.4);
         var tagged = new TaggedSequence<>(tokens, embeddedFeatures, List.of(firstScores, secondScores, thirdScores));
-        List<Set<Feature>> features = includeKey
-                ? List.of(Set.of(Features.of("CAP")), Set.of(Features.of("LOWER"), Features.of("ANIMAL")), Set.of())
+        List<Set<Feature>> features = includeKey ? List
+                .of(Set.of(createFeature("CAP")), Set.of(createFeature("LOWER"), createFeature("ANIMAL")), Set.of())
                 : null;
-        List<Set<Feature>> verboseFeatures = includeVerbose ? List
-                .of(Set.of(Features.of("WINDOW_NEXT_fox")), Set.of(Features.of("ANIMAL")), Set.of(Features.of("PUNCT")))
-                : null;
+        List<Set<Feature>> verboseFeatures = includeVerbose ? List.of(
+                Set.of(createFeature("WINDOW_NEXT_fox")),
+                Set.of(createFeature("ANIMAL")),
+                Set.of(createFeature("PUNCT"))
+        ) : null;
         return annotatorSequence(1, 1, tagged, features, verboseFeatures);
     }
 

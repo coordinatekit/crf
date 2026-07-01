@@ -41,8 +41,8 @@ import static java.util.stream.Collectors.toSet;
  * <pre>
  * <code>
  * LengthFeatureExtractor extractor = LengthFeatureExtractor.builder(5)
- *         .hasLengthFeatureMapper(len -> Features.of("HAS_LENGTH_" + len))
- *         .lacksLengthFeatureMapper(len -> Features.of("LACKS_LENGTH_" + len)).build();
+ *         .hasLengthFeatureMapper(len -> createFeature("HAS_LENGTH_" + len))
+ *         .lacksLengthFeatureMapper(len -> createFeature("LACKS_LENGTH_" + len)).build();
  * </code>
  * </pre>
  */
