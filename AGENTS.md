@@ -126,6 +126,8 @@ void extractAt(ExtractAtParameters parameters) {
 - Record name: `{TestMethodName}Parameters` (e.g., `ExtractAtParameters`)
 - First field is always `String name` with a descriptive snake_case identifier
 - Static method name matches the test method name (enables `@MethodSource` without arguments)
+- Place the parameter record and its `@MethodSource` provider immediately before the parameterized test
+  method they belong to, rather than grouping all records at the top of the class
 - Use `// ARRANGE //`, `// ACT //`, `// ASSERT //` comments in the test method
 
 **When to use parameterized tests:**

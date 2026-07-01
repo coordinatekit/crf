@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
@@ -30,29 +32,32 @@ class CompositeFeatureExtractorTest {
     @Test
     void combinesMultipleExtractors() {
         FeatureExtractor lengthExtractor = (seq, pos) -> Set
-                .of(Features.of("LENGTH", String.valueOf(seq.get(pos).token().length())));
+                .of(createFeatureWithValue("LENGTH", String.valueOf(seq.get(pos).token().length())));
         FeatureExtractor lowerExtractor = (seq, pos) -> Set
-                .of(Features.of("LOWER", seq.get(pos).token().toLowerCase(Locale.ROOT)));
+                .of(createFeatureWithValue("LOWER", seq.get(pos).token().toLowerCase(Locale.ROOT)));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(lengthExtractor, lowerExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("Hello"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")), features);
+        assertEquals(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")), features);
     }
 
     @Test
     void duplicateFeaturesAreDeduped() {
-        FeatureExtractor extractor1 = (seq, pos) -> Set.of(Features.of("FEATURE_A"), Features.of("FEATURE_B"));
-        FeatureExtractor extractor2 = (seq, pos) -> Set.of(Features.of("FEATURE_B"), Features.of("FEATURE_C"));
+        FeatureExtractor extractor1 = (seq, pos) -> Set.of(createFeature("FEATURE_A"), createFeature("FEATURE_B"));
+        FeatureExtractor extractor2 = (seq, pos) -> Set.of(createFeature("FEATURE_B"), createFeature("FEATURE_C"));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(extractor1, extractor2);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("token"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("FEATURE_A"), Features.of("FEATURE_B"), Features.of("FEATURE_C")), features);
+        assertEquals(
+                Set.of(createFeature("FEATURE_A"), createFeature("FEATURE_B"), createFeature("FEATURE_C")),
+                features
+        );
     }
 
     @Test
@@ -68,16 +73,16 @@ class CompositeFeatureExtractorTest {
     @Test
     void of__combinesMultipleExtractors() {
         FeatureExtractor lengthExtractor = (seq, pos) -> Set
-                .of(Features.of("LENGTH", String.valueOf(seq.get(pos).token().length())));
+                .of(createFeatureWithValue("LENGTH", String.valueOf(seq.get(pos).token().length())));
         FeatureExtractor lowerExtractor = (seq, pos) -> Set
-                .of(Features.of("LOWER", seq.get(pos).token().toLowerCase(Locale.ROOT)));
+                .of(createFeatureWithValue("LOWER", seq.get(pos).token().toLowerCase(Locale.ROOT)));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(lengthExtractor, lowerExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("Hello"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello")), features);
+        assertEquals(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")), features);
     }
 
     @Test
@@ -92,66 +97,66 @@ class CompositeFeatureExtractorTest {
 
     @Test
     void of__singleExtractor() {
-        FeatureExtractor extractor = (seq, pos) -> Set.of(Features.of("TOKEN", seq.get(pos).token()));
+        FeatureExtractor extractor = (seq, pos) -> Set.of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(extractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("test"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("TOKEN", "test")), features);
+        assertEquals(Set.of(createFeatureWithValue("TOKEN", "test")), features);
     }
 
     @Test
     void extractorReturningEmptySet() {
         FeatureExtractor emptyExtractor = (seq, pos) -> Set.of();
         FeatureExtractor lengthExtractor = (seq, pos) -> Set
-                .of(Features.of("LENGTH", String.valueOf(seq.get(pos).token().length())));
+                .of(createFeatureWithValue("LENGTH", String.valueOf(seq.get(pos).token().length())));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(emptyExtractor, lengthExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("hello"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("LENGTH", "5")), features);
+        assertEquals(Set.of(createFeatureWithValue("LENGTH", "5")), features);
     }
 
     @Test
     void extractsAtCorrectPosition() {
-        FeatureExtractor tokenExtractor = (seq, pos) -> Set.of(Features.of("TOKEN", seq.get(pos).token()));
+        FeatureExtractor tokenExtractor = (seq, pos) -> Set.of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(tokenExtractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("first", "second", "third"));
 
-        assertEquals(Set.of(Features.of("TOKEN", "first")), composite.extractAt(sequence, 0));
-        assertEquals(Set.of(Features.of("TOKEN", "second")), composite.extractAt(sequence, 1));
-        assertEquals(Set.of(Features.of("TOKEN", "third")), composite.extractAt(sequence, 2));
+        assertEquals(Set.of(createFeatureWithValue("TOKEN", "first")), composite.extractAt(sequence, 0));
+        assertEquals(Set.of(createFeatureWithValue("TOKEN", "second")), composite.extractAt(sequence, 1));
+        assertEquals(Set.of(createFeatureWithValue("TOKEN", "third")), composite.extractAt(sequence, 2));
     }
 
     @Test
     void preservesOrderOfExtraction() {
-        FeatureExtractor first = (seq, pos) -> Set.of(Features.of("FIRST"));
-        FeatureExtractor second = (seq, pos) -> Set.of(Features.of("SECOND"));
-        FeatureExtractor third = (seq, pos) -> Set.of(Features.of("THIRD"));
+        FeatureExtractor first = (seq, pos) -> Set.of(createFeature("FIRST"));
+        FeatureExtractor second = (seq, pos) -> Set.of(createFeature("SECOND"));
+        FeatureExtractor third = (seq, pos) -> Set.of(createFeature("THIRD"));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(first, second, third);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("token"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("FIRST"), Features.of("SECOND"), Features.of("THIRD")), features);
+        assertEquals(Set.of(createFeature("FIRST"), createFeature("SECOND"), createFeature("THIRD")), features);
     }
 
     @Test
     void singleExtractor() {
-        FeatureExtractor extractor = (seq, pos) -> Set.of(Features.of("TOKEN", seq.get(pos).token()));
+        FeatureExtractor extractor = (seq, pos) -> Set.of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(extractor);
 
         Sequence<PositionedToken> sequence = new InputSequence(List.of("test"));
         Set<Feature> features = composite.extractAt(sequence, 0);
 
-        assertEquals(Set.of(Features.of("TOKEN", "test")), features);
+        assertEquals(Set.of(createFeatureWithValue("TOKEN", "test")), features);
     }
 }

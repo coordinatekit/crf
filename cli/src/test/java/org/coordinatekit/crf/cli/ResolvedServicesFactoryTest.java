@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.cli;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,7 +34,6 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -74,9 +74,9 @@ import java.util.stream.Stream;
 class ResolvedServicesFactoryTest {
     private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> Set.of();
     private static final FeatureExtractor FULL_EXTRACTOR = (sequence, position) -> Set
-            .of(Features.of("VERBOSE_" + sequence.get(position).token()));
+            .of(createFeature("VERBOSE_" + sequence.get(position).token()));
     private static final FeatureExtractor KEY_EXTRACTOR = (sequence, position) -> Set
-            .of(Features.of("KEY_" + sequence.get(position).token()));
+            .of(createFeature("KEY_" + sequence.get(position).token()));
     private static final CrfTagger<String> TAGGER = input -> {
         throw new UnsupportedOperationException("not used");
     };
@@ -104,18 +104,18 @@ class ResolvedServicesFactoryTest {
     private static void assertRoutedToViews(AnnotatorSequence<String> presented) {
         assertEquals(
                 List.of(
-                        Set.of(Features.of("KEY_the")),
-                        Set.of(Features.of("KEY_quick")),
-                        Set.of(Features.of("KEY_brown"))
+                        Set.of(createFeature("KEY_the")),
+                        Set.of(createFeature("KEY_quick")),
+                        Set.of(createFeature("KEY_brown"))
                 ),
                 presented.tokens().stream().map(AnnotatorToken::features).toList(),
                 "the key feature extractor must reach the key view"
         );
         assertEquals(
                 List.of(
-                        Set.of(Features.of("VERBOSE_the")),
-                        Set.of(Features.of("VERBOSE_quick")),
-                        Set.of(Features.of("VERBOSE_brown"))
+                        Set.of(createFeature("VERBOSE_the")),
+                        Set.of(createFeature("VERBOSE_quick")),
+                        Set.of(createFeature("VERBOSE_brown"))
                 ),
                 presented.tokens().stream().map(AnnotatorToken::verboseFeatures).toList(),
                 "the full feature extractor must reach the verbose view"

@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,9 +66,10 @@ public class DefaultFeatureFormat implements FeatureFormat {
 
         int separator = remainder.indexOf('=');
         if (separator < 0) {
-            return Features.of(remainder).withOffset(offset);
+            return createFeature(remainder).withOffset(offset);
         }
-        return Features.of(remainder.substring(0, separator), remainder.substring(separator + 1)).withOffset(offset);
+        return createFeatureWithValue(remainder.substring(0, separator), remainder.substring(separator + 1))
+                .withOffset(offset);
     }
 
     @Override

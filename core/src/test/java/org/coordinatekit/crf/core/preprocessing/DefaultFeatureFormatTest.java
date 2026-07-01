@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -48,16 +50,20 @@ class DefaultFeatureFormatTest {
 
     static Stream<MappingParameters> mapping() {
         return Stream.of(
-                new MappingParameters("bare_name", Features.of("IS_NUMERIC"), "IS_NUMERIC"),
-                new MappingParameters("name_value", Features.of("LENGTH", "3"), "LENGTH=3"),
-                new MappingParameters("empty_value", Features.of("X", ""), "X="),
-                new MappingParameters("value_with_equals", Features.of("A", "B=C"), "A=B=C"),
+                new MappingParameters("bare_name", createFeature("IS_NUMERIC"), "IS_NUMERIC"),
+                new MappingParameters("name_value", createFeatureWithValue("LENGTH", "3"), "LENGTH=3"),
+                new MappingParameters("empty_value", createFeatureWithValue("X", ""), "X="),
+                new MappingParameters("value_with_equals", createFeatureWithValue("A", "B=C"), "A=B=C"),
                 new MappingParameters(
                         "previous_prefix",
-                        Features.of("TOKEN", "517").withOffset(-1),
+                        createFeatureWithValue("TOKEN", "517").withOffset(-1),
                         "PREV_1__TOKEN=517"
                 ),
-                new MappingParameters("next_prefix", Features.of("TOKEN", "517").withOffset(2), "NEXT_2__TOKEN=517")
+                new MappingParameters(
+                        "next_prefix",
+                        createFeatureWithValue("TOKEN", "517").withOffset(2),
+                        "NEXT_2__TOKEN=517"
+                )
         );
     }
 
@@ -76,14 +82,14 @@ class DefaultFeatureFormatTest {
     static Stream<ParseAsymmetricParameters> parse__asymmetric() {
         return Stream.of(
                 // PREV_0__ collapses to offset 0; renders back as bare "X", so it does not round-trip.
-                new ParseAsymmetricParameters("zero_offset_prefix", "PREV_0__X", Features.of("X")),
+                new ParseAsymmetricParameters("zero_offset_prefix", "PREV_0__X", createFeature("X")),
                 // A leading '=' yields an empty name.
-                new ParseAsymmetricParameters("leading_equals", "=value", Features.of("", "value")),
+                new ParseAsymmetricParameters("leading_equals", "=value", createFeatureWithValue("", "value")),
                 // parse does not validate: it produces a prefix-shaped name that render() would reject.
                 new ParseAsymmetricParameters(
                         "nested_prefix_name",
                         "PREV_1__NEXT_2__TOKEN",
-                        Features.of("NEXT_2__TOKEN").withOffset(-1)
+                        createFeature("NEXT_2__TOKEN").withOffset(-1)
                 )
         );
     }
@@ -139,13 +145,13 @@ class DefaultFeatureFormatTest {
         return Stream.of(
                 new ExceptionParameters(
                         "name_with_equals",
-                        () -> formatter.render(Features.of("A=B")),
+                        () -> formatter.render(createFeature("A=B")),
                         IllegalArgumentException.class,
                         "must not contain '='"
                 ),
                 new ExceptionParameters(
                         "name_looks_like_prefix",
-                        () -> formatter.render(Features.of("PREV_1__X")),
+                        () -> formatter.render(createFeature("PREV_1__X")),
                         IllegalArgumentException.class,
                         "positional prefix"
                 ),

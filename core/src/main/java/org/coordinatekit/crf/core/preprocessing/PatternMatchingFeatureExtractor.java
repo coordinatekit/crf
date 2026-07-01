@@ -38,8 +38,8 @@ import java.util.regex.Pattern;
  * <pre>
  * <code>
  * PatternMatchingFeatureExtractor extractor = PatternMatchingFeatureExtractor
- *         .builder("[A-Z]+", false).matchedFeature(Features.of("IS_CAPS"))
- *         .notMatchedFeature(Features.of("NOT_CAPS")).build();
+ *         .builder("[A-Z]+", false).matchedFeature(createFeature("IS_CAPS"))
+ *         .notMatchedFeature(createFeature("NOT_CAPS")).build();
  * </code>
  * </pre>
  */

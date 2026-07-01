@@ -15,6 +15,8 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
@@ -31,11 +33,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 class TransformingFeatureExtractorTest {
     private static final Function<String, Set<Feature>> CLASSIFYING_TRANSFORMER = token -> {
         if (token.matches("\\d+")) {
-            return Set.of(Features.of("IS_NUMBER"));
+            return Set.of(createFeature("IS_NUMBER"));
         } else if (token.matches("[A-Z]+")) {
-            return Set.of(Features.of("IS_CAPS"));
+            return Set.of(createFeature("IS_CAPS"));
         } else {
-            return Set.of(Features.of("OTHER"));
+            return Set.of(createFeature("OTHER"));
         }
     };
 
@@ -51,21 +53,25 @@ class TransformingFeatureExtractorTest {
         return Stream.of(
                 new ExtractAtParameters(
                         "transformer_applied_to_token",
-                        token -> Set.of(Features.of("LENGTH", String.valueOf(token.length()))),
+                        token -> Set.of(createFeatureWithValue("LENGTH", String.valueOf(token.length()))),
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("LENGTH", "5"))
+                        Set.of(createFeatureWithValue("LENGTH", "5"))
                 ),
                 new ExtractAtParameters(
                         "transformer_returns_multiple_features",
                         token -> Set.of(
-                                Features.of("LENGTH", String.valueOf(token.length())),
-                                Features.of("LOWER", token.toLowerCase(Locale.ROOT)),
-                                Features.of("UPPER", token.toUpperCase(Locale.ROOT))
+                                createFeatureWithValue("LENGTH", String.valueOf(token.length())),
+                                createFeatureWithValue("LOWER", token.toLowerCase(Locale.ROOT)),
+                                createFeatureWithValue("UPPER", token.toUpperCase(Locale.ROOT))
                         ),
                         List.of("Hello"),
                         0,
-                        Set.of(Features.of("LENGTH", "5"), Features.of("LOWER", "hello"), Features.of("UPPER", "HELLO"))
+                        Set.of(
+                                createFeatureWithValue("LENGTH", "5"),
+                                createFeatureWithValue("LOWER", "hello"),
+                                createFeatureWithValue("UPPER", "HELLO")
+                        )
                 ),
                 new ExtractAtParameters(
                         "transformer_returns_empty_set",
@@ -76,45 +82,45 @@ class TransformingFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_0",
-                        token -> Set.of(Features.of("TOKEN", token)),
+                        token -> Set.of(createFeatureWithValue("TOKEN", token)),
                         List.of("first", "second", "third"),
                         0,
-                        Set.of(Features.of("TOKEN", "first"))
+                        Set.of(createFeatureWithValue("TOKEN", "first"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_1",
-                        token -> Set.of(Features.of("TOKEN", token)),
+                        token -> Set.of(createFeatureWithValue("TOKEN", token)),
                         List.of("first", "second", "third"),
                         1,
-                        Set.of(Features.of("TOKEN", "second"))
+                        Set.of(createFeatureWithValue("TOKEN", "second"))
                 ),
                 new ExtractAtParameters(
                         "extracts_at_position_2",
-                        token -> Set.of(Features.of("TOKEN", token)),
+                        token -> Set.of(createFeatureWithValue("TOKEN", token)),
                         List.of("first", "second", "third"),
                         2,
-                        Set.of(Features.of("TOKEN", "third"))
+                        Set.of(createFeatureWithValue("TOKEN", "third"))
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_number",
                         CLASSIFYING_TRANSFORMER,
                         List.of("123", "ABC", "hello"),
                         0,
-                        Set.of(Features.of("IS_NUMBER"))
+                        Set.of(createFeature("IS_NUMBER"))
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_caps",
                         CLASSIFYING_TRANSFORMER,
                         List.of("123", "ABC", "hello"),
                         1,
-                        Set.of(Features.of("IS_CAPS"))
+                        Set.of(createFeature("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_other",
                         CLASSIFYING_TRANSFORMER,
                         List.of("123", "ABC", "hello"),
                         2,
-                        Set.of(Features.of("OTHER"))
+                        Set.of(createFeature("OTHER"))
                 )
         );
     }

@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.core.InputSequence;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,62 +77,62 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "caseSensitive_returnsNotPresentFeatureWhenNotFound",
                         true,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("hello", "world"),
                         0,
-                        Set.of(Features.of("NOT_CONJUNCTION"))
+                        Set.of(createFeature("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseSensitive_returnsPresentFeatureWhenFound",
                         true,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("hello", "and", "world"),
                         1,
-                        Set.of(Features.of("CONJUNCTION"))
+                        Set.of(createFeature("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseSensitive_doesNotMatchDifferentCase",
                         true,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("AND"),
                         0,
-                        Set.of(Features.of("NOT_CONJUNCTION"))
+                        Set.of(createFeature("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_matchesDifferentCase",
                         false,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("AND"),
                         0,
-                        Set.of(Features.of("CONJUNCTION"))
+                        Set.of(createFeature("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_matchesMixedCase",
                         false,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("AnD"),
                         0,
-                        Set.of(Features.of("CONJUNCTION"))
+                        Set.of(createFeature("CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "caseInsensitive_returnsNotPresentFeatureWhenNotFound",
                         false,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("hello"),
                         0,
-                        Set.of(Features.of("NOT_CONJUNCTION"))
+                        Set.of(createFeature("NOT_CONJUNCTION"))
                 ),
                 new ExtractAtParameters(
                         "nullNotPresentFeature_returnsEmptySetWhenNotFound",
                         true,
                         null,
-                        Features.of("CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("hello"),
                         0,
                         Set.of()
@@ -139,7 +140,7 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "nullPresentFeature_returnsEmptySetWhenFound",
                         true,
-                        Features.of("NOT_CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
                         null,
                         List.of("and"),
                         0,
@@ -148,11 +149,11 @@ class XPathFeatureExtractorTest {
                 new ExtractAtParameters(
                         "returnsCorrectFeatureAtDifferentPositions",
                         true,
-                        Features.of("NOT_CONJUNCTION"),
-                        Features.of("CONJUNCTION"),
+                        createFeature("NOT_CONJUNCTION"),
+                        createFeature("CONJUNCTION"),
                         List.of("hello", "but", "world", "or", "foo"),
                         3,
-                        Set.of(Features.of("CONJUNCTION"))
+                        Set.of(createFeature("CONJUNCTION"))
                 )
         );
     }

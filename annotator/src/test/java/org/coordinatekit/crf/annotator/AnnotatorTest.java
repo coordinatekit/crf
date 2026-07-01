@@ -15,13 +15,13 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.Feature;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
@@ -144,9 +144,9 @@ class AnnotatorTest {
     static Stream<FeatureWiringParameters> featureWiring() {
         List<String> lowercaseTokens = List.of("the", "quick", "brown");
         List<Set<Feature>> embeddedFeatures = List.of(
-                Set.of(Features.of("embedded1")),
-                Set.of(Features.of("embedded2")),
-                Set.of(Features.of("embedded3"))
+                Set.of(createFeature("embedded1")),
+                Set.of(createFeature("embedded2")),
+                Set.of(createFeature("embedded3"))
         );
         List<Set<Feature>> noFeatures = List.of(Set.of(), Set.of(), Set.of());
         return Stream
@@ -173,9 +173,9 @@ class AnnotatorTest {
                                         .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("TOKEN_THE")),
-                                        Set.of(Features.of("TOKEN_QUICK")),
-                                        Set.of(Features.of("TOKEN_BROWN"))
+                                        Set.of(createFeature("TOKEN_THE")),
+                                        Set.of(createFeature("TOKEN_QUICK")),
+                                        Set.of(createFeature("TOKEN_BROWN"))
                                 ),
                                 true,
                                 noFeatures
@@ -186,7 +186,7 @@ class AnnotatorTest {
                                         .featureExtractor(
                                                 (sequence, position) -> Set
                                                         .of(
-                                                                Features.of(
+                                                                createFeature(
                                                                         "LENGTH_" + sequence.get(position).token()
                                                                                 .length()
                                                                 )
@@ -194,9 +194,9 @@ class AnnotatorTest {
                                         ).tokenizer(new WhitespaceTokenizer()),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("LENGTH_3")),
-                                        Set.of(Features.of("LENGTH_5")),
-                                        Set.of(Features.of("LENGTH_5"))
+                                        Set.of(createFeature("LENGTH_3")),
+                                        Set.of(createFeature("LENGTH_5")),
+                                        Set.of(createFeature("LENGTH_5"))
                                 ),
                                 false,
                                 noFeatures
@@ -207,9 +207,9 @@ class AnnotatorTest {
                                         .tokenizer(new WhitespaceTokenizer()),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("0:NEXT_quick")),
-                                        Set.of(Features.of("1:NEXT_brown")),
-                                        Set.of(Features.of("2:END"))
+                                        Set.of(createFeature("0:NEXT_quick")),
+                                        Set.of(createFeature("1:NEXT_brown")),
+                                        Set.of(createFeature("2:END"))
                                 ),
                                 false,
                                 noFeatures
@@ -221,15 +221,15 @@ class AnnotatorTest {
                                         .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("KEY_the")),
-                                        Set.of(Features.of("KEY_quick")),
-                                        Set.of(Features.of("KEY_brown"))
+                                        Set.of(createFeature("KEY_the")),
+                                        Set.of(createFeature("KEY_quick")),
+                                        Set.of(createFeature("KEY_brown"))
                                 ),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("VERBOSE_the")),
-                                        Set.of(Features.of("VERBOSE_quick")),
-                                        Set.of(Features.of("VERBOSE_brown"))
+                                        Set.of(createFeature("VERBOSE_the")),
+                                        Set.of(createFeature("VERBOSE_quick")),
+                                        Set.of(createFeature("VERBOSE_brown"))
                                 )
                         ),
                         new FeatureWiringParameters(
@@ -239,15 +239,15 @@ class AnnotatorTest {
                                         .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("KEY_the")),
-                                        Set.of(Features.of("KEY_quick")),
-                                        Set.of(Features.of("KEY_brown"))
+                                        Set.of(createFeature("KEY_the")),
+                                        Set.of(createFeature("KEY_quick")),
+                                        Set.of(createFeature("KEY_brown"))
                                 ),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("VERBOSE_the")),
-                                        Set.of(Features.of("VERBOSE_quick")),
-                                        Set.of(Features.of("VERBOSE_brown"))
+                                        Set.of(createFeature("VERBOSE_the")),
+                                        Set.of(createFeature("VERBOSE_quick")),
+                                        Set.of(createFeature("VERBOSE_brown"))
                                 )
                         ),
                         new FeatureWiringParameters(
@@ -258,9 +258,9 @@ class AnnotatorTest {
                                 noFeatures,
                                 true,
                                 List.of(
-                                        Set.of(Features.of("VERBOSE_the")),
-                                        Set.of(Features.of("VERBOSE_quick")),
-                                        Set.of(Features.of("VERBOSE_brown"))
+                                        Set.of(createFeature("VERBOSE_the")),
+                                        Set.of(createFeature("VERBOSE_quick")),
+                                        Set.of(createFeature("VERBOSE_brown"))
                                 )
                         ),
                         new FeatureWiringParameters(
@@ -269,9 +269,9 @@ class AnnotatorTest {
                                         .tokenizer(new WhitespaceTokenizer()),
                                 true,
                                 List.of(
-                                        Set.of(Features.of("KEY_the")),
-                                        Set.of(Features.of("KEY_quick")),
-                                        Set.of(Features.of("KEY_brown"))
+                                        Set.of(createFeature("KEY_the")),
+                                        Set.of(createFeature("KEY_quick")),
+                                        Set.of(createFeature("KEY_brown"))
                                 ),
                                 false,
                                 noFeatures
@@ -751,12 +751,12 @@ class AnnotatorTest {
     private static FeatureExtractor positionAndNextTokenExtractor() {
         return (sequence, position) -> {
             String next = position + 1 < sequence.size() ? "NEXT_" + sequence.get(position + 1).token() : "END";
-            return Set.of(Features.of(position + ":" + next));
+            return Set.of(createFeature(position + ":" + next));
         };
     }
 
     private static FeatureExtractor prefixExtractor(String prefix) {
-        return (sequence, position) -> Set.of(Features.of(prefix + sequence.get(position).token()));
+        return (sequence, position) -> Set.of(createFeature(prefix + sequence.get(position).token()));
     }
 
     @SafeVarargs

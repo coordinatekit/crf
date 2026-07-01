@@ -15,13 +15,13 @@
  */
 package org.coordinatekit.crf.mallet.model;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.Features;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
 
@@ -92,8 +92,8 @@ public enum PartsOfSpeechModel {
         return (sequence, position) -> {
             String token = sequence.get(position).token();
             return Set.of(
-                    Features.of("LENGTH", String.valueOf(token.length())),
-                    Features.of("LOWER", token.toLowerCase(Locale.getDefault()))
+                    createFeatureWithValue("LENGTH", String.valueOf(token.length())),
+                    createFeatureWithValue("LOWER", token.toLowerCase(Locale.getDefault()))
             );
         };
     }

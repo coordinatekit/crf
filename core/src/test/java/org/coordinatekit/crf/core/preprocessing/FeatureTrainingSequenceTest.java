@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core.preprocessing;
 
+import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,27 +46,27 @@ class FeatureTrainingSequenceTest {
                 new SequenceParameters(
                         List.of("Hello"),
                         List.of("GREETING"),
-                        List.of(Set.of(Features.of("f1"), Features.of("f2"))),
+                        List.of(Set.of(createFeature("f1"), createFeature("f2"))),
                         List.of("Hello"),
                         List.of(0),
                         List.of("GREETING"),
-                        List.of(Set.of(Features.of("f1"), Features.of("f2")))
+                        List.of(Set.of(createFeature("f1"), createFeature("f2")))
                 ),
                 new SequenceParameters(
                         List.of("Hello", "world", "!"),
                         List.of("GREETING", "NOUN", "PUNCT"),
                         List.of(
-                                Set.of(Features.of("f1")),
-                                Set.of(Features.of("f2"), Features.of("f3")),
-                                Set.of(Features.of("f4"))
+                                Set.of(createFeature("f1")),
+                                Set.of(createFeature("f2"), createFeature("f3")),
+                                Set.of(createFeature("f4"))
                         ),
                         List.of("Hello", "world", "!"),
                         List.of(0, 1, 2),
                         List.of("GREETING", "NOUN", "PUNCT"),
                         List.of(
-                                Set.of(Features.of("f1")),
-                                Set.of(Features.of("f2"), Features.of("f3")),
-                                Set.of(Features.of("f4"))
+                                Set.of(createFeature("f1")),
+                                Set.of(createFeature("f2"), createFeature("f3")),
+                                Set.of(createFeature("f4"))
                         )
                 )
         );
@@ -86,7 +87,7 @@ class FeatureTrainingSequenceTest {
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING", "SALUTATION"),
-                                List.of(Set.of(Features.of("f1")))
+                                List.of(Set.of(createFeature("f1")))
                         )
                 ),
                 new ExceptionParameters(
@@ -95,7 +96,7 @@ class FeatureTrainingSequenceTest {
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING"),
-                                List.of(Set.of(Features.of("f1")), Set.of(Features.of("f2")))
+                                List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")))
                         )
                 ),
                 new ExceptionParameters(
@@ -111,10 +112,10 @@ class FeatureTrainingSequenceTest {
         var sequence = new FeatureTrainingSequence<>(
                 List.of("Hello"),
                 List.of("GREETING"),
-                List.of(Set.of(Features.of("f1")))
+                List.of(Set.of(createFeature("f1")))
         );
 
-        assertIterableEquals(Set.of(Features.of("f1")), sequence.get(0).features());
+        assertIterableEquals(Set.of(createFeature("f1")), sequence.get(0).features());
         assertEquals(0, sequence.get(0).position());
         assertEquals("GREETING", sequence.get(0).tag());
         assertEquals("Hello", sequence.get(0).token());
@@ -125,7 +126,7 @@ class FeatureTrainingSequenceTest {
         var sequence = new FeatureTrainingSequence<>(
                 List.of("Hello"),
                 List.of("NOUN"),
-                List.of(Set.of(Features.of("f1")))
+                List.of(Set.of(createFeature("f1")))
         );
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
