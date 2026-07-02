@@ -19,8 +19,8 @@ import org.coordinatekit.crf.annotator.AnnotatorSequence;
 import org.coordinatekit.crf.annotator.AnnotatorToken;
 import org.coordinatekit.crf.annotator.FeatureAvailability;
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.Feature;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -173,9 +173,7 @@ final class TaggingViewModels {
      * {@value TerminalDisplay#NULL_VALUE_PLACEHOLDER} placeholder when the set is empty. Each feature
      * is rendered through {@code featureFormat} first, then the rendered strings are sorted — sorting
      * the rendered text rather than the features preserves the historical lexicographic display order,
-     * which
-     * {@link org.coordinatekit.crf.core.preprocessing.Feature#compareTo(org.coordinatekit.crf.core.preprocessing.Feature)}
-     * would not (it orders by offset first).
+     * which {@link Feature#compareTo(Feature)} would not (it orders by offset first).
      *
      * @param features the features to format
      * @param featureFormat the format rendering each feature to its displayed string

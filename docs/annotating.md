@@ -28,12 +28,12 @@ covers.
 `crf` fills four slots, each from the one service registered for it, or from a
 built-in default where there is one:
 
-| Slot              | Service interface                                           | Built-in default      | You register                    |
-| ----------------- | ----------------------------------------------------------- | --------------------- | ------------------------------- |
-| Tag provider      | `org.coordinatekit.crf.core.TagProvider`                    | none                  | yes, required                   |
-| Tokenizer         | `org.coordinatekit.crf.core.preprocessing.Tokenizer`        | `WhitespaceTokenizer` | only to override the default    |
-| Feature extractor | `org.coordinatekit.crf.core.preprocessing.FeatureExtractor` | none                  | for model suggestions           |
-| Model loader      | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`            | none                  | the `mallet` module provides it |
+| Slot              | Service interface                                     | Built-in default      | You register                    |
+| ----------------- | ----------------------------------------------------- | --------------------- | ------------------------------- |
+| Tag provider      | `org.coordinatekit.crf.core.TagProvider`              | none                  | yes, required                   |
+| Tokenizer         | `org.coordinatekit.crf.core.preprocessing.Tokenizer`  | `WhitespaceTokenizer` | only to override the default    |
+| Feature extractor | `org.coordinatekit.crf.core.feature.FeatureExtractor` | none                  | for model suggestions           |
+| Model loader      | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`      | none                  | the `mallet` module provides it |
 
 Only the tag provider is required. Without one, `crf` has no label set and will
 not run. It defines the parts of speech and the starting tag, and the running
@@ -236,7 +236,7 @@ model loader that reads `pos-model.crf`. Register the feature extractor you trai
 with as well, so the model sees the same features it learned on:
 
 ```
-# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.FeatureExtractor
+# src/main/resources/META-INF/services/org.coordinatekit.crf.core.feature.FeatureExtractor
 com.example.pos.PartOfSpeechFeatureExtractor
 ```
 

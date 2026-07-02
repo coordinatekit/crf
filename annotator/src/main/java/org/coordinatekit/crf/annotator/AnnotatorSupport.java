@@ -20,8 +20,8 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
-import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.Feature;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.SegmentKind;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;

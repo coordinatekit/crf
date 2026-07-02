@@ -16,9 +16,9 @@
 package org.coordinatekit.crf.mallet.tag;
 
 import org.coordinatekit.crf.core.Sequence;
-import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.feature.Feature;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.TagScore;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;

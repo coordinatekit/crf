@@ -18,11 +18,11 @@ package org.coordinatekit.crf.core.spi;
 import static java.util.Objects.requireNonNull;
 
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor;
+import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
+import org.coordinatekit.crf.core.feature.FullFeatureExtractor;
+import org.coordinatekit.crf.core.feature.KeyFeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTaggerLoader;

@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.core.tag;
 
-import org.coordinatekit.crf.core.preprocessing.FeaturePositionedToken;
+import org.coordinatekit.crf.core.feature.FeaturePositionedToken;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.List;

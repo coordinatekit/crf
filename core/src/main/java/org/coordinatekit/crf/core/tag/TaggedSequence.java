@@ -16,7 +16,7 @@
 package org.coordinatekit.crf.core.tag;
 
 import org.coordinatekit.crf.core.Sequence;
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.Comparator;

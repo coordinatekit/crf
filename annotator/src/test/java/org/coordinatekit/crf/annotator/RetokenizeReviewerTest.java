@@ -18,7 +18,7 @@ package org.coordinatekit.crf.annotator;
 import org.coordinatekit.crf.annotator.AnnotatorTestSupport.PunctuationTokenizer;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.StringTagProvider;
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.coordinatekit.crf.core.preprocessing.InvalidInputException;
 import org.coordinatekit.crf.core.preprocessing.Segments;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;

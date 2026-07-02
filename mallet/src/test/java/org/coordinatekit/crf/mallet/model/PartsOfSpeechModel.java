@@ -15,13 +15,13 @@
  */
 package org.coordinatekit.crf.mallet.model;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
+import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
-import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
 import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
 

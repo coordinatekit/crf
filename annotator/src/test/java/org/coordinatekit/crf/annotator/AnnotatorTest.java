@@ -15,13 +15,13 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
-import org.coordinatekit.crf.core.preprocessing.Feature;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.Feature;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingPositionedToken;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
