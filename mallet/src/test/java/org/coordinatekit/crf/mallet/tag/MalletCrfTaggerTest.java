@@ -147,55 +147,28 @@ class MalletCrfTaggerTest {
         );
         assertEquals(5, actual.size());
 
-        assertEquals(0, actual.get(0).position());
-        assertEquals("DET", actual.get(0).tag());
-        assertEquals("They", actual.get(0).token());
-        assertIterableEquals(
-                PartsOfSpeechModel.INSTANCE.validTags(),
-                actual.get(0).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
-        );
-        assertTrue(actual.get(0).tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, actual.get(0).tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
+        assertTaggedToken(actual.get(0), 0, "DET", "They");
+        assertTaggedToken(actual.get(1), 1, "ADJ", "quickly");
+        assertTaggedToken(actual.get(2), 2, "NOUN", "opened");
+        assertTaggedToken(actual.get(3), 3, "VERB", "the");
+        assertTaggedToken(actual.get(4), 4, "ADV", "door");
+    }
 
-        assertEquals(1, actual.get(1).position());
-        assertEquals("ADJ", actual.get(1).tag());
-        assertEquals("quickly", actual.get(1).token());
+    private static void assertTaggedToken(
+            TaggedPositionedToken<String> token,
+            int expectedPosition,
+            String expectedTag,
+            String expectedToken
+    ) {
+        assertEquals(expectedPosition, token.position());
+        assertEquals(expectedTag, token.tag());
+        assertEquals(expectedToken, token.token());
         assertIterableEquals(
                 PartsOfSpeechModel.INSTANCE.validTags(),
-                actual.get(1).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
+                token.tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
         );
-        assertTrue(actual.get(1).tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, actual.get(1).tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
-
-        assertEquals(2, actual.get(2).position());
-        assertEquals("NOUN", actual.get(2).tag());
-        assertEquals("opened", actual.get(2).token());
-        assertIterableEquals(
-                PartsOfSpeechModel.INSTANCE.validTags(),
-                actual.get(2).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
-        );
-        assertTrue(actual.get(2).tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, actual.get(2).tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
-
-        assertEquals(3, actual.get(3).position());
-        assertEquals("VERB", actual.get(3).tag());
-        assertEquals("the", actual.get(3).token());
-        assertIterableEquals(
-                PartsOfSpeechModel.INSTANCE.validTags(),
-                actual.get(3).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
-        );
-        assertTrue(actual.get(3).tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, actual.get(3).tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
-
-        assertEquals(4, actual.get(4).position());
-        assertEquals("ADV", actual.get(4).tag());
-        assertEquals("door", actual.get(4).token());
-        assertIterableEquals(
-                PartsOfSpeechModel.INSTANCE.validTags(),
-                actual.get(4).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
-        );
-        assertTrue(actual.get(4).tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, actual.get(4).tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
+        assertTrue(token.tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
+        assertEquals(1.0, token.tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
     }
 
     @Test
