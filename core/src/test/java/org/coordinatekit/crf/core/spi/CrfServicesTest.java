@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.DefaultFeatureFormat;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;

@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.core.tag;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.preprocessing.Segment;
 import org.coordinatekit.crf.core.preprocessing.Tokenization;

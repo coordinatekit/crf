@@ -30,13 +30,13 @@ fit. This module is only the command-line wiring.
 `crf` resolves five slots through `ServiceLoader`, each as
 `explicit > a single registered service > a built-in default`:
 
-| Slot                   | Service interface                                               | Default                          | Needed when                |
-| ---------------------- | --------------------------------------------------------------- | -------------------------------- | -------------------------- |
-| Tag provider           | `org.coordinatekit.crf.core.TagProvider`                        | none (required)                  | always                     |
-| Tokenizer              | `org.coordinatekit.crf.core.preprocessing.Tokenizer`            | `WhitespaceTokenizer`            | always                     |
-| Full feature extractor | `org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor` | none (tags without features)     | recommended with `--model` |
-| Key feature extractor  | `org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor`  | falls back to the full extractor | optional                   |
-| Model loader           | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`                | `mallet` (bundled)               | overriding the bundled one |
+| Slot                   | Service interface                                         | Default                          | Needed when                |
+| ---------------------- | --------------------------------------------------------- | -------------------------------- | -------------------------- |
+| Tag provider           | `org.coordinatekit.crf.core.TagProvider`                  | none (required)                  | always                     |
+| Tokenizer              | `org.coordinatekit.crf.core.preprocessing.Tokenizer`      | `WhitespaceTokenizer`            | always                     |
+| Full feature extractor | `org.coordinatekit.crf.core.feature.FullFeatureExtractor` | none (tags without features)     | recommended with `--model` |
+| Key feature extractor  | `org.coordinatekit.crf.core.feature.KeyFeatureExtractor`  | falls back to the full extractor | optional                   |
+| Model loader           | `org.coordinatekit.crf.core.tag.CrfTaggerLoader`          | `mallet` (bundled)               | overriding the bundled one |
 
 The full feature extractor is the one your model was trained with: it drives the
 tagger and the verbose "all features" view. The key feature extractor backs the
@@ -58,7 +58,7 @@ your model was trained with. The `mallet` model loader is already bundled, so
 `--model` reads MALLET models without any extra setup:
 
 ```
-# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.FullFeatureExtractor
+# src/main/resources/META-INF/services/org.coordinatekit.crf.core.feature.FullFeatureExtractor
 com.example.MyFullFeatureExtractor
 ```
 
@@ -67,7 +67,7 @@ features" view a simpler, easier-to-read feature set; without one it falls back
 to the full extractor:
 
 ```
-# src/main/resources/META-INF/services/org.coordinatekit.crf.core.preprocessing.KeyFeatureExtractor
+# src/main/resources/META-INF/services/org.coordinatekit.crf.core.feature.KeyFeatureExtractor
 com.example.MyKeyFeatureExtractor
 ```
 

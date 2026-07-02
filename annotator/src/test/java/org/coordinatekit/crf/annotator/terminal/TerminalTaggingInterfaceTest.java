@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.annotator.terminal;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.annotatorSequence;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.initialTagsOf;
 import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.quietTerminal;
@@ -38,7 +38,7 @@ import org.coordinatekit.crf.annotator.AnnotatorTestSupport;
 import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.impl.DumbTerminal;

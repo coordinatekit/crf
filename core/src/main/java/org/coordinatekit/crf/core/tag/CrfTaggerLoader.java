@@ -16,8 +16,8 @@
 package org.coordinatekit.crf.core.tag;
 
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.Tokenizer;
 import org.jspecify.annotations.NullMarked;
 

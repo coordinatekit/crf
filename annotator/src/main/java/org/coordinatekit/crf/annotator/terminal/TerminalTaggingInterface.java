@@ -21,7 +21,7 @@ import org.coordinatekit.crf.annotator.TaggingAction;
 import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.FeatureFormat;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.spi.CrfServices;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.Nullable;

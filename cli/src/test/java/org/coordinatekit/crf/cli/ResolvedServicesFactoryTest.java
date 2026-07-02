@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.cli;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,7 +33,7 @@ import org.coordinatekit.crf.annotator.TaggingResult;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;

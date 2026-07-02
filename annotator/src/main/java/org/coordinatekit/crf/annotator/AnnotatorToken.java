@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;

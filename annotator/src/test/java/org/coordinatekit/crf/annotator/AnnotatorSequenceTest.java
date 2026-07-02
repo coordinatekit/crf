@@ -15,10 +15,10 @@
  */
 package org.coordinatekit.crf.annotator;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.TagProvider;
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.coordinatekit.crf.core.tag.TaggedPositionedToken;
 import org.coordinatekit.crf.core.tag.TaggedSequence;
 import org.jspecify.annotations.Nullable;

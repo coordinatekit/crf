@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.mallet.train;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeatureWithValue;
+import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
@@ -24,7 +24,7 @@ import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
 import org.coordinatekit.crf.core.io.TrainingDataSequencer;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
-import org.coordinatekit.crf.core.preprocessing.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.jspecify.annotations.Nullable;

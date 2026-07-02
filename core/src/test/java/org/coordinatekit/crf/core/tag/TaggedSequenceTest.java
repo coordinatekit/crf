@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.tag;
 
-import static org.coordinatekit.crf.core.preprocessing.Feature.createFeature;
-import org.coordinatekit.crf.core.preprocessing.Feature;
+import static org.coordinatekit.crf.core.feature.Feature.createFeature;
+import org.coordinatekit.crf.core.feature.Feature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
