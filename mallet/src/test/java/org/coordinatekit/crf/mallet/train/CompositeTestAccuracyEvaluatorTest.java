@@ -18,7 +18,6 @@ package org.coordinatekit.crf.mallet.train;
 import cc.mallet.fst.CRF;
 import cc.mallet.fst.CRFTrainerByThreadedLabelLikelihood;
 import cc.mallet.fst.Transducer;
-import cc.mallet.fst.TransducerTrainer;
 import cc.mallet.types.Alphabet;
 import cc.mallet.types.FeatureVector;
 import cc.mallet.types.FeatureVectorSequence;
@@ -26,9 +25,16 @@ import cc.mallet.types.Instance;
 import cc.mallet.types.InstanceList;
 import cc.mallet.types.LabelAlphabet;
 import cc.mallet.types.LabelSequence;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,6 +47,9 @@ class CompositeTestAccuracyEvaluatorTest {
 
     private Alphabet dataAlphabet;
     private LabelAlphabet targetAlphabet;
+    private ListAppender<ILoggingEvent> logAppender;
+    private ch.qos.logback.classic.Logger evaluatorLogger;
+    private Level previousLevel;
 
     @BeforeEach
     void setUp() {
@@ -49,6 +58,19 @@ class CompositeTestAccuracyEvaluatorTest {
         targetAlphabet.lookupIndex("O", true);
         targetAlphabet.lookupIndex("B-LOC", true);
         targetAlphabet.lookupIndex("I-LOC", true);
+
+        evaluatorLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(CompositeTestAccuracyEvaluator.class);
+        previousLevel = evaluatorLogger.getLevel();
+        evaluatorLogger.setLevel(Level.INFO);
+        logAppender = new ListAppender<>();
+        logAppender.start();
+        evaluatorLogger.addAppender(logAppender);
+    }
+
+    @AfterEach
+    void tearDown() {
+        evaluatorLogger.detachAppender(logAppender);
+        evaluatorLogger.setLevel(previousLevel);
     }
 
     @Test
@@ -61,7 +83,8 @@ class CompositeTestAccuracyEvaluatorTest {
     }
 
     @Test
-    void evaluateInstanceListWithEmptyInstances() {
+    void evaluate__logsLikelihoodOnlyForEmptyInstances() {
+        // ARRANGE //
         InstanceList trainingData = createTrainingData();
         InstanceList emptyTestData = new InstanceList(dataAlphabet, targetAlphabet);
 
@@ -75,15 +98,25 @@ class CompositeTestAccuracyEvaluatorTest {
                     emptyTestData,
                     TEST_DESCRIPTION
             );
+
+            // ACT //
             evaluator.evaluate(trainer);
-            // Should complete without error - logs only iteration and log likelihood
+
+            // ASSERT //
+            ILoggingEvent event = singleLoggedEvent();
+            assertEquals(Level.INFO, event.getLevel());
+            String message = event.getFormattedMessage();
+            assertTrue(message.contains("log likelihood = "), message);
+            assertFalse(message.contains("instance accuracy"), message);
+            assertFalse(message.contains("token accuracy"), message);
         } finally {
             trainer.shutdown();
         }
     }
 
     @Test
-    void evaluateInstanceListWithNonEmptyInstancesCalculatesAccuracy() {
+    void evaluate__logsAccuracyForNonEmptyInstances() {
+        // ARRANGE //
         InstanceList trainingData = createTrainingData();
         InstanceList testData = createTestData();
 
@@ -94,17 +127,25 @@ class CompositeTestAccuracyEvaluatorTest {
             trainer.train(trainingData, 5);
 
             CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(testData, TEST_DESCRIPTION);
+
+            // ACT //
             evaluator.evaluate(trainer);
 
-            // The evaluator should have run successfully and logged accuracy metrics
-            // We can't easily verify log output, but we verify no exceptions occurred
+            // ASSERT //
+            ILoggingEvent event = singleLoggedEvent();
+            assertEquals(Level.INFO, event.getLevel());
+            String message = event.getFormattedMessage();
+            assertTrue(message.contains("log likelihood = "), message);
+            assertTrue(message.contains("instance accuracy = "), message);
+            assertTrue(message.contains("token accuracy = "), message);
         } finally {
             trainer.shutdown();
         }
     }
 
     @Test
-    void evaluateReturnsAccuracyBetweenZeroAndOne() {
+    void evaluate__accuracyIsBetweenZeroAndOne() {
+        // ARRANGE //
         InstanceList trainingData = createTrainingData();
         InstanceList testData = createTestData();
 
@@ -114,28 +155,28 @@ class CompositeTestAccuracyEvaluatorTest {
         try {
             trainer.train(trainingData, 10);
 
-            // Create a test-accessible subclass to verify accuracy values
-            TestableCompositeTestAccuracyEvaluator evaluator = new TestableCompositeTestAccuracyEvaluator(
-                    testData,
-                    TEST_DESCRIPTION
-            );
+            CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(testData, TEST_DESCRIPTION);
+
+            // ACT //
             evaluator.evaluate(trainer);
 
+            // ASSERT //
+            ILoggingEvent event = singleLoggedEvent();
+            double instanceAccuracy = loggedMetric(event, "instance accuracy");
+            double tokenAccuracy = loggedMetric(event, "token accuracy");
             assertTrue(
-                    evaluator.lastInstanceAccuracy >= 0.0 && evaluator.lastInstanceAccuracy <= 1.0,
+                    instanceAccuracy >= 0.0 && instanceAccuracy <= 1.0,
                     "Instance accuracy should be between 0 and 1"
             );
-            assertTrue(
-                    evaluator.lastTokenAccuracy >= 0.0 && evaluator.lastTokenAccuracy <= 1.0,
-                    "Token accuracy should be between 0 and 1"
-            );
+            assertTrue(tokenAccuracy >= 0.0 && tokenAccuracy <= 1.0, "Token accuracy should be between 0 and 1");
         } finally {
             trainer.shutdown();
         }
     }
 
     @Test
-    void evaluateWithPerfectPredictionsReturnsFullAccuracy() {
+    void evaluate__reportsHighTokenAccuracyForTrainedData() {
+        // ARRANGE //
         InstanceList trainingData = createSimpleTrainingData();
 
         CRF crf = createAndInitializeCrf(trainingData);
@@ -145,15 +186,17 @@ class CompositeTestAccuracyEvaluatorTest {
             // Train extensively on simple data
             trainer.train(trainingData, 50);
 
-            // Test on same data (should achieve high accuracy)
-            TestableCompositeTestAccuracyEvaluator evaluator = new TestableCompositeTestAccuracyEvaluator(
+            CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(
                     trainingData,
                     TEST_DESCRIPTION
             );
+
+            // ACT //
             evaluator.evaluate(trainer);
 
-            // With simple data and enough training, we expect high accuracy
-            assertTrue(evaluator.lastTokenAccuracy > 0.5, "Token accuracy should be reasonable after training");
+            // ASSERT //
+            double tokenAccuracy = loggedMetric(singleLoggedEvent(), "token accuracy");
+            assertTrue(tokenAccuracy > 0.5, "Token accuracy should be reasonable after training");
         } finally {
             trainer.shutdown();
         }
@@ -161,6 +204,7 @@ class CompositeTestAccuracyEvaluatorTest {
 
     @Test
     void evaluateReportsIterationNumber() {
+        // ARRANGE //
         InstanceList trainingData = createTrainingData();
         InstanceList testData = createTestData();
 
@@ -170,13 +214,16 @@ class CompositeTestAccuracyEvaluatorTest {
         try {
             trainer.train(trainingData, 3);
 
-            TestableCompositeTestAccuracyEvaluator evaluator = new TestableCompositeTestAccuracyEvaluator(
-                    testData,
-                    TEST_DESCRIPTION
-            );
+            CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(testData, TEST_DESCRIPTION);
+
+            // ACT //
             evaluator.evaluate(trainer);
 
-            assertEquals(3, evaluator.lastIteration, "Should report correct iteration number");
+            // ASSERT //
+            assertTrue(
+                    singleLoggedEvent().getFormattedMessage().startsWith("Iteration 3:"),
+                    "Should report correct iteration number"
+            );
         } finally {
             trainer.shutdown();
         }
@@ -184,6 +231,7 @@ class CompositeTestAccuracyEvaluatorTest {
 
     @Test
     void evaluateReportsLogLikelihood() {
+        // ARRANGE //
         InstanceList trainingData = createTrainingData();
         InstanceList testData = createTestData();
 
@@ -193,17 +241,31 @@ class CompositeTestAccuracyEvaluatorTest {
         try {
             trainer.train(trainingData, 3);
 
-            TestableCompositeTestAccuracyEvaluator evaluator = new TestableCompositeTestAccuracyEvaluator(
-                    testData,
-                    TEST_DESCRIPTION
-            );
+            CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(testData, TEST_DESCRIPTION);
+
+            // ACT //
             evaluator.evaluate(trainer);
 
-            // Log likelihood should be a negative number (it's a log probability)
-            assertFalse(Double.isNaN(evaluator.lastLogLikelihood), "Log likelihood should be a valid number");
+            // ASSERT //
+            assertFalse(
+                    Double.isNaN(loggedMetric(singleLoggedEvent(), "log likelihood")),
+                    "Log likelihood should be a valid number"
+            );
         } finally {
             trainer.shutdown();
         }
+    }
+
+    private ILoggingEvent singleLoggedEvent() {
+        List<ILoggingEvent> events = logAppender.list;
+        assertEquals(1, events.size(), "expected exactly one log event");
+        return events.getFirst();
+    }
+
+    private static double loggedMetric(ILoggingEvent event, String label) {
+        Matcher matcher = Pattern.compile(label + " = ([^,]+)").matcher(event.getFormattedMessage());
+        assertTrue(matcher.find(), () -> "expected '" + label + "' in log: " + event.getFormattedMessage());
+        return Double.parseDouble(matcher.group(1).trim());
     }
 
     private InstanceList createTrainingData() {
@@ -310,43 +372,5 @@ class CompositeTestAccuracyEvaluatorTest {
         crf.getState(startName).setInitialWeight(0.0);
 
         return crf;
-    }
-
-    /**
-     * Test subclass that captures evaluation results for verification.
-     */
-    private static class TestableCompositeTestAccuracyEvaluator extends CompositeTestAccuracyEvaluator {
-        int lastIteration;
-        double lastLogLikelihood;
-        double lastInstanceAccuracy;
-        double lastTokenAccuracy;
-
-        private final cc.mallet.fst.InstanceAccuracyEvaluator instanceEval = new cc.mallet.fst.InstanceAccuracyEvaluator();
-        private final cc.mallet.fst.TokenAccuracyEvaluator tokenEval = new cc.mallet.fst.TokenAccuracyEvaluator(
-                new InstanceList[0],
-                new String[0]
-        );
-
-        TestableCompositeTestAccuracyEvaluator(InstanceList testData, String description) {
-            super(testData, description);
-        }
-
-        @Override
-        public void evaluateInstanceList(TransducerTrainer trainer, InstanceList instances, String description) {
-            super.evaluateInstanceList(trainer, instances, description);
-
-            lastIteration = trainer.getIteration();
-            if (trainer instanceof CRFTrainerByThreadedLabelLikelihood crfTrainer) {
-                lastLogLikelihood = ((cc.mallet.optimize.Optimizable.ByGradientValue) crfTrainer.getOptimizer()
-                        .getOptimizable()).getValue();
-            }
-
-            if (!instances.isEmpty()) {
-                instanceEval.evaluateInstanceList(trainer, instances, description);
-                tokenEval.evaluateInstanceList(trainer, instances, description);
-                lastInstanceAccuracy = instanceEval.getAccuracy(description);
-                lastTokenAccuracy = tokenEval.getAccuracy(description);
-            }
-        }
     }
 }
