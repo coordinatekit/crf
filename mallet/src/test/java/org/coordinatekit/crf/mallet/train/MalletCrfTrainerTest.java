@@ -300,8 +300,24 @@ class MalletCrfTrainerTest {
         return transitions;
     }
 
+    private static List<String> firstTokenSignature(InstanceList instances) {
+        return instances.stream().map(instance -> ((TrainingSequence<?>) instance.getSource()).get(0).token()).toList();
+    }
+
     private static Path resourcePath(String name) throws URISyntaxException {
         return Path.of(Objects.requireNonNull(MalletCrfTrainerTest.class.getResource(name)).toURI());
+    }
+
+    private static TrainingTestSplit splitWithSeed(int randomSeed) throws IOException, URISyntaxException {
+        var configuration = MalletCrfTrainerConfiguration.builder().iterations(1).trainingFraction(0.6)
+                .randomSeed(randomSeed).conllOutputEnabled(false).modelOutputEnabled(false).build();
+        var trainer = new MalletCrfTrainer<>(
+                SIMPLE_FEATURE_EXTRACTOR,
+                TAG_PROVIDER,
+                new XmlTrainingData<>(TAG_PROVIDER),
+                configuration
+        );
+        return trainer.splitTrainingData(Collections.singleton(resourcePath(TRAINING_DATA_RESOURCE)));
     }
 
     record SplitTrainingDataParameters(
@@ -356,6 +372,28 @@ class MalletCrfTrainerTest {
         assertEquals(5, split.size());
         assertSame(split.training().getDataAlphabet(), split.test().getDataAlphabet());
         assertSame(split.training().getTargetAlphabet(), split.test().getTargetAlphabet());
+    }
+
+    @Test
+    void splitTrainingData__differentSeedsProduceDifferentSplit() throws IOException, URISyntaxException {
+        // ARRANGE / ACT
+        var firstSplit = splitWithSeed(42);
+        var secondSplit = splitWithSeed(123);
+
+        // ASSERT — different seeds shuffle the fixed-size 3/2 partition differently,
+        // so the training partitions must contain different instances.
+        assertNotEquals(firstTokenSignature(firstSplit.training()), firstTokenSignature(secondSplit.training()));
+    }
+
+    @Test
+    void splitTrainingData__sameSeedProducesSameSplit() throws IOException, URISyntaxException {
+        // ARRANGE / ACT
+        var firstSplit = splitWithSeed(42);
+        var secondSplit = splitWithSeed(42);
+
+        // ASSERT — the same seed must reproduce the exact same partition membership and order.
+        assertEquals(firstTokenSignature(firstSplit.training()), firstTokenSignature(secondSplit.training()));
+        assertEquals(firstTokenSignature(firstSplit.test()), firstTokenSignature(secondSplit.test()));
     }
 
     @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
@@ -557,70 +595,5 @@ class MalletCrfTrainerTest {
                     "State initial weight should be finite or IMPOSSIBLE_WEIGHT"
             );
         }
-    }
-
-    @Test
-    void train_withDifferentRandomSeeds_producesDifferentSplits() throws IOException, URISyntaxException {
-        // ARRANGE
-        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
-
-        MalletCrfTrainerConfiguration config1 = MalletCrfTrainerConfiguration.builder().iterations(1)
-                .trainingFraction(0.6).randomSeed(42).conllOutputEnabled(false).modelOutputEnabled(false).build();
-
-        MalletCrfTrainerConfiguration config2 = MalletCrfTrainerConfiguration.builder().iterations(1)
-                .trainingFraction(0.6).randomSeed(123).conllOutputEnabled(false).modelOutputEnabled(false).build();
-
-        MalletCrfTrainer<String> trainer1 = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                config1
-        );
-
-        MalletCrfTrainer<String> trainer2 = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                config2
-        );
-
-        // ACT
-        var split1 = trainer1.splitTrainingData(Collections.singleton(trainingPath));
-        var split2 = trainer2.splitTrainingData(Collections.singleton(trainingPath));
-
-        // ASSERT - different seeds should produce same sizes but potentially different instances
-        assertEquals(split1.training().size(), split2.training().size(), "Training sizes should be equal");
-        assertEquals(split1.test().size(), split2.test().size(), "Test sizes should be equal");
-    }
-
-    @Test
-    void train_withSameRandomSeed_producesSameSplits() throws IOException, URISyntaxException {
-        // ARRANGE
-        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
-
-        MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().iterations(1)
-                .trainingFraction(0.6).randomSeed(42).conllOutputEnabled(false).modelOutputEnabled(false).build();
-
-        MalletCrfTrainer<String> trainer1 = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                config
-        );
-
-        MalletCrfTrainer<String> trainer2 = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                config
-        );
-
-        // ACT
-        var split1 = trainer1.splitTrainingData(Collections.singleton(trainingPath));
-        var split2 = trainer2.splitTrainingData(Collections.singleton(trainingPath));
-
-        // ASSERT - same seed should produce identical splits
-        assertEquals(split1.training().size(), split2.training().size(), "Training sizes should be equal");
-        assertEquals(split1.test().size(), split2.test().size(), "Test sizes should be equal");
     }
 }
