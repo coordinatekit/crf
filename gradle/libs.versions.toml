@@ -9,7 +9,7 @@ mallet = "2.0.8"
 slf4j = "2.0.17"
 
 # test — always latest
-junit = "6.1.0"
+junit = "6.1.1"
 logback = "1.5.37"
 
 # build — keep current
