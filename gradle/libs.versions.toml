@@ -6,7 +6,7 @@ picocli = "4.7.7"
 # implementation — keep current
 jline = "3.27.1"
 mallet = "2.0.8"
-slf4j = "2.0.17"
+slf4j = "2.0.18"
 
 # test — always latest
 junit = "6.1.0"
