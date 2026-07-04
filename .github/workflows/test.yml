@@ -35,7 +35,7 @@ jobs:
         run: ./gradlew test aggregateJacocoReport
 
       - name: Add coverage to PR
-        uses: madrapps/jacoco-report@v1.7.1
+        uses: madrapps/jacoco-report@v1.8.0
         with:
           paths: "build/reports/jacoco/aggregateJacocoReport/aggregateJacocoReport.xml"
           token: ${{ secrets.GITHUB_TOKEN }}
