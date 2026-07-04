@@ -4,7 +4,7 @@ jspecify = "1.0.0"
 picocli = "4.7.7"
 
 # implementation — keep current
-jline = "3.27.1"
+jline = "3.30.15"
 mallet = "2.0.8"
 slf4j = "2.0.17"
 
