@@ -18,7 +18,7 @@ nullaway = "0.13.7"
 
 # plugins
 dependency-license-report = "3.1.4"
-errorprone-plugin = "4.1.0"
+errorprone-plugin = "5.1.0"
 git-changelog = "3.1.2"
 sonatype-central-portal-publisher = "1.2.4"
 spotless = "6.25.0"
