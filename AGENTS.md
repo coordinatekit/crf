@@ -40,18 +40,26 @@ comment at the declaration explaining why.
 
 ### Records vs Classes
 
-Records must not be part of the public API surface. Public value types (cross-module or cross-package) are exposed as
-interfaces, with a private record handling the implementation. When a record is not a good fit (e.g., builder-driven
-construction, mutable state), use a full-fledged class instead. Records remain appropriate for internal DTOs,
-package-private value types, private implementations of public interfaces, and test parameters.
+Records must never appear on the public API surface. That rule is about records, not interfaces: it does not mean every
+public value type needs one.
 
-Configuration objects must be **classes** with builder pattern, not records.
+An interface is for polymorphism. Reach for one only when a public type has, or is about to have, more than one
+implementation, and keep those implementations (record or class) package-private. A type with a single implementation is
+a public final class built through a builder or static factory. Do not add an interface just to keep a record off the
+public surface; a class removes the record without the extra indirection.
+
+A public value class that participates in equality (stored in a set or map, or compared) declares its own `equals`,
+`hashCode`, and `toString`, since it gives up the ones a record would generate.
+
+Records remain the right choice for internal DTOs, package-private value types, private implementations of public
+interfaces, and test parameters. Configuration objects are classes with a builder, never records.
 
 ### Models Factory
 
-Public value types follow a three-part pattern: a public interface, a private record implementing it, and a static
-factory method for construction. Factories are scoped to where the value type is used — e.g., `AnnotatorModels` lives in
-the annotator's `ui` package and exposes the types used there. Always use static imports for factory methods.
+Public value types are constructed through a static factory method or builder, always reached through a static import.
+Whether the type is an interface with private implementations or a public final class follows Records vs Classes above.
+Factories are scoped to where the value type is used. `AnnotatorModels`, for example, lives in the annotator's `ui`
+package and exposes the types used there.
 
 ### Code Analysis
 
