@@ -1,0 +1,43 @@
+- name: "area: annotator"
+  color: c5def5
+  description: Interactive annotate and retokenize flows
+
+- name: "area: build"
+  color: c5def5
+  description: Gradle, CI, dependencies, cross-cutting foundations
+
+- name: "area: cli"
+  color: c5def5
+  description: picocli command-line front end
+
+- name: "area: core"
+  color: c5def5
+  description: Framework-agnostic CRF interfaces, features, and preprocessing
+
+- name: "area: mallet"
+  color: c5def5
+  description: MALLET-backed CRF trainer and tagger implementation
+
+- name: blocked
+  color: e99695
+  description: Blocked on an external dependency or another issue
+
+- name: good first issue
+  color: d4c5f9
+  description: Approachable for a first-time contributor
+
+- name: help wanted
+  color: c2e0c6
+  description: Maintainer would welcome outside help
+
+- name: needs-info
+  color: fef2c0
+  description: Blocked on more information from the reporter
+
+- name: question
+  color: d876e3
+  description: Further information is requested
+
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
