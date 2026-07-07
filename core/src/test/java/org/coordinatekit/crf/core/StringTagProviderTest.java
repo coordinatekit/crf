@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class StringTagProviderTest {
     @Test
-    void constructor_startingTagNotInTags() {
+    void constructor__startingTagNotInTags() {
         assertThrows(IllegalArgumentException.class, () -> new StringTagProvider(List.of("NOUN", "VERB"), "O"));
     }
 
@@ -39,7 +39,7 @@ class StringTagProviderTest {
     }
 
     @Test
-    void decode_noTags() {
+    void decode__noTags() {
         var provider = new StringTagProvider("O");
 
         assertEquals("NOUN", provider.decode("NOUN"));
@@ -75,6 +75,7 @@ class StringTagProviderTest {
         assertEquals(Set.of("O", "NOUN", "VERB"), provider.tags());
     }
 
+    @SuppressWarnings("DataFlowIssue")
     @Test
     void tags__returnsUnmodifiableSet() {
         var provider = new StringTagProvider(List.of("O", "NOUN", "VERB"), "O");

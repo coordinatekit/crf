@@ -41,15 +41,17 @@ class FeatureExtractorTest {
         );
     };
 
-    record ExtractParameters(List<String> tokens, List<Set<Feature>> expectedFeatures) {}
+    record ExtractParameters(String name, List<String> tokens, List<Set<Feature>> expectedFeatures) {}
 
-    static Stream<ExtractParameters> extractProvider() {
+    static Stream<ExtractParameters> extract() {
         return Stream.of(
                 new ExtractParameters(
+                        "single_token",
                         List.of("Hello"),
                         List.of(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")))
                 ),
                 new ExtractParameters(
+                        "two_tokens",
                         List.of("Hello", "World"),
                         List.of(
                                 Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")),
@@ -57,6 +59,7 @@ class FeatureExtractorTest {
                         )
                 ),
                 new ExtractParameters(
+                        "varying_length_tokens",
                         List.of("A", "BB", "CCC"),
                         List.of(
                                 Set.of(createFeatureWithValue("LENGTH", "1"), createFeatureWithValue("LOWER", "a")),
@@ -68,7 +71,7 @@ class FeatureExtractorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("extractProvider")
+    @MethodSource
     void extract(ExtractParameters parameters) {
         Sequence<PositionedToken> input = new InputSequence(parameters.tokens());
         Sequence<FeaturePositionedToken> result = SIMPLE_FEATURE_EXTRACTOR.extract(input);
@@ -79,7 +82,7 @@ class FeatureExtractorTest {
             String token = parameters.tokens().get(i);
 
             assertAll(
-                    "position " + position + " (token: " + token + ")",
+                    parameters.name() + ": position " + position + " (token: " + token + ")",
                     () -> assertEquals(token, result.get(position).token(), "token"),
                     () -> assertEquals(position, result.get(position).position(), "position"),
                     () -> assertEquals(
@@ -91,16 +94,23 @@ class FeatureExtractorTest {
         }
     }
 
-    record ExtractTrainingParameters(List<String> tokens, List<String> tags, List<Set<Feature>> expectedFeatures) {}
+    record ExtractTrainingParameters(
+            String name,
+            List<String> tokens,
+            List<String> tags,
+            List<Set<Feature>> expectedFeatures
+    ) {}
 
-    static Stream<ExtractTrainingParameters> extractTrainingProvider() {
+    static Stream<ExtractTrainingParameters> extractTraining() {
         return Stream.of(
                 new ExtractTrainingParameters(
+                        "single_token",
                         List.of("Hello"),
                         List.of("GREETING"),
                         List.of(Set.of(createFeatureWithValue("LENGTH", "5"), createFeatureWithValue("LOWER", "hello")))
                 ),
                 new ExtractTrainingParameters(
+                        "two_tokens",
                         List.of("New", "York"),
                         List.of("CITY", "CITY"),
                         List.of(
@@ -109,6 +119,7 @@ class FeatureExtractorTest {
                         )
                 ),
                 new ExtractTrainingParameters(
+                        "three_tokens",
                         List.of("123", "Main", "St"),
                         List.of("NUMBER", "STREET", "SUFFIX"),
                         List.of(
@@ -121,7 +132,7 @@ class FeatureExtractorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("extractTrainingProvider")
+    @MethodSource
     void extractTraining(ExtractTrainingParameters parameters) {
         Sequence<TrainingPositionedToken<String>> input = TrainingSequence
                 .ofTokens(parameters.tokens(), parameters.tags());
@@ -133,7 +144,7 @@ class FeatureExtractorTest {
             String token = parameters.tokens().get(i);
 
             assertAll(
-                    "position " + position + " (token: " + token + ")",
+                    parameters.name() + ": position " + position + " (token: " + token + ")",
                     () -> assertEquals(token, result.get(position).token(), "token"),
                     () -> assertEquals(position, result.get(position).position(), "position"),
                     () -> assertEquals(parameters.tags().get(position), result.get(position).tag(), "tag"),

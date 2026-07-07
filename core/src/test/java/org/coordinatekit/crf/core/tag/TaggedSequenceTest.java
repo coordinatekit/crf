@@ -31,9 +31,15 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TaggedSequenceTest {
-    record ExceptionParameters(Class<? extends Throwable> expectedException, String message, Executable executable) {}
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     record SequenceParameters(
+            String name,
             List<String> tokens,
             List<Set<Feature>> features,
             List<Map<String, Double>> tagScores,
@@ -46,9 +52,10 @@ class TaggedSequenceTest {
             List<Integer> expectedPositions
     ) {}
 
-    static Stream<SequenceParameters> sequenceProvider() {
+    static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters(
+                        "single_token",
                         List.of("Hello"),
                         List.of(Set.of(createFeature("f1"))),
                         List.of(Map.of("TAG", 0.5, "ANOTHER_TAG", 0.5)),
@@ -61,6 +68,7 @@ class TaggedSequenceTest {
                         List.of(0)
                 ),
                 new SequenceParameters(
+                        "three_tokens",
                         List.of("Hello", "world", "!"),
                         List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")), Set.of(createFeature("f3"))),
                         List.of(
@@ -82,34 +90,40 @@ class TaggedSequenceTest {
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
-        Throwable t = assertThrows(parameters.expectedException(), parameters.executable());
-        assertEquals(parameters.message(), t.getMessage());
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
     }
 
     static Stream<ExceptionParameters> constructor__exception() {
         return Stream.of(
                 new ExceptionParameters(
-                        IllegalArgumentException.class,
-                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)",
+                        "features_size_mismatch",
                         () -> new TaggedSequence<>(
                                 List.of("Hello"),
                                 List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2"))),
                                 List.of(Map.of("GREETING", 1.0d))
-                        )
+                        ),
+                        IllegalArgumentException.class,
+                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)"
                 ),
                 new ExceptionParameters(
-                        IllegalArgumentException.class,
-                        "The number of tag scores must be equal to the number of tokens. (tokens: 1, tag scores: 2)",
+                        "tag_scores_size_mismatch",
                         () -> new TaggedSequence<>(
                                 List.of("Hello"),
                                 List.of(Set.of(createFeature("f1"))),
                                 List.of(Map.of("GREETING", 1d), Map.of("SALUTATION", 1d))
-                        )
+                        ),
+                        IllegalArgumentException.class,
+                        "The number of tag scores must be equal to the number of tokens. (tokens: 1, tag scores: 2)"
                 ),
                 new ExceptionParameters(
+                        "empty_tokens",
+                        () -> new TaggedSequence<>(List.of(), List.of(), List.of()),
                         IllegalArgumentException.class,
-                        "There must be one or more tokens provided to a tagged sequence.",
-                        () -> new TaggedSequence<>(List.of(), List.of(), List.of())
+                        "There must be one or more tokens provided to a tagged sequence."
                 )
         );
     }
@@ -144,7 +158,7 @@ class TaggedSequenceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void iterator(SequenceParameters parameters) {
         var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
 
@@ -166,43 +180,62 @@ class TaggedSequenceTest {
             actualTokens.add(token.token());
         }
 
-        assertIterableEquals(parameters.expectedBestTags(), actualBestTags);
-        assertIterableEquals(parameters.expectedFeatures(), actualFeatures);
-        assertIterableEquals(parameters.expectedFirstTwoTags(), actualFirstTwoTags);
-        assertIterableEquals(parameters.expectedPositions(), actualPositions);
-        assertIterableEquals(parameters.expectedTags(), actualTags);
-        assertIterableEquals(parameters.expectedTokens(), actualTokens);
-        assertIterableEquals(parameters.expectedTagScores(), actualTagScores);
+        assertIterableEquals(parameters.expectedBestTags(), actualBestTags, parameters.name());
+        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
+        assertIterableEquals(parameters.expectedFirstTwoTags(), actualFirstTwoTags, parameters.name());
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
+        assertIterableEquals(parameters.expectedTagScores(), actualTagScores, parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void size(SequenceParameters parameters) {
         var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
 
-        assertEquals(parameters.tokens().size(), sequence.size());
+        assertEquals(parameters.tokens().size(), sequence.size(), parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void stream(SequenceParameters parameters) {
         var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
 
         assertIterableEquals(
                 parameters.expectedFeatures(),
-                sequence.stream().map(TaggedPositionedToken::features).toList()
+                sequence.stream().map(TaggedPositionedToken::features).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedPositions(),
-                sequence.stream().map(TaggedPositionedToken::position).toList()
+                sequence.stream().map(TaggedPositionedToken::position).toList(),
+                parameters.name()
         );
-        assertIterableEquals(parameters.expectedBestTags(), sequence.stream().map(TaggedPositionedToken::tag).toList());
-        assertIterableEquals(parameters.expectedTags(), sequence.stream().map(t -> t.tag(0)).toList());
-        assertIterableEquals(parameters.expectedFirstTwoTags(), sequence.stream().map(t -> t.tag(2)).toList());
-        assertIterableEquals(parameters.expectedTokens(), sequence.stream().map(TaggedPositionedToken::token).toList());
+        assertIterableEquals(
+                parameters.expectedBestTags(),
+                sequence.stream().map(TaggedPositionedToken::tag).toList(),
+                parameters.name()
+        );
+        assertIterableEquals(
+                parameters.expectedTags(),
+                sequence.stream().map(t -> t.tag(0)).toList(),
+                parameters.name()
+        );
+        assertIterableEquals(
+                parameters.expectedFirstTwoTags(),
+                sequence.stream().map(t -> t.tag(2)).toList(),
+                parameters.name()
+        );
+        assertIterableEquals(
+                parameters.expectedTokens(),
+                sequence.stream().map(TaggedPositionedToken::token).toList(),
+                parameters.name()
+        );
         assertIterableEquals(
                 parameters.expectedTagScores(),
-                sequence.stream().map(t -> t.tagScores().stream().map(TagScore::score).toList()).toList()
+                sequence.stream().map(t -> t.tagScores().stream().map(TagScore::score).toList()).toList(),
+                parameters.name()
         );
     }
 }

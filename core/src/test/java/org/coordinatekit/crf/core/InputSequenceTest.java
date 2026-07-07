@@ -27,30 +27,49 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class InputSequenceTest {
-    record ExceptionParameters(Class<? extends Throwable> expectedException, String message, Executable executable) {}
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
-    record SequenceParameters(List<String> input, List<String> expectedTokens, List<Integer> expectedPositions) {}
+    record SequenceParameters(
+            String name,
+            List<String> input,
+            List<String> expectedTokens,
+            List<Integer> expectedPositions
+    ) {}
 
-    static Stream<SequenceParameters> sequenceProvider() {
+    static Stream<SequenceParameters> sequences() {
         return Stream.of(
-                new SequenceParameters(List.of("Hello"), List.of("Hello"), List.of(0)),
-                new SequenceParameters(List.of("Hello", "world", "!"), List.of("Hello", "world", "!"), List.of(0, 1, 2))
+                new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2)
+                )
         );
     }
 
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
-        Throwable t = assertThrows(parameters.expectedException(), parameters.executable());
-        assertEquals(parameters.message(), t.getMessage());
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
     }
 
     static Stream<ExceptionParameters> constructor__exception() {
         return Stream.of(
                 new ExceptionParameters(
+                        "empty_token_list",
+                        () -> new InputSequence(List.of()),
                         IllegalArgumentException.class,
-                        "There must be one or more tokens provided to an input sequence.",
-                        () -> new InputSequence(List.of())
+                        "There must be one or more tokens provided to an input sequence."
                 )
         );
     }
@@ -72,7 +91,7 @@ class InputSequenceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void iterator(SequenceParameters parameters) {
         var sequence = new InputSequence(parameters.input());
 
@@ -84,24 +103,32 @@ class InputSequenceTest {
             actualTokens.add(token.token());
         }
 
-        assertIterableEquals(parameters.expectedPositions(), actualPositions);
-        assertIterableEquals(parameters.expectedTokens(), actualTokens);
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void size(SequenceParameters parameters) {
         var sequence = new InputSequence(parameters.input());
 
-        assertEquals(parameters.input().size(), sequence.size());
+        assertEquals(parameters.input().size(), sequence.size(), parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void stream(SequenceParameters parameters) {
         var sequence = new InputSequence(parameters.input());
 
-        assertIterableEquals(parameters.expectedPositions(), sequence.stream().map(PositionedToken::position).toList());
-        assertIterableEquals(parameters.expectedTokens(), sequence.stream().map(PositionedToken::token).toList());
+        assertIterableEquals(
+                parameters.expectedPositions(),
+                sequence.stream().map(PositionedToken::position).toList(),
+                parameters.name()
+        );
+        assertIterableEquals(
+                parameters.expectedTokens(),
+                sequence.stream().map(PositionedToken::token).toList(),
+                parameters.name()
+        );
     }
 }
