@@ -21,7 +21,7 @@ dependency-license-report = "3.1.4"
 errorprone-plugin = "5.1.0"
 git-changelog = "3.1.2"
 sonatype-central-portal-publisher = "1.2.4"
-spotless = "6.25.0"
+spotless = "8.8.0"
 
 [libraries]
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
