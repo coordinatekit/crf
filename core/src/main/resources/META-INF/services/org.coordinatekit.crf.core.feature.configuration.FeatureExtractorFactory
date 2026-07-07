@@ -1,0 +1,9 @@
+org.coordinatekit.crf.core.feature.configuration.factory.CompositeFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.LengthFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.LookupFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.PatternFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.PositionFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.PrefixFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.SequenceLengthFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.SuffixFeatureExtractorFactory
+org.coordinatekit.crf.core.feature.configuration.factory.WindowFeatureExtractorFactory
