@@ -1,0 +1,31 @@
+/*
+ * Copyright 2025-present Andy Marek
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * The built-in {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory
+ * factories} a configuration can name out of the box.
+ *
+ * <p>
+ * Each factory wraps an extractor from {@code org.coordinatekit.crf.core.feature} and is registered
+ * through {@code META-INF/services} so it is discovered by
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactoryRegistry#load()}.
+ * The catalog spans the composing extractors — {@code composite} and {@code window} — and the leaf
+ * extractors: {@code prefix}, {@code suffix}, {@code length}, {@code lookup}, {@code pattern},
+ * {@code position}, and {@code sequenceLength}.
+ */
+@NullMarked
+package org.coordinatekit.crf.core.feature.configuration.factory;
+
+import org.jspecify.annotations.NullMarked;
