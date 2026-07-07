@@ -30,22 +30,22 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WhitespaceTokenizerTest {
-    record TokenizeParameters(String input, List<String> expectedTokens) {}
+    record TokenizeParameters(String name, String input, List<String> expectedTokens) {}
 
-    static Stream<TokenizeParameters> tokenizeProvider() {
+    static Stream<TokenizeParameters> tokenize() {
         return Stream.of(
-                new TokenizeParameters("Hello", List.of("Hello")),
-                new TokenizeParameters("Hello world", List.of("Hello", "world")),
-                new TokenizeParameters("Hello  world", List.of("Hello", "world")),
-                new TokenizeParameters("Hello\tworld", List.of("Hello", "world")),
-                new TokenizeParameters("Hello\nworld", List.of("Hello", "world")),
-                new TokenizeParameters("  Hello  world  ", List.of("Hello", "world")),
-                new TokenizeParameters("one two three four", List.of("one", "two", "three", "four"))
+                new TokenizeParameters("single_token", "Hello", List.of("Hello")),
+                new TokenizeParameters("single_space", "Hello world", List.of("Hello", "world")),
+                new TokenizeParameters("multiple_spaces", "Hello  world", List.of("Hello", "world")),
+                new TokenizeParameters("tab_separator", "Hello\tworld", List.of("Hello", "world")),
+                new TokenizeParameters("newline_separator", "Hello\nworld", List.of("Hello", "world")),
+                new TokenizeParameters("leading_and_trailing_spaces", "  Hello  world  ", List.of("Hello", "world")),
+                new TokenizeParameters("four_tokens", "one two three four", List.of("one", "two", "three", "four"))
         );
     }
 
     @ParameterizedTest
-    @MethodSource("tokenizeProvider")
+    @MethodSource
     void tokenize(TokenizeParameters parameters) {
         var tokenizer = new WhitespaceTokenizer();
 
@@ -53,11 +53,12 @@ class WhitespaceTokenizerTest {
 
         assertIterableEquals(
                 parameters.expectedTokens(),
-                result.sequence().stream().map(PositionedToken::token).toList()
+                result.sequence().stream().map(PositionedToken::token).toList(),
+                parameters.name()
         );
-        assertEquals(parameters.expectedTokens().size(), result.sequence().size());
+        assertEquals(parameters.expectedTokens().size(), result.sequence().size(), parameters.name());
         for (int index = 0; index < result.sequence().size(); index++) {
-            assertEquals(index, result.sequence().get(index).position());
+            assertEquals(index, result.sequence().get(index).position(), parameters.name());
         }
     }
 

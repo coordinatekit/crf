@@ -30,9 +30,15 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FeatureTrainingSequenceTest {
-    record ExceptionParameters(Class<? extends Throwable> expectedException, String message, Executable executable) {}
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     record SequenceParameters(
+            String name,
             List<String> tokens,
             List<String> tags,
             List<Set<Feature>> features,
@@ -42,9 +48,10 @@ class FeatureTrainingSequenceTest {
             List<Set<Feature>> expectedFeatures
     ) {}
 
-    static Stream<SequenceParameters> sequenceProvider() {
+    static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters(
+                        "single_token",
                         List.of("Hello"),
                         List.of("GREETING"),
                         List.of(Set.of(createFeature("f1"), createFeature("f2"))),
@@ -54,6 +61,7 @@ class FeatureTrainingSequenceTest {
                         List.of(Set.of(createFeature("f1"), createFeature("f2")))
                 ),
                 new SequenceParameters(
+                        "three_tokens",
                         List.of("Hello", "world", "!"),
                         List.of("GREETING", "NOUN", "PUNCT"),
                         List.of(
@@ -76,34 +84,40 @@ class FeatureTrainingSequenceTest {
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
-        Throwable t = assertThrows(parameters.expectedException(), parameters.executable());
-        assertEquals(parameters.message(), t.getMessage());
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
     }
 
     static Stream<ExceptionParameters> constructor__exception() {
         return Stream.of(
                 new ExceptionParameters(
-                        IllegalArgumentException.class,
-                        "The number of tags must be equal to the number of tokens. (tokens: 1, tags: 2)",
+                        "tags_size_mismatch",
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING", "SALUTATION"),
                                 List.of(Set.of(createFeature("f1")))
-                        )
+                        ),
+                        IllegalArgumentException.class,
+                        "The number of tags must be equal to the number of tokens. (tokens: 1, tags: 2)"
                 ),
                 new ExceptionParameters(
-                        IllegalArgumentException.class,
-                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)",
+                        "features_size_mismatch",
                         () -> new FeatureTrainingSequence<>(
                                 List.of("Hello"),
                                 List.of("GREETING"),
                                 List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")))
-                        )
+                        ),
+                        IllegalArgumentException.class,
+                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)"
                 ),
                 new ExceptionParameters(
+                        "empty_tokens",
+                        () -> new FeatureTrainingSequence<>(List.of(), List.of(), List.of()),
                         IllegalArgumentException.class,
-                        "There must be one or more tokens provided to a feature training sequence.",
-                        () -> new FeatureTrainingSequence<>(List.of(), List.of(), List.of())
+                        "There must be one or more tokens provided to a feature training sequence."
                 )
         );
     }
@@ -135,7 +149,7 @@ class FeatureTrainingSequenceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void iterator(SequenceParameters parameters) {
         var sequence = new FeatureTrainingSequence<>(parameters.tokens(), parameters.tags(), parameters.features());
 
@@ -151,40 +165,44 @@ class FeatureTrainingSequenceTest {
             actualTokens.add(token.token());
         }
 
-        assertIterableEquals(parameters.expectedFeatures(), actualFeatures);
-        assertIterableEquals(parameters.expectedPositions(), actualPositions);
-        assertIterableEquals(parameters.expectedTags(), actualTags);
-        assertIterableEquals(parameters.expectedTokens(), actualTokens);
+        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void size(SequenceParameters parameters) {
         var sequence = new FeatureTrainingSequence<>(parameters.tokens(), parameters.tags(), parameters.features());
 
-        assertEquals(parameters.tokens().size(), sequence.size());
+        assertEquals(parameters.tokens().size(), sequence.size(), parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void stream(SequenceParameters parameters) {
         var sequence = new FeatureTrainingSequence<>(parameters.tokens(), parameters.tags(), parameters.features());
 
         assertIterableEquals(
                 parameters.expectedFeatures(),
-                sequence.stream().map(FeatureTrainingPositionedToken::features).toList()
+                sequence.stream().map(FeatureTrainingPositionedToken::features).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedPositions(),
-                sequence.stream().map(FeatureTrainingPositionedToken::position).toList()
+                sequence.stream().map(FeatureTrainingPositionedToken::position).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedTags(),
-                sequence.stream().map(FeatureTrainingPositionedToken::tag).toList()
+                sequence.stream().map(FeatureTrainingPositionedToken::tag).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedTokens(),
-                sequence.stream().map(FeatureTrainingPositionedToken::token).toList()
+                sequence.stream().map(FeatureTrainingPositionedToken::token).toList(),
+                parameters.name()
         );
     }
 }

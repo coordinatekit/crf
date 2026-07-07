@@ -62,41 +62,59 @@ class SerializablesTest {
     }
 
     record DeserializeExceptionParameters(
+            String name,
             @Nullable Class<?> clazz,
             @Nullable Path file,
             Class<? extends Exception> expectedClass,
             @Nullable String expectedMessage
     ) {}
 
-    static Stream<DeserializeExceptionParameters> deserialize_exception() {
+    static Stream<DeserializeExceptionParameters> deserialize__exception() {
         return Stream.of(
                 new DeserializeExceptionParameters(
+                        "null_clazz",
                         null,
                         Path.of("testObject.ser"),
                         NullPointerException.class,
                         "The clazz parameter may not be null."
                 ),
                 new DeserializeExceptionParameters(
+                        "null_file",
                         Object.class,
                         null,
                         NullPointerException.class,
                         "The file parameter may not be null."
                 ),
-                new DeserializeExceptionParameters(Object.class, Path.of("nonexistent.ser"), IOException.class, null),
-                new DeserializeExceptionParameters(Object.class, Path.of("empty"), IOException.class, null),
                 new DeserializeExceptionParameters(
+                        "missing_file",
+                        Object.class,
+                        Path.of("nonexistent.ser"),
+                        IOException.class,
+                        null
+                ),
+                new DeserializeExceptionParameters(
+                        "empty_directory",
+                        Object.class,
+                        Path.of("empty"),
+                        IOException.class,
+                        null
+                ),
+                new DeserializeExceptionParameters(
+                        "class_not_found",
                         Object.class,
                         Path.of("classNotFound.ser"),
                         UncheckedCrfException.class,
                         null
                 ),
                 new DeserializeExceptionParameters(
+                        "invalid_stream_header",
                         Object.class,
                         Path.of("file.txt"),
                         ObjectStreamException.class,
                         null
                 ),
                 new DeserializeExceptionParameters(
+                        "wrong_type",
                         String.class,
                         Path.of("testObject.ser"),
                         UncheckedCrfException.class,
@@ -107,22 +125,23 @@ class SerializablesTest {
 
     @MethodSource
     @ParameterizedTest
-    void deserialize_exception(DeserializeExceptionParameters parameters) {
+    void deserialize__exception(DeserializeExceptionParameters parameters) {
         var file = parameters.file() != null ? temporaryDirectory.resolve(parameters.file()) : null;
 
         @SuppressWarnings({"DataFlowIssue", "NullAway"})
         Exception exception = assertThrows(
                 parameters.expectedClass(),
-                () -> Serializables.deserialize(parameters.clazz(), file)
+                () -> Serializables.deserialize(parameters.clazz(), file),
+                parameters.name()
         );
 
         if (parameters.expectedMessage() != null) {
-            assertEquals(parameters.expectedMessage(), exception.getMessage());
+            assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
         }
     }
 
     @Test
-    void deserialize_nullFilter() {
+    void deserialize__nullFilter() {
         var file = temporaryDirectory.resolve("testObject.ser");
 
         @SuppressWarnings({"DataFlowIssue", "NullAway"})
@@ -135,7 +154,7 @@ class SerializablesTest {
     }
 
     @Test
-    void deserialize_rejectAllFilter() {
+    void deserialize__rejectAllFilter() {
         var file = temporaryDirectory.resolve("testObject.ser");
         ObjectInputFilter rejectAll = ObjectInputFilter.Config.createFilter("!*");
 
@@ -143,7 +162,7 @@ class SerializablesTest {
     }
 
     @Test
-    void deserialize_roundTripWithFilter() throws Exception {
+    void deserialize__roundTripWithFilter() throws Exception {
         var original = new TestObject("hello", 42);
         var file = temporaryDirectory.resolve("filtered.ser");
         ObjectInputFilter filter = ObjectInputFilter.Config.createFilter("org.coordinatekit.**;java.**;!*");
@@ -155,27 +174,31 @@ class SerializablesTest {
     }
 
     record SerializeExceptionParameters(
+            String name,
             @Nullable Object object,
             @Nullable Path file,
             Class<? extends Exception> expectedClass,
             @Nullable String expectedMessage
     ) {}
 
-    static Stream<SerializeExceptionParameters> serialize_exception() {
+    static Stream<SerializeExceptionParameters> serialize__exception() {
         return Stream.of(
                 new SerializeExceptionParameters(
+                        "null_object",
                         null,
                         Path.of("testObject.ser"),
                         NullPointerException.class,
                         "The object parameter may not be null."
                 ),
                 new SerializeExceptionParameters(
+                        "null_file",
                         Object.class,
                         null,
                         NullPointerException.class,
                         "The file parameter may not be null."
                 ),
                 new SerializeExceptionParameters(
+                        "unserializable_object",
                         new Object(),
                         Path.of("nonexistent.ser"),
                         ObjectStreamException.class,
@@ -186,22 +209,23 @@ class SerializablesTest {
 
     @MethodSource
     @ParameterizedTest
-    void serialize_exception(SerializeExceptionParameters parameters) {
+    void serialize__exception(SerializeExceptionParameters parameters) {
         var file = parameters.file() != null ? temporaryDirectory.resolve(parameters.file()) : null;
 
         @SuppressWarnings({"DataFlowIssue", "NullAway"})
         Exception exception = assertThrows(
                 parameters.expectedClass(),
-                () -> Serializables.serialize(parameters.object(), file)
+                () -> Serializables.serialize(parameters.object(), file),
+                parameters.name()
         );
 
         if (parameters.expectedMessage() != null) {
-            assertEquals(parameters.expectedMessage(), exception.getMessage());
+            assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
         }
     }
 
     @Test
-    void serialize_overwritesExistingFile() throws Exception {
+    void serialize__overwritesExistingFile() throws Exception {
         var file = temporaryDirectory.resolve("overwrite.ser");
 
         Serializables.serialize(new TestObject("first", 1), file);
@@ -213,7 +237,7 @@ class SerializablesTest {
     }
 
     @Test
-    void serialize_roundTrip() throws Exception {
+    void serialize__roundTrip() throws Exception {
         var original = new TestObject("hello", 42);
         var file = temporaryDirectory.resolve("test.ser");
 

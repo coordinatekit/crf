@@ -30,9 +30,15 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FeatureSequenceTest {
-    record ExceptionParameters(Class<? extends Throwable> expectedException, String message, Executable executable) {}
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     record SequenceParameters(
+            String name,
             List<String> tokens,
             List<Set<Feature>> features,
             List<String> expectedTokens,
@@ -40,9 +46,10 @@ class FeatureSequenceTest {
             List<Set<Feature>> expectedFeatures
     ) {}
 
-    static Stream<SequenceParameters> sequenceProvider() {
+    static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters(
+                        "single_token",
                         List.of("Hello"),
                         List.of(Set.of(createFeature("f1"), createFeature("f2"))),
                         List.of("Hello"),
@@ -50,6 +57,7 @@ class FeatureSequenceTest {
                         List.of(Set.of(createFeature("f1"), createFeature("f2")))
                 ),
                 new SequenceParameters(
+                        "three_tokens",
                         List.of("Hello", "world", "!"),
                         List.of(
                                 Set.of(createFeature("f1")),
@@ -70,24 +78,29 @@ class FeatureSequenceTest {
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
-        Throwable t = assertThrows(parameters.expectedException(), parameters.executable());
-        assertEquals(parameters.message(), t.getMessage());
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage(), parameters.name());
     }
 
     static Stream<ExceptionParameters> constructor__exception() {
         return Stream.of(
                 new ExceptionParameters(
-                        IllegalArgumentException.class,
-                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)",
+                        "features_size_mismatch",
                         () -> new FeatureSequence(
                                 List.of("Hello"),
                                 List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")))
-                        )
+                        ),
+                        IllegalArgumentException.class,
+                        "The number of features must be equal to the number of tokens. (tokens: 1, features: 2)"
                 ),
                 new ExceptionParameters(
+                        "empty_tokens",
+                        () -> new FeatureSequence(List.of(), List.of()),
                         IllegalArgumentException.class,
-                        "There must be one or more tokens provided to a feature sequence.",
-                        () -> new FeatureSequence(List.of(), List.of())
+                        "There must be one or more tokens provided to a feature sequence."
                 )
         );
     }
@@ -110,7 +123,7 @@ class FeatureSequenceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void iterator(SequenceParameters parameters) {
         var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
@@ -124,35 +137,38 @@ class FeatureSequenceTest {
             actualTokens.add(token.token());
         }
 
-        assertIterableEquals(parameters.expectedFeatures(), actualFeatures);
-        assertIterableEquals(parameters.expectedPositions(), actualPositions);
-        assertIterableEquals(parameters.expectedTokens(), actualTokens);
+        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void size(SequenceParameters parameters) {
         var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
-        assertEquals(parameters.tokens().size(), sequence.size());
+        assertEquals(parameters.tokens().size(), sequence.size(), parameters.name());
     }
 
     @ParameterizedTest
-    @MethodSource("sequenceProvider")
+    @MethodSource("sequences")
     void stream(SequenceParameters parameters) {
         var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
 
         assertIterableEquals(
                 parameters.expectedFeatures(),
-                sequence.stream().map(FeaturePositionedToken::features).toList()
+                sequence.stream().map(FeaturePositionedToken::features).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedPositions(),
-                sequence.stream().map(FeaturePositionedToken::position).toList()
+                sequence.stream().map(FeaturePositionedToken::position).toList(),
+                parameters.name()
         );
         assertIterableEquals(
                 parameters.expectedTokens(),
-                sequence.stream().map(FeaturePositionedToken::token).toList()
+                sequence.stream().map(FeaturePositionedToken::token).toList(),
+                parameters.name()
         );
     }
 }
