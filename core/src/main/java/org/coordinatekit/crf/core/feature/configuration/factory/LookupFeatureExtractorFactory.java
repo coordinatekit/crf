@@ -19,7 +19,6 @@ import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 
 import org.coordinatekit.crf.core.UncheckedCrfException;
-import org.coordinatekit.crf.core.feature.configuration.AssemblyContext;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorParameters;
 import org.coordinatekit.crf.core.feature.configuration.LeafFeatureExtractorFactory;
 import org.coordinatekit.crf.core.feature.configuration.ParameterDescriptor;
@@ -31,8 +30,7 @@ import org.coordinatekit.crf.core.feature.XPathFeatureExtractor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.net.URL;
 import java.util.Set;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -42,7 +40,7 @@ import javax.xml.xpath.XPathFactory;
  * file.
  *
  * <p>
- * It reads {@code dictionary} (path, required) and {@code xpath} (string, required) to load the
+ * It reads {@code dictionary} (resource, required) and {@code xpath} (string, required) to load the
  * value set, {@code caseSensitive} (boolean, default {@code true}), and the feature names:
  * {@code name} (required) with an optional {@code value} for a present token — emitting
  * {@code NAME=value}, or a bare {@code NAME} when {@code value} is unset — and an optional
@@ -58,8 +56,8 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
         String name = parameters.getString("name");
         Feature presentFeature = parameters.findString("value").map(value -> createFeatureWithValue(name, value))
                 .orElseGet(() -> createFeature(name));
-        Path dictionary = parameters.getPath("dictionary");
-        try (InputStream dictionaryStream = Files.newInputStream(dictionary)) {
+        URL dictionary = parameters.getResource("dictionary");
+        try (InputStream dictionaryStream = dictionary.openStream()) {
             XPathFeatureExtractor.Builder builder = XPathFeatureExtractor
                     .builder(dictionaryStream, parameters.getString("xpath"))
                     .caseSensitive(parameters.getBoolean("caseSensitive")).presentFeature(presentFeature);
@@ -73,7 +71,14 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
 
     @Override
     public FeatureExtractor create(FeatureExtractorParameters parameters) {
-        return buildExtractor(parameters);
+        try {
+            return buildExtractor(parameters);
+        } catch (UncheckedCrfException exception) {
+            throw new IllegalArgumentException(
+                    "parameter 'dictionary' is not well-formed XML: " + parameters.getResource("dictionary"),
+                    exception
+            );
+        }
     }
 
     @Override
@@ -83,8 +88,8 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
                         .description("feature name emitted when the token is absent from the dictionary").build(),
                 ParameterDescriptor.builder("caseSensitive", ParameterKind.BOOLEAN).defaultValue("true")
                         .description("whether membership testing is case-sensitive").build(),
-                ParameterDescriptor.builder("dictionary", ParameterKind.PATH).required(true)
-                        .description("path to the XML file holding the value set").build(),
+                ParameterDescriptor.builder("dictionary", ParameterKind.RESOURCE).required(true)
+                        .description("URL of the XML file holding the value set").build(),
                 ParameterDescriptor.builder("name", ParameterKind.STRING).required(true)
                         .description("feature name emitted when the token is present").build(),
                 ParameterDescriptor.builder("value", ParameterKind.STRING)
@@ -100,21 +105,13 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
     }
 
     @Override
-    public void validate(FeatureExtractorParameters parameters, AssemblyContext context) {
+    public void validate(FeatureExtractorParameters parameters) {
         String xpath = parameters.getString("xpath");
         try {
             XPathFactory.newInstance().newXPath().compile(xpath);
         } catch (XPathExpressionException exception) {
             throw new IllegalArgumentException(
                     "parameter 'xpath' is not a valid XPath expression: '" + xpath + "'",
-                    exception
-            );
-        }
-        try {
-            buildExtractor(parameters);
-        } catch (UncheckedCrfException exception) {
-            throw new IllegalArgumentException(
-                    "parameter 'dictionary' is not well-formed XML: " + parameters.getPath("dictionary"),
                     exception
             );
         }

@@ -18,25 +18,37 @@
  *
  * <p>
  * A downstream project changes which features a model sees by describing a tree of extractors
- * rather than writing Java. Each node names a
- * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory factory} by its
+ * rather than writing Java, either by hand-building
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode}s or by writing a
+ * file a {@link org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationParser} reads.
+ * Each node names a {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory
+ * factory} by its
  * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory#type() type} and
- * supplies string-valued parameters; the
- * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorAssembler assembler}
- * validates the parameters against each factory's declared
+ * supplies string-valued parameters; the assembler validates the parameters against each factory's
+ * declared
  * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory#parameters()
  * parameters}, resolves nesting, and produces a single
  * {@link org.coordinatekit.crf.core.feature.FeatureExtractor}.
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureConfiguration} is the façade tying
+ * a file straight to the assembled extractor.
  *
  * <p>
  * The pieces:
  *
  * <ul>
- * <li>{@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode} - the
- * hand-built tree the assembler consumes (a file parser arrives in a later phase)
- * <li>{@link org.coordinatekit.crf.core.feature.configuration.AssemblyContext} - the ambient state
- * threaded through assembly; where a node says what to build, the context says where the assembler
- * is and how its path parameters resolve
+ * <li>{@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode} - the tree the
+ * assembler consumes, built by hand through
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNodes} or by a parser
+ * <li>{@link org.coordinatekit.crf.core.feature.configuration.SourceLocation} - the format-neutral
+ * file/line/column a parser stamps onto a node, surfaced in located error messages
+ * <li>{@link org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationParser} - the
+ * ServiceLoader SPI turning a configuration file's bytes into a node tree, and the seam a
+ * downstream module implements to teach the assembly a new format. The built-in
+ * {@link org.coordinatekit.crf.core.feature.configuration.XmlFeatureConfigurationParser} covers XML
+ * on the standard library alone; a format that pulls in its own dependencies, such as JSON or YAML,
+ * ships as a separate module rather than joining this one
+ * <li>{@link org.coordinatekit.crf.core.feature.configuration.FeatureConfiguration} - the façade
+ * from a file straight to an assembled {@link org.coordinatekit.crf.core.feature.FeatureExtractor}
  * <li>{@link org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory} - the
  * ServiceLoader SPI, split into
  * {@link org.coordinatekit.crf.core.feature.configuration.LeafFeatureExtractorFactory leaf} and
@@ -52,13 +64,18 @@
  * </ul>
  *
  * <p>
- * Configuration-content mistakes (an unknown parameter, a missing required value, an uncoercible or
- * out-of-bounds value, an arity violation, a rejected cross-parameter rule) surface as a located
- * {@link org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationException}; a
+ * Two error taxonomies apply at different stages. Before any node reaches the assembler, a
+ * <em>syntactic</em> problem in a file's shape (malformed markup, a disallowed {@code DOCTYPE}, a
+ * missing required attribute, the wrong number of top-level extractors) surfaces as a located
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationParseException}. Once
+ * assembly runs, a <em>content</em> mistake (an unknown parameter, a missing required value, an
+ * uncoercible or out-of-bounds value, an arity violation, a rejected cross-parameter rule) surfaces
+ * as a located
+ * {@link org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationException}. A
  * classpath mistake (two factories claiming one type) surfaces as a
  * {@link org.coordinatekit.crf.core.feature.configuration.DuplicateFactoryTypeException}.
  *
- * @see org.coordinatekit.crf.core.feature.configuration.FeatureExtractorAssembler
+ * @see org.coordinatekit.crf.core.feature.configuration.FeatureConfiguration
  * @see org.coordinatekit.crf.core.feature.configuration.FeatureExtractorFactory
  */
 @NullMarked

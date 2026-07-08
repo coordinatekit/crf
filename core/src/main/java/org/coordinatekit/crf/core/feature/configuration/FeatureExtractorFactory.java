@@ -22,15 +22,14 @@ import java.util.Set;
  *
  * <p>
  * A factory publishes a stable {@link #type()} — the token a node carries to select it — and the
- * {@link #parameters()} it accepts, and may override
- * {@link #validate(FeatureExtractorParameters, AssemblyContext)} to reject a configuration the
- * parameters alone cannot. Every factory is one of two kinds: a {@link LeafFeatureExtractorFactory}
- * that takes no children, or a {@link NestingFeatureExtractorFactory} that composes children and
- * declares its own child arity. This root interface is <strong>not sealed</strong>: a downstream
- * registers its own factories through {@code META-INF/services}, and the
- * {@link FeatureExtractorAssembler} dispatches on which sub-interface a factory implements.
- * {@link FeatureExtractorFactoryRegistry} enforces at construction that a factory implements
- * exactly one of the two sub-interfaces, rejecting a mismatch with an
+ * {@link #parameters()} it accepts, and may override {@link #validate(FeatureExtractorParameters)}
+ * to reject a configuration the parameters alone cannot. Every factory is one of two kinds: a
+ * {@link LeafFeatureExtractorFactory} that takes no children, or a
+ * {@link NestingFeatureExtractorFactory} that composes children and declares its own child arity.
+ * This root interface is <strong>not sealed</strong>: a downstream registers its own factories
+ * through {@code META-INF/services}, and the assembler dispatches on which sub-interface a factory
+ * implements. {@link FeatureExtractorFactoryRegistry} enforces at construction that a factory
+ * implements exactly one of the two sub-interfaces, rejecting a mismatch with an
  * {@link InvalidFactoryDeclarationException} rather than letting it surface later, mid-assembly.
  *
  * @see LeafFeatureExtractorFactory
@@ -60,17 +59,17 @@ public interface FeatureExtractorFactory {
      *
      * <p>
      * The default implementation accepts every configuration. Override to reject one, throwing an
-     * {@link IllegalArgumentException} describing the problem; the {@link FeatureExtractorAssembler}
-     * calls this after per-parameter validation and the arity check, before recursing into children,
-     * and wraps a thrown {@link IllegalArgumentException} into a located
-     * {@link FeatureConfigurationException} naming this node. Content that could otherwise make
-     * {@code create()} throw on user input — an invalid regex, XPath, or dictionary, for example — must
-     * be rejected here instead: the assembler runs {@code create()} only on already-validated input, so
-     * a failure there is treated as a factory bug rather than a configuration-content error.
+     * {@link IllegalArgumentException} describing the problem; the assembler calls this after
+     * per-parameter validation and the arity check, before recursing into children, and wraps a thrown
+     * {@link IllegalArgumentException} into a located {@link FeatureConfigurationException} naming this
+     * node. Use this for a cheap cross-parameter or value check that per-parameter
+     * {@link ParameterDescriptor}s cannot express. A check that is only affordable while actually
+     * building the extractor — parsing a dictionary to prove it is well-formed XML, for example — need
+     * not be duplicated here: {@code create()} may itself throw {@link IllegalArgumentException} to
+     * report a content problem, and the assembler locates it exactly as it does one thrown from here.
      *
      * @param parameters the validated, coerced parameters
-     * @param context the assembly context, supplying the location for error messages
      * @throws IllegalArgumentException if the configuration violates a cross-parameter rule
      */
-    default void validate(FeatureExtractorParameters parameters, AssemblyContext context) {}
+    default void validate(FeatureExtractorParameters parameters) {}
 }

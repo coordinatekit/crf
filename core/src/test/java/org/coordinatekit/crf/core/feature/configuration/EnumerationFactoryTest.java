@@ -16,20 +16,18 @@
 package org.coordinatekit.crf.core.feature.configuration;
 
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
+import static org.coordinatekit.crf.core.feature.configuration.ConfigurationTestSupport.currentDirectoryUrl;
+import static org.coordinatekit.crf.core.feature.configuration.ConfigurationTestSupport.renderFeatures;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.coordinatekit.crf.core.InputSequence;
 import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
-import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Covers the {@link ParameterKind#ENUMERATION} kind end-to-end with a synthetic factory, since no
@@ -66,10 +64,8 @@ class EnumerationFactoryTest {
     );
 
     private static Set<String> render(FeatureExtractorNode node) {
-        FeatureExtractor extractor = ASSEMBLER.assemble(node, Path.of("."));
-        Sequence<PositionedToken> sequence = new InputSequence(List.of("token"));
-        DefaultFeatureFormat format = new DefaultFeatureFormat();
-        return extractor.extractAt(sequence, 0).stream().map(format::render).collect(Collectors.toSet());
+        FeatureExtractor extractor = ASSEMBLER.assemble(node, currentDirectoryUrl());
+        return renderFeatures(extractor, List.of("token"), 0);
     }
 
     @Test
@@ -97,7 +93,7 @@ class EnumerationFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'mode' at /mode — parameter 'mode' expects one of [fast, slow] but got 'medium'",
+                "extractor 'mode' — parameter 'mode' expects one of [fast, slow] but got 'medium'",
                 exception.getMessage()
         );
     }

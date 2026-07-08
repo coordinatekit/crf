@@ -44,11 +44,11 @@ public enum ParameterKind {
     INTEGER,
 
     /**
-     * A filesystem path, resolved against {@link AssemblyContext#baseDirectory()} and read with
-     * {@link FeatureExtractorParameters#getPath(String)} /
-     * {@link FeatureExtractorParameters#findPath(String)}.
+     * A resource location, resolved as a URL against the configuration's base location and read with
+     * {@link FeatureExtractorParameters#getResource(String)} /
+     * {@link FeatureExtractorParameters#findResource(String)}.
      */
-    PATH,
+    RESOURCE,
 
     /**
      * An uninterpreted string, read with {@link FeatureExtractorParameters#getString(String)} /

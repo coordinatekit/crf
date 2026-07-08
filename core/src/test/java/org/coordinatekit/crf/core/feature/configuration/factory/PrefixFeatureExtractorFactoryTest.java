@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
@@ -48,45 +48,37 @@ class PrefixFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'prefix' at /prefix — parameter 'length' expects an integer >= 1 but got '0'",
+                "extractor 'prefix' — parameter 'length' expects an integer >= 1 but got '0'",
                 exception.getMessage()
         );
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "customName",
+                new CreateRenderParameters(
+                        "custom_name",
                         FeatureExtractorNodes.builder("prefix").parameter("name", "PREFIX2").parameter("length", "2")
                                 .build(),
                         List.of("517"),
                         0,
                         Set.of("PREFIX2=51")
                 ),
-                new RenderParameters(
-                        "defaultNameTakesLeadingCharacters",
+                new CreateRenderParameters(
+                        "default_name_takes_leading_characters",
                         FeatureExtractorNodes.builder("prefix").parameter("length", "3").build(),
                         List.of("abcdef"),
                         0,
                         Set.of("PREFIX=abc")
                 ),
-                new RenderParameters(
-                        "emitsShortTokensByDefault",
+                new CreateRenderParameters(
+                        "emits_short_tokens_by_default",
                         FeatureExtractorNodes.builder("prefix").parameter("length", "3").build(),
                         List.of("ab"),
                         0,
                         Set.of("PREFIX=ab")
                 ),
-                new RenderParameters(
-                        "excludesShortTokensWhenConfigured",
+                new CreateRenderParameters(
+                        "excludes_short_tokens_when_configured",
                         FeatureExtractorNodes.builder("prefix").parameter("length", "4")
                                 .parameter("includeIfLessThanLength", "false").build(),
                         List.of("ab"),
@@ -98,7 +90,7 @@ class PrefixFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 

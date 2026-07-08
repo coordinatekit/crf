@@ -18,7 +18,6 @@ package org.coordinatekit.crf.core.feature.configuration.factory;
 import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 
-import org.coordinatekit.crf.core.feature.configuration.AssemblyContext;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorParameters;
 import org.coordinatekit.crf.core.feature.configuration.LeafFeatureExtractorFactory;
 import org.coordinatekit.crf.core.feature.configuration.ParameterDescriptor;
@@ -79,7 +78,7 @@ public final class PositionFeatureExtractorFactory implements LeafFeatureExtract
     }
 
     @Override
-    public void validate(FeatureExtractorParameters parameters, AssemblyContext context) {
+    public void validate(FeatureExtractorParameters parameters) {
         if (parameters.findString("firstName").isEmpty() && parameters.findString("lastName").isEmpty()
                 && parameters.findString("fromStartName").isEmpty() && parameters.findString("fromEndName").isEmpty()) {
             throw new IllegalArgumentException(

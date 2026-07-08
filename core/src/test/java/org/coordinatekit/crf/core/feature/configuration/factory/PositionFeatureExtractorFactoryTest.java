@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
@@ -37,47 +37,39 @@ class PositionFeatureExtractorFactoryTest {
                 .parameter("fromStartName", "START").parameter("fromEndName", "END").build();
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "emitsOnlyConfiguredNames",
+                new CreateRenderParameters(
+                        "emits_only_configured_names",
                         FeatureExtractorNodes.builder("position").parameter("firstName", "FIRST")
                                 .parameter("fromStartName", "START").build(),
                         List.of("a", "bb", "ccc"),
                         0,
                         Set.of("FIRST", "START=0")
                 ),
-                new RenderParameters(
-                        "firstTokenGetsFirstAndDistances",
+                new CreateRenderParameters(
+                        "first_token_gets_first_and_distances",
                         allNames(),
                         List.of("a", "bb", "ccc"),
                         0,
                         Set.of("FIRST", "START=0", "END=2")
                 ),
-                new RenderParameters(
-                        "lastTokenGetsLastAndDistances",
+                new CreateRenderParameters(
+                        "last_token_gets_last_and_distances",
                         allNames(),
                         List.of("a", "bb", "ccc"),
                         2,
                         Set.of("LAST", "START=2", "END=0")
                 ),
-                new RenderParameters(
-                        "middleTokenGetsOnlyDistances",
+                new CreateRenderParameters(
+                        "middle_token_gets_only_distances",
                         allNames(),
                         List.of("a", "bb", "ccc"),
                         1,
                         Set.of("START=1", "END=1")
                 ),
-                new RenderParameters(
-                        "singleTokenIsBothFirstAndLast",
+                new CreateRenderParameters(
+                        "single_token_is_both_first_and_last",
                         allNames(),
                         List.of("a"),
                         0,
@@ -88,7 +80,7 @@ class PositionFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 
@@ -106,7 +98,7 @@ class PositionFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'position' at /position — at least one of 'firstName', 'lastName', 'fromStartName',"
+                "extractor 'position' — at least one of 'firstName', 'lastName', 'fromStartName',"
                         + " or 'fromEndName' must be set",
                 exception.getMessage()
         );

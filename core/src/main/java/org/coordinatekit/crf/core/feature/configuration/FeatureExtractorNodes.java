@@ -15,15 +15,18 @@
  */
 package org.coordinatekit.crf.core.feature.configuration;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * Test-only scaffolding for hand-building {@link FeatureExtractorNode} trees. Superseded by the
- * file parser in Phase 3.
+ * Builds {@link FeatureExtractorNode} trees. A {@link FeatureConfigurationParser} builds nodes
+ * through this, and it remains the ergonomic way to hand-build a tree in a test.
  */
 public final class FeatureExtractorNodes {
     private FeatureExtractorNodes() {}
@@ -39,16 +42,32 @@ public final class FeatureExtractorNodes {
     }
 
     /**
-     * Builder for {@link FeatureExtractorNode}, ergonomic for hand-built trees.
+     * Builder for {@link FeatureExtractorNode}, ergonomic for hand-built trees and the parser alike.
      */
     public static final class Builder {
         private final List<FeatureExtractorNode> children = new ArrayList<>();
-        private final Map<String, String> parameters = new LinkedHashMap<>();
-        private final String type;
         private boolean key = false;
+        private final Map<String, String> parameters = new LinkedHashMap<>();
+        private @Nullable SourceLocation sourceLocation;
+        private final String type;
 
         private Builder(String type) {
             this.type = Objects.requireNonNull(type, "type must not be null");
+        }
+
+        /**
+         * Builds the node.
+         *
+         * @return a new {@link FeatureExtractorNode}
+         */
+        public FeatureExtractorNode build() {
+            return new DefaultFeatureExtractorNode(
+                    List.copyOf(children),
+                    key,
+                    Map.copyOf(parameters),
+                    sourceLocation,
+                    type
+            );
         }
 
         /**
@@ -89,12 +108,14 @@ public final class FeatureExtractorNodes {
         }
 
         /**
-         * Builds the node.
+         * Sets where this node came from in its source configuration.
          *
-         * @return a new {@link FeatureExtractorNode}
+         * @param sourceLocation the source location
+         * @return this builder
          */
-        public FeatureExtractorNode build() {
-            return new DefaultFeatureExtractorNode(List.copyOf(children), key, Map.copyOf(parameters), type);
+        public Builder sourceLocation(SourceLocation sourceLocation) {
+            this.sourceLocation = Objects.requireNonNull(sourceLocation, "sourceLocation must not be null");
+            return this;
         }
     }
 
@@ -105,12 +126,19 @@ public final class FeatureExtractorNodes {
      * @param children the child nodes
      * @param key whether this node is the key boundary
      * @param parameters the raw parameters
+     * @param source where this node came from in its source configuration, empty for a hand-built node
      * @param type the factory type
      */
     private record DefaultFeatureExtractorNode(
             List<FeatureExtractorNode> children,
             boolean key,
             Map<String, String> parameters,
+            @Nullable SourceLocation source,
             String type
-    ) implements FeatureExtractorNode {}
+    ) implements FeatureExtractorNode {
+        @Override
+        public Optional<SourceLocation> sourceLocation() {
+            return Optional.ofNullable(source);
+        }
+    }
 }

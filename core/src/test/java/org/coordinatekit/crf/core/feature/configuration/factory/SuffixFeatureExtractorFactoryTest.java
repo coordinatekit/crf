@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
@@ -48,45 +48,37 @@ class SuffixFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'suffix' at /suffix — parameter 'length' expects an integer >= 1 but got '0'",
+                "extractor 'suffix' — parameter 'length' expects an integer >= 1 but got '0'",
                 exception.getMessage()
         );
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "customName",
+                new CreateRenderParameters(
+                        "custom_name",
                         FeatureExtractorNodes.builder("suffix").parameter("name", "SUF").parameter("length", "3")
                                 .build(),
                         List.of("running"),
                         0,
                         Set.of("SUF=ing")
                 ),
-                new RenderParameters(
-                        "defaultNameTakesTrailingCharacters",
+                new CreateRenderParameters(
+                        "default_name_takes_trailing_characters",
                         FeatureExtractorNodes.builder("suffix").parameter("length", "2").build(),
                         List.of("cats"),
                         0,
                         Set.of("SUFFIX=ts")
                 ),
-                new RenderParameters(
-                        "emitsShortTokensByDefault",
+                new CreateRenderParameters(
+                        "emits_short_tokens_by_default",
                         FeatureExtractorNodes.builder("suffix").parameter("length", "3").build(),
                         List.of("hi"),
                         0,
                         Set.of("SUFFIX=hi")
                 ),
-                new RenderParameters(
-                        "excludesShortTokensWhenConfigured",
+                new CreateRenderParameters(
+                        "excludes_short_tokens_when_configured",
                         FeatureExtractorNodes.builder("suffix").parameter("length", "3")
                                 .parameter("includeIfLessThanLength", "false").build(),
                         List.of("hi"),
@@ -98,7 +90,7 @@ class SuffixFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 

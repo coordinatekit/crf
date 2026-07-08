@@ -17,7 +17,6 @@ package org.coordinatekit.crf.core.feature.configuration.factory;
 
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 
-import org.coordinatekit.crf.core.feature.configuration.AssemblyContext;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorParameters;
 import org.coordinatekit.crf.core.feature.configuration.LeafFeatureExtractorFactory;
 import org.coordinatekit.crf.core.feature.configuration.ParameterDescriptor;
@@ -73,7 +72,7 @@ public final class SequenceLengthFeatureExtractorFactory implements LeafFeatureE
     }
 
     @Override
-    public void validate(FeatureExtractorParameters parameters, AssemblyContext context) {
+    public void validate(FeatureExtractorParameters parameters) {
         if (parameters.findString("hasName").isEmpty() && parameters.findString("lacksName").isEmpty()) {
             throw new IllegalArgumentException("at least one of 'hasName' or 'lacksName' must be set");
         }
