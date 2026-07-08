@@ -30,6 +30,25 @@ repos:
           - ci
           - chore
           - revert
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.4
+    hooks:
+      - id: check-jsonschema
+        name: Validate issue form templates
+        files: ^\.github/ISSUE_TEMPLATE/(bug_report|feature_request|task)\.yml$
+        args:
+          [
+            "--schemafile",
+            "https://json.schemastore.org/github-issue-forms.json",
+          ]
+      - id: check-jsonschema
+        name: Validate issue template config
+        files: ^\.github/ISSUE_TEMPLATE/config\.yml$
+        args:
+          [
+            "--schemafile",
+            "https://json.schemastore.org/github-issue-config.json",
+          ]
   - repo: local
     hooks:
       - id: prettier
