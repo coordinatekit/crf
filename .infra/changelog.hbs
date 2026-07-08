@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {{#ifReleaseTag}}
 
 ## [{{subString name 1}}] - {{tagTime}}
+{{#ifContainsBreaking commits}}
+
+### BREAKING CHANGES
+
+{{#commits}}
+{{#ifCommitBreaking .}}
+- {{{description .}}}{{#ifMatches (pullRequest .) "[0-9]+"}} ([#{{pullRequest .}}](https://github.com/coordinatekit/crf/pull/{{pullRequest .}})){{else}} ([{{hash}}](https://github.com/coordinatekit/crf/commit/{{hashFull}})){{/ifMatches}}
+{{#eachCommitFooter . tokenMatching="BREAKING[ -]CHANGE"}}
+{{#ifFooterHasValue .}}
+  {{{value}}}
+{{/ifFooterHasValue}}
+{{/eachCommitFooter}}
+{{/ifCommitBreaking}}
+{{/commits}}
+{{/ifContainsBreaking}}
 {{#ifContainsType commits type="feat"}}
 
 ### Features
