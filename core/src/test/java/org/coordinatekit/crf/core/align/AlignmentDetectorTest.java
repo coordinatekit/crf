@@ -70,7 +70,7 @@ class AlignmentDetectorTest {
 
     // language=XML
     private static final String ALIGNED_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
                     <crf:Excluded> </crf:Excluded>
@@ -80,11 +80,11 @@ class AlignmentDetectorTest {
             """;
     // language=XML
     private static final String EMPTY_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" />
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" />
             """;
     // language=XML
     private static final String MERGE_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence>
                     <Unknown>Salt</Unknown>
                     <Unknown>Lake</Unknown>
@@ -93,7 +93,7 @@ class AlignmentDetectorTest {
             """;
     // language=XML
     private static final String MIXED_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
                     <crf:Excluded> </crf:Excluded>
@@ -106,7 +106,7 @@ class AlignmentDetectorTest {
             """;
     // language=XML
     private static final String SPLIT_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence>
                     <Noun>New York</Noun>
                 </crf:Sequence>
@@ -114,7 +114,7 @@ class AlignmentDetectorTest {
             """;
     // language=XML
     private static final String TRAILING_DIVERGENCE_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence>
                     <Word>Alpha</Word>
                     <crf:Excluded> </crf:Excluded>

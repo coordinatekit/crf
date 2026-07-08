@@ -34,7 +34,7 @@ final class TrainingSequenceFixtures {
     static final String DOCTYPE_DOCUMENT = """
             <?xml version="1.0" encoding="UTF-8"?>
             <!DOCTYPE crf:Collection>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>Fox</Noun></crf:Sequence>
             </crf:Collection>
             """;

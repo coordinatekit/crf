@@ -55,7 +55,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String VALID_DOCUMENT = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
             </crf:Collection>
             """;
@@ -64,7 +64,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__UNKNOWN_TAG = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
             </crf:Collection>
             """;
@@ -73,7 +73,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__TAG_UNDER_ROOT = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <Adjective>Brown</Adjective>
             </crf:Collection>
             """;
@@ -82,7 +82,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__EXCLUDED_UNDER_ROOT = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Excluded> </crf:Excluded>
             </crf:Collection>
             """;
@@ -91,7 +91,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__EXCLUDED_WITH_CHILD = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><crf:Excluded><Adjective>Brown</Adjective></crf:Excluded></crf:Sequence>
             </crf:Collection>
             """;
@@ -101,7 +101,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__MULTIPLE_UNKNOWN_TAGS = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Pronoun>It</Pronoun><Conjunction>and</Conjunction></crf:Sequence>
             </crf:Collection>
             """;
@@ -110,7 +110,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String INVALID__MALFORMED = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>Fox</Noun>
             </crf:Collection>
             """;
@@ -120,7 +120,7 @@ class XmlTrainingDataValidationTest {
     private static final String INVALID__WITH_DOCTYPE = """
             <?xml version="1.0" encoding="UTF-8"?>
             <!DOCTYPE crf:Collection>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>Fox</Noun></crf:Sequence>
             </crf:Collection>
             """;
@@ -129,7 +129,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String VALID_EMPTY_COLLECTION = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags"/>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags"/>
             """;
 
     // Tag elements left in no namespace, validated by a namespace-configured instance whose tag schema
@@ -138,7 +138,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String VALID_NO_NAMESPACE_TAGS_UNDER_NAMESPACE_VALIDATOR = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>
             </crf:Collection>
             """;
@@ -148,7 +148,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String VALID_NO_NAMESPACE_DOCUMENT = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
             </crf:Collection>
             """;
@@ -158,7 +158,7 @@ class XmlTrainingDataValidationTest {
     // language=XML
     private static final String VALID_NO_NAMESPACE_UNDECLARED_TAG = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
             </crf:Collection>
             """;

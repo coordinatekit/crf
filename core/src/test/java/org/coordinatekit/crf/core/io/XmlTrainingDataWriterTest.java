@@ -56,14 +56,14 @@ class XmlTrainingDataWriterTest {
 
     // language=XML
     private static final String NON_COLLECTION_ROOT = """
-            <crf:TrainingData xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:TrainingData xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
             </crf:TrainingData>
             """;
 
     // language=XML
     private static final String VALID_EMPTY_COLLECTION = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
             </crf:Collection>
             """;
 
@@ -234,7 +234,7 @@ class XmlTrainingDataWriterTest {
             Files.writeString(file, Files.readString(file) + "\n   \n  ");
         }), new AppendHappyPathParameters("missingCloseTag", file -> Files.writeString(file, """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+                <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                     <crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>
                 """)));
     }
