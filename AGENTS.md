@@ -228,7 +228,7 @@ rather than falling back to a lone registered loader.
 
 ### Training Data Format
 
-Training data uses XML with a CRF-specific namespace (`https://coordinatekit.org/crf/schema`):
+Training data uses XML with a CRF-specific namespace (`https://coordinatekit.org/schema/crf/training-data`):
 
 - `<crf:Sequence>` elements wrap training examples
 - Child elements represent tagged tokens (element name = tag, text content = token)

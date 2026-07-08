@@ -175,7 +175,7 @@ closes the file, writes that final tag, and your accepted sequences are saved:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema">
+<crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
 <crf:Sequence><Determiner>A</Determiner><crf:Excluded> </crf:Excluded><Noun>cat</Noun><crf:Excluded> </crf:Excluded><Verb>sat</Verb><crf:Excluded> </crf:Excluded><Preposition>on</Preposition><crf:Excluded> </crf:Excluded><Determiner>the</Determiner><crf:Excluded> </crf:Excluded><Noun>mat</Noun></crf:Sequence>
 </crf:Collection>
 ```

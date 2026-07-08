@@ -37,8 +37,8 @@
   validated vocabulary; leave it off for an open one.
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:crf="https://coordinatekit.org/crf/schema"
-           targetNamespace="https://coordinatekit.org/crf/schema"
+           xmlns:crf="https://coordinatekit.org/schema/crf/training-data"
+           targetNamespace="https://coordinatekit.org/schema/crf/training-data"
            elementFormDefault="qualified">
 
     <xs:element name="Excluded" type="xs:string">

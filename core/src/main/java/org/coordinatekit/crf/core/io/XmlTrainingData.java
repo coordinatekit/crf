@@ -74,22 +74,22 @@ import java.util.stream.StreamSupport;
  *
  * <p>
  * Two namespaces are in play. The <em>structural grammar</em>
- * ({@code https://coordinatekit.org/crf/schema}) is fixed and library-owned: it defines the
- * {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape and lives in the
- * static {@code crf-structure.xsd} resource. The <em>tag vocabulary</em> is dynamic and per-
- * {@link TagProvider}: {@link #generateSchema(OutputStream)} emits one element declaration per tag.
- * The {@link XmlTrainingDataConfiguration#targetNamespace() target namespace} is optional: with one
- * configured, the tags are declared in it and the writer declares it as the document's default
- * namespace; with none (the default), the tags are declared in no namespace, matching the bare tag
- * elements the writer emits. Either way the library's own output validates against the schema it
- * generates.
+ * ({@code https://coordinatekit.org/schema/crf/training-data}) is fixed and library-owned: it
+ * defines the {@code <crf:Collection>} / {@code <crf:Sequence>} / {@code <crf:Excluded>} shape and
+ * lives in the static {@code training-data.xsd} resource. The <em>tag vocabulary</em> is dynamic
+ * and per- {@link TagProvider}: {@link #generateSchema(OutputStream)} emits one element declaration
+ * per tag. The {@link XmlTrainingDataConfiguration#targetNamespace() target namespace} is optional:
+ * with one configured, the tags are declared in it and the writer declares it as the document's
+ * default namespace; with none (the default), the tags are declared in no namespace, matching the
+ * bare tag elements the writer emits. Either way the library's own output validates against the
+ * schema it generates.
  *
  * <p>
  * When reading XML, {@code <crf:Excluded>} runs in the CRF schema namespace
- * ({@code https://coordinatekit.org/crf/schema}) are captured verbatim as excluded segments, so a
- * sequence's original surface text can be reconstructed. Other CRF-namespace structural elements,
- * such as {@code <crf:Sequence>} and {@code <crf:Collection>}, are skipped, leaving only the tag
- * elements to process.
+ * ({@code https://coordinatekit.org/schema/crf/training-data}) are captured verbatim as excluded
+ * segments, so a sequence's original surface text can be reconstructed. Other CRF-namespace
+ * structural elements, such as {@code <crf:Sequence>} and {@code <crf:Collection>}, are skipped,
+ * leaving only the tag elements to process.
  *
  * <p>
  * When writing XML, the root element is configured by
@@ -120,7 +120,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * Elements in this namespace (such as {@code <crf:Sequence>} and {@code <crf:Excluded>}) are used
      * for document structure and are excluded when reading training data.
      */
-    public static final String CRF_SCHEMA_NAMESPACE_URI = "https://coordinatekit.org/crf/schema";
+    public static final String CRF_SCHEMA_NAMESPACE_URI = "https://coordinatekit.org/schema/crf/training-data";
 
     /**
      * The local name of the element that wraps a run of excluded characters dropped by a tokenizer.
@@ -143,7 +143,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
     /**
      * The classpath resource name of the fixed structural grammar, resolved relative to this class.
      */
-    private static final String STRUCTURAL_SCHEMA_RESOURCE = "crf-structure.xsd";
+    private static final String STRUCTURAL_SCHEMA_RESOURCE = "training-data.xsd";
 
     private static final String XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema";
 
@@ -474,7 +474,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      * non-default root is configured.
      *
      * <p>
-     * The static {@code crf-structure.xsd} declares the document root as
+     * The static {@code training-data.xsd} declares the document root as
      * {@link XmlTrainingDataConfiguration#DEFAULT_ROOT_ELEMENT_NAME}. A custom root local name is
      * applied by a single in-memory substitution of that element declaration's {@code name} attribute,
      * so the resource stays the one source of truth for the grammar. The substitution requires the

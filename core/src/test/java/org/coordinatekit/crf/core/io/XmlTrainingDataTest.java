@@ -137,7 +137,7 @@ class XmlTrainingDataTest {
             """;
     // language=XML
     private static final String READ__MULTIPLE_RECORDS_SCHEMA_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
                     <crf:Excluded> </crf:Excluded>
@@ -158,7 +158,7 @@ class XmlTrainingDataTest {
     private static final String READ__NO_RECORDS_XML = "<Collection />";
     // language=XML
     private static final String READ__NO_RECORDS_SCHEMA_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" />
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" />
             """;
     // language=XML
     private static final String READ__SINGLE_RECORD_XML = """
@@ -168,7 +168,7 @@ class XmlTrainingDataTest {
             """;
     // language=XML
     private static final String READ__SINGLE_RECORD_SCHEMA_XML = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
                     <crf:Excluded> </crf:Excluded>
@@ -187,7 +187,7 @@ class XmlTrainingDataTest {
                 <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">
                 <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;">
             ]>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>&lol3;</Noun></crf:Sequence>
             </crf:Collection>
             """;
@@ -196,7 +196,7 @@ class XmlTrainingDataTest {
     // directly, surviving a narrowing of the explicit DOCTYPE guard).
     // language=XML
     private static final String READ__UNDECLARED_ENTITY = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://example.org/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>&xxe;</Noun></crf:Sequence>
             </crf:Collection>
             """;
@@ -206,7 +206,7 @@ class XmlTrainingDataTest {
     @SuppressWarnings("CheckTagEmptyBody")
     // language=XML
     private static final String SINGLE_RECORD_SCHEMA_XML__EMPTY_EXCLUDED = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence>
                     <Adjective>Brown</Adjective>
                     <crf:Excluded></crf:Excluded>
@@ -222,7 +222,7 @@ class XmlTrainingDataTest {
     // namespace is ignored within a `crf:Sequence` is ignored.
     // language=XML
     private static final String SINGLE_RECORD_SCHEMA_XML__DEEP_EXCLUDED = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence>
                     <crf:Excluded>
                         <Adverb>Quick</Adverb>
@@ -240,7 +240,7 @@ class XmlTrainingDataTest {
     // parse, mirroring the crf:Excluded skip-and-log behavior.
     // language=XML
     private static final String SINGLE_RECORD_SCHEMA_XML__TOKEN_WITH_CHILD = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/crf/schema" xmlns="https://coordinatekit.org/crf/schema/tags">
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence>
                     <Verb>Jumped<Adverb>quickly</Adverb></Verb>
                     <Adjective>Brown</Adjective>
