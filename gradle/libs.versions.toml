@@ -10,7 +10,7 @@ slf4j = "2.0.18"
 
 # test — always latest
 junit = "6.1.1"
-logback = "1.5.37"
+logback = "1.5.38"
 
 # build — keep current
 errorprone = "2.50.0"
