@@ -17,15 +17,15 @@ package org.coordinatekit.crf.core.feature.configuration;
 
 import org.jspecify.annotations.Nullable;
 
-import java.nio.file.Files;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Validates a node's raw string parameters against its factory's declared
@@ -37,10 +37,9 @@ import java.util.TreeSet;
  * declared name is close), requires the required parameters, coerces each value to its declared
  * {@link ParameterKind kind} (parsing integers within their declared
  * {@link ParameterDescriptor#minimumValue() minimum}/{@link ParameterDescriptor#maximumValue()
- * maximum}, checking an enumeration against its allowed values, resolving a path against
- * {@link AssemblyContext#baseDirectory()} and verifying it names a readable regular file), and
- * applies a default for an absent optional parameter that declares one. Every rejection is a
- * located {@link FeatureConfigurationException}.
+ * maximum}, checking an enumeration against its allowed values, resolving a resource against the
+ * base location and verifying it can be opened), and applies a default for an absent optional
+ * parameter that declares one. Every rejection is a located {@link FeatureConfigurationException}.
  */
 final class ParameterValidation {
     /**
@@ -59,7 +58,8 @@ final class ParameterValidation {
      * @param extractorType the factory type, named in located error messages
      * @param rawParameters the raw, unvalidated parameters keyed by name
      * @param parameters the declared parameters to validate against
-     * @param context the assembly context, supplying the location and the base directory for paths
+     * @param baseLocation the document location that resource parameters resolve against
+     * @param source the current node's source location, or {@code null} if it carried none
      * @return the validated, coerced parameters
      * @throws FeatureConfigurationException if a parameter is unknown, a required one is missing, or a
      *         value cannot be coerced to its declared kind
@@ -68,7 +68,8 @@ final class ParameterValidation {
             String extractorType,
             Map<String, String> rawParameters,
             Set<ParameterDescriptor> parameters,
-            AssemblyContext context
+            URL baseLocation,
+            @Nullable SourceLocation source
     ) {
         List<ParameterDescriptor> ordered = parameters.stream().sorted(Comparator.comparing(ParameterDescriptor::name))
                 .toList();
@@ -76,7 +77,7 @@ final class ParameterValidation {
             if (lookup(parameters, name) == null) {
                 throw new FeatureConfigurationException(
                         extractorType,
-                        context.location(),
+                        source,
                         "unknown parameter '" + name + "'" + suggestion(ordered, name)
                 );
             }
@@ -87,15 +88,15 @@ final class ParameterValidation {
             String raw = rawParameters.get(parameter.name());
             String defaultValue = parameter.defaultValue();
             if (raw != null) {
-                coerced.put(parameter.name(), coerce(extractorType, context, parameter, raw));
+                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, raw));
             } else if (parameter.required()) {
                 throw new FeatureConfigurationException(
                         extractorType,
-                        context.location(),
+                        source,
                         "missing required parameter '" + parameter.name() + "'"
                 );
             } else if (defaultValue != null) {
-                coerced.put(parameter.name(), coerce(extractorType, context, parameter, defaultValue));
+                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, defaultValue));
             }
         }
         return new DefaultFeatureExtractorParameters(parameters, Map.copyOf(coerced));
@@ -105,7 +106,8 @@ final class ParameterValidation {
      * Coerces one raw value to the Java type its declared kind maps to.
      *
      * @param extractorType the factory type, named in located error messages
-     * @param context the assembly context, supplying the location and the base directory for paths
+     * @param baseLocation the document location that resource parameters resolve against
+     * @param source the current node's source location, or {@code null} if it carried none
      * @param parameter the descriptor of the parameter being coerced
      * @param raw the raw value
      * @return the coerced value
@@ -113,22 +115,23 @@ final class ParameterValidation {
      */
     private static Object coerce(
             String extractorType,
-            AssemblyContext context,
+            URL baseLocation,
+            @Nullable SourceLocation source,
             ParameterDescriptor parameter,
             String raw
     ) {
         return switch (parameter.kind()) {
-            case BOOLEAN -> coerceBoolean(extractorType, context, parameter, raw);
-            case ENUMERATION -> coerceEnumeration(extractorType, context, parameter, raw);
-            case INTEGER -> coerceInteger(extractorType, context, parameter, raw);
-            case PATH -> coercePath(extractorType, context, parameter, raw);
+            case BOOLEAN -> coerceBoolean(extractorType, source, parameter, raw);
+            case ENUMERATION -> coerceEnumeration(extractorType, source, parameter, raw);
+            case INTEGER -> coerceInteger(extractorType, source, parameter, raw);
+            case RESOURCE -> coerceResource(extractorType, baseLocation, source, parameter, raw);
             case STRING -> raw;
         };
     }
 
     private static Boolean coerceBoolean(
             String extractorType,
-            AssemblyContext context,
+            @Nullable SourceLocation source,
             ParameterDescriptor parameter,
             String raw
     ) {
@@ -140,14 +143,14 @@ final class ParameterValidation {
         }
         throw new FeatureConfigurationException(
                 extractorType,
-                context.location(),
+                source,
                 "parameter '" + parameter.name() + "' expects a boolean (true or false) but got '" + raw + "'"
         );
     }
 
     private static String coerceEnumeration(
             String extractorType,
-            AssemblyContext context,
+            @Nullable SourceLocation source,
             ParameterDescriptor parameter,
             String raw
     ) {
@@ -156,7 +159,7 @@ final class ParameterValidation {
         }
         throw new FeatureConfigurationException(
                 extractorType,
-                context.location(),
+                source,
                 "parameter '" + parameter.name() + "' expects one of " + new TreeSet<>(parameter.allowedValues())
                         + " but got '" + raw + "'"
         );
@@ -164,7 +167,7 @@ final class ParameterValidation {
 
     private static Integer coerceInteger(
             String extractorType,
-            AssemblyContext context,
+            @Nullable SourceLocation source,
             ParameterDescriptor parameter,
             String raw
     ) {
@@ -174,14 +177,14 @@ final class ParameterValidation {
         } catch (NumberFormatException exception) {
             throw new FeatureConfigurationException(
                     extractorType,
-                    context.location(),
+                    source,
                     "parameter '" + parameter.name() + "' expects an integer but got '" + raw + "'"
             );
         }
         if (value < parameter.minimumValue() || value > parameter.maximumValue()) {
             throw new FeatureConfigurationException(
                     extractorType,
-                    context.location(),
+                    source,
                     "parameter '" + parameter.name() + "' expects an integer "
                             + rangeDescription(parameter.minimumValue(), parameter.maximumValue()) + " but got '" + raw
                             + "'"
@@ -191,44 +194,54 @@ final class ParameterValidation {
     }
 
     /**
-     * Coerces one raw {@link ParameterKind#PATH} value, resolving it against
-     * {@link AssemblyContext#baseDirectory()} and verifying it names a readable regular file.
+     * Coerces one raw {@link ParameterKind#RESOURCE} value, resolving it as a URL against
+     * {@code baseLocation} and verifying it can be opened.
      *
      * @param extractorType the factory type, named in located error messages
-     * @param context the assembly context, supplying the location and the base directory
+     * @param baseLocation the document location that resource parameters resolve against
+     * @param source the current node's source location, or {@code null} if it carried none
      * @param parameter the descriptor of the parameter being coerced
      * @param raw the raw value
-     * @return the resolved path
-     * @throws FeatureConfigurationException if the resolved path does not exist, is not a regular file,
-     *         or is not readable
+     * @return the resolved resource URL
+     * @throws FeatureConfigurationException if {@code raw} is blank, does not resolve to a valid URL,
+     *         or the resolved URL cannot be opened
      */
-    private static Path coercePath(
+    private static URL coerceResource(
             String extractorType,
-            AssemblyContext context,
+            URL baseLocation,
+            @Nullable SourceLocation source,
             ParameterDescriptor parameter,
             String raw
     ) {
-        Path resolved = context.baseDirectory().resolve(raw);
-        if (!Files.exists(resolved)) {
+        if (raw.isBlank()) {
             throw new FeatureConfigurationException(
                     extractorType,
-                    context.location(),
-                    "parameter '" + parameter.name() + "' points at a file that does not exist: " + resolved
+                    source,
+                    "parameter '" + parameter.name() + "' must name a resource but was blank"
             );
         }
-        if (!Files.isRegularFile(resolved)) {
+        URL resolved;
+        try {
+            resolved = resolveResource(baseLocation, raw);
+        } catch (MalformedURLException | URISyntaxException | InvalidPathException exception) {
             throw new FeatureConfigurationException(
                     extractorType,
-                    context.location(),
-                    "parameter '" + parameter.name() + "' points at a path that is not a regular file: " + resolved
+                    source,
+                    "parameter '" + parameter.name() + "' is not a valid resource: '" + raw + "'",
+                    exception
             );
         }
-        if (!Files.isReadable(resolved)) {
-            throw new FeatureConfigurationException(
-                    extractorType,
-                    context.location(),
-                    "parameter '" + parameter.name() + "' points at a file that is not readable: " + resolved
-            );
+        if (isLocalResource(resolved)) {
+            try (InputStream probe = resolved.openStream()) {
+                Objects.requireNonNull(probe); // probe only; confirms the resource can be opened
+            } catch (IOException exception) {
+                throw new FeatureConfigurationException(
+                        extractorType,
+                        source,
+                        "parameter '" + parameter.name() + "' points at a resource that cannot be opened: " + resolved,
+                        exception
+                );
+            }
         }
         return resolved;
     }
@@ -260,6 +273,25 @@ final class ParameterValidation {
             current = swap;
         }
         return previous[right.length()];
+    }
+
+    /**
+     * Whether opening {@code resource} is a cheap local access worth probing at validation time. A
+     * {@code file:} URL and a {@code jar:} URL backed by a {@code file:} locator read from local disk;
+     * every other scheme (network, or a jar backed by a non-file locator) is left for the consumer to
+     * open at build time so it is fetched exactly once.
+     *
+     * @param resource the resolved resource URL
+     * @return {@code true} if {@code resource} is a local disk read
+     */
+    private static boolean isLocalResource(URL resource) {
+        String protocol = resource.getProtocol();
+        if ("file".equalsIgnoreCase(protocol)) {
+            return true;
+        }
+        // a jar: URL's path is its inner locator, e.g. file:/lib/x.jar!/dict.xml
+        return "jar".equalsIgnoreCase(protocol)
+                && resource.getPath().regionMatches(true, 0, "file:", 0, "file:".length());
     }
 
     /**
@@ -301,6 +333,48 @@ final class ParameterValidation {
             return "<= " + maximum;
         }
         return "any value";
+    }
+
+    /**
+     * Resolves a raw {@link ParameterKind#RESOURCE} value to a URL: an absolute URL (a scheme of at
+     * least two characters, keeping a Windows drive letter such as {@code C:} on the filesystem branch)
+     * is parsed as-is, an absolute filesystem path is converted directly, and anything else is resolved
+     * as a sibling of {@code base} — a {@code file:} base yields a sibling on disk, a {@code jar:} base
+     * a sibling on the classpath.
+     *
+     * @param base the document location relative resources resolve against
+     * @param raw the raw value
+     * @return the resolved URL
+     * @throws MalformedURLException if {@code raw} does not resolve to a valid URL
+     * @throws URISyntaxException if {@code raw} has illegal URI syntax or {@code base} is not a valid
+     *         URI
+     * @throws InvalidPathException if {@code raw} is not a valid filesystem path
+     */
+    private static URL resolveResource(URL base, String raw) throws MalformedURLException, URISyntaxException {
+        if (raw.matches("^[a-zA-Z][a-zA-Z0-9+.-]+:.*")) {
+            return new URI(raw).toURL();
+        }
+        if (Path.of(raw).isAbsolute()) {
+            return Path.of(raw).toUri().toURL();
+        }
+        URI relative = new URI(null, null, raw, null);
+        URI baseUri = base.toURI();
+        if ("jar".equals(baseUri.getScheme())) {
+            // a jar: URL is opaque, so URI.resolve returns the relative ref unchanged. Only the entry
+            // path after "!/" is hierarchical, so split there, resolve within it, and reassemble. This
+            // is the string-hack the JDK's own maintainers point to for jar URLs; there is no method
+            // replacement for the deprecated new URL(base, raw) (Apache Daffodil dev thread:
+            // https://lists.apache.org/thread/znk5fjwgm5byply4xp9bxzfbw9lvbyo0)
+            String text = base.toString();
+            int separator = text.lastIndexOf("!/");
+            if (separator < 0) {
+                throw new MalformedURLException("jar URL has no '!/' entry separator: " + text);
+            }
+            String container = text.substring(0, separator + 1);
+            URI entry = new URI(text.substring(separator + 1));
+            return URI.create(container + entry.resolve(relative)).toURL();
+        }
+        return baseUri.resolve(relative).toURL();
     }
 
     /**

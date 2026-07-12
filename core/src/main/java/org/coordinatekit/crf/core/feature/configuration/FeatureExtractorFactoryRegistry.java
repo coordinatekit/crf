@@ -25,8 +25,7 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 /**
- * The factories available to the {@link FeatureExtractorAssembler}, indexed by
- * {@link FeatureExtractorFactory#type() type}.
+ * The factories available to the assembler, indexed by {@link FeatureExtractorFactory#type() type}.
  *
  * <p>
  * {@link #load()} loads every registered {@link FeatureExtractorFactory} through

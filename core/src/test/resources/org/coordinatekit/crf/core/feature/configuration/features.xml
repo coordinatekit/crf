@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<featureExtractors xmlns="https://coordinatekit.org/schema/crf/feature-configuration">
+    <extractor type="window">
+        <parameter name="before" value="3"/>
+        <parameter name="after" value="3"/>
+        <extractor type="composite">
+            <extractor type="length"/>
+            <extractor type="prefix">
+                <parameter name="name" value="PREFIX2"/>
+                <parameter name="length" value="2"/>
+            </extractor>
+            <extractor type="lookup">
+                <parameter name="name" value="STATE"/>
+                <parameter name="value" value="US"/>
+                <parameter name="dictionary" value="states.xml"/>
+                <parameter name="xpath" value="/states/state"/>
+            </extractor>
+        </extractor>
+    </extractor>
+</featureExtractors>

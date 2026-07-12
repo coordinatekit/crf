@@ -182,6 +182,21 @@ public final class CrfServices {
     }
 
     /**
+     * Resolves an arbitrary service type by {@code explicit > single registered provider > fallback},
+     * exposing the discovery kernel to callers outside this package that have no dedicated slot.
+     *
+     * @param serviceType the service type to discover and resolve
+     * @param explicit the explicitly supplied provider, or {@code null} if none was set
+     * @param fallback the built-in default
+     * @param <X> the service type
+     * @return the resolved provider, never {@code null}
+     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
+     */
+    public static <X> X resolve(Class<X> serviceType, @Nullable X explicit, X fallback) {
+        return requireNonNull(ServiceResolution.resolve(serviceType, explicit, requireNonNull(fallback)));
+    }
+
+    /**
      * Discovers the tag provider by {@code single registered TagProvider > none}.
      *
      * @param <T> the tag type

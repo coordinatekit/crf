@@ -15,14 +15,16 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNodes;
 import org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -32,47 +34,54 @@ import java.util.stream.Stream;
 
 /** Tests the {@code window} factory stamps its child's features with their window offset. */
 class WindowFeatureExtractorFactoryTest {
-    record NegativeBoundParameters(String name, FeatureExtractorNode node, String expectedMessage) {}
+    record CreateExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
-    static Stream<NegativeBoundParameters> create__exception() {
+    static Stream<CreateExceptionParameters> create__exception() {
         return Stream.of(
-                new NegativeBoundParameters(
-                        "negativeBefore",
-                        FeatureExtractorNodes.builder("window").parameter("before", "-1")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
-                        "extractor 'window' at /window — parameter 'before' expects an integer >= 0 but got '-1'"
+                new CreateExceptionParameters(
+                        "negative_before",
+                        () -> render(
+                                FeatureExtractorNodes.builder("window").parameter("before", "-1")
+                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                List.of("a"),
+                                0
+                        ),
+                        FeatureConfigurationException.class,
+                        "extractor 'window' — parameter 'before' expects an integer >= 0 but got '-1'"
                 ),
-                new NegativeBoundParameters(
-                        "negativeAfter",
-                        FeatureExtractorNodes.builder("window").parameter("after", "-1")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
-                        "extractor 'window' at /window — parameter 'after' expects an integer >= 0 but got '-1'"
+                new CreateExceptionParameters(
+                        "negative_after",
+                        () -> render(
+                                FeatureExtractorNodes.builder("window").parameter("after", "-1")
+                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                List.of("a"),
+                                0
+                        ),
+                        FeatureConfigurationException.class,
+                        "extractor 'window' — parameter 'after' expects an integer >= 0 but got '-1'"
                 )
         );
     }
 
     @MethodSource
     @ParameterizedTest
-    void create__exception(NegativeBoundParameters parameters) {
+    void create__exception(CreateExceptionParameters parameters) {
         // ACT //
-        FeatureConfigurationException exception = assembleThrows(parameters.node());
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "excludesCurrentTokenWhenConfigured",
+                new CreateRenderParameters(
+                        "excludes_current_token_when_configured",
                         FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
                                 .parameter("includeCurrentToken", "false")
                                 .child(FeatureExtractorNodes.builder("length").build()).build(),
@@ -80,24 +89,24 @@ class WindowFeatureExtractorFactoryTest {
                         1,
                         Set.of("PREV_1__LENGTH=1", "NEXT_1__LENGTH=3")
                 ),
-                new RenderParameters(
-                        "skipsNeighborAfterSequenceEnd",
+                new CreateRenderParameters(
+                        "skips_neighbor_after_sequence_end",
                         FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
                                 .child(FeatureExtractorNodes.builder("length").build()).build(),
                         List.of("a", "bb", "ccc"),
                         2,
                         Set.of("PREV_1__LENGTH=2", "LENGTH=3")
                 ),
-                new RenderParameters(
-                        "skipsNeighborBeforeSequenceStart",
+                new CreateRenderParameters(
+                        "skips_neighbor_before_sequence_start",
                         FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
                                 .child(FeatureExtractorNodes.builder("length").build()).build(),
                         List.of("a", "bb", "ccc"),
                         0,
                         Set.of("LENGTH=1", "NEXT_1__LENGTH=2")
                 ),
-                new RenderParameters(
-                        "stampsNeighborOffsets",
+                new CreateRenderParameters(
+                        "stamps_neighbor_offsets",
                         FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
                                 .child(FeatureExtractorNodes.builder("length").build()).build(),
                         List.of("a", "bb", "ccc"),
@@ -109,7 +118,7 @@ class WindowFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 
@@ -129,7 +138,7 @@ class WindowFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'window' at /window — at least one of a non-zero 'before', a non-zero 'after',"
+                "extractor 'window' — at least one of a non-zero 'before', a non-zero 'after',"
                         + " or 'includeCurrentToken' must be set",
                 exception.getMessage()
         );

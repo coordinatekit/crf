@@ -18,7 +18,6 @@ package org.coordinatekit.crf.core.feature.configuration.factory;
 import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 
-import org.coordinatekit.crf.core.feature.configuration.AssemblyContext;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorParameters;
 import org.coordinatekit.crf.core.feature.configuration.LeafFeatureExtractorFactory;
 import org.coordinatekit.crf.core.feature.configuration.ParameterDescriptor;
@@ -80,7 +79,7 @@ public final class PatternFeatureExtractorFactory implements LeafFeatureExtracto
     }
 
     @Override
-    public void validate(FeatureExtractorParameters parameters, AssemblyContext context) {
+    public void validate(FeatureExtractorParameters parameters) {
         String regex = parameters.getString("regex");
         try {
             Pattern.compile(regex);

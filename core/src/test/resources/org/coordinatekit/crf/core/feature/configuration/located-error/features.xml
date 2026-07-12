@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<featureExtractors xmlns="https://coordinatekit.org/schema/crf/feature-configuration">
+    <extractor type="window">
+        <parameter name="beofre" value="3"/>
+        <parameter name="after" value="3"/>
+        <extractor type="length"/>
+    </extractor>
+</featureExtractors>

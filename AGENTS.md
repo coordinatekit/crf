@@ -163,7 +163,7 @@ record BuilderExceptionParameters(
 static Stream<BuilderExceptionParameters> builder__exception() {
     return Stream.of(
             new BuilderExceptionParameters(
-                    "negativeValue",
+                    "negative_value",
                     () -> builder().someMethod(-1),
                     IllegalArgumentException.class,
                     "value must be non-negative"

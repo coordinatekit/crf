@@ -15,10 +15,9 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNodes;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,24 +28,16 @@ import java.util.stream.Stream;
 
 /** Tests the {@code length} factory renders {@code NAME=<characterLength>} for a token. */
 class LengthFeatureExtractorFactoryTest {
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
+                new CreateRenderParameters(
                         "default_length",
                         FeatureExtractorNodes.builder("length").build(),
                         List.of("abc"),
                         0,
                         Set.of("LENGTH=3")
                 ),
-                new RenderParameters(
+                new CreateRenderParameters(
                         "custom_name",
                         FeatureExtractorNodes.builder("length").parameter("name", "CHARS").build(),
                         List.of("hello"),
@@ -58,7 +49,7 @@ class LengthFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 

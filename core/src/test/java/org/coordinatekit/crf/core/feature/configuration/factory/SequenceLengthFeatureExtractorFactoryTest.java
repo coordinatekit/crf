@@ -15,8 +15,8 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
@@ -46,40 +46,31 @@ class SequenceLengthFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'sequenceLength' at /sequenceLength — parameter 'limit' expects an integer >= 1 but got"
-                        + " '0'",
+                "extractor 'sequenceLength' — parameter 'limit' expects an integer >= 1 but got" + " '0'",
                 exception.getMessage()
         );
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "distinguishesHadAndLackedLengths",
+                new CreateRenderParameters(
+                        "distinguishes_had_and_lacked_lengths",
                         FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
                                 .parameter("hasName", "HAS").parameter("lacksName", "LACKS").build(),
                         List.of("a", "bb"),
                         0,
                         Set.of("HAS=1", "HAS=2", "LACKS=3")
                 ),
-                new RenderParameters(
-                        "emitsOnlyHadLengthsWhenLacksNameUnset",
+                new CreateRenderParameters(
+                        "emits_only_had_lengths_when_lacks_name_unset",
                         FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
                                 .parameter("hasName", "HAS").build(),
                         List.of("a", "bb"),
                         0,
                         Set.of("HAS=1", "HAS=2")
                 ),
-                new RenderParameters(
-                        "emitsOnlyLackedLengthsWhenHasNameUnset",
+                new CreateRenderParameters(
+                        "emits_only_lacked_lengths_when_has_name_unset",
                         FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
                                 .parameter("lacksName", "LACKS").build(),
                         List.of("a", "bb"),
@@ -91,7 +82,7 @@ class SequenceLengthFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 
@@ -109,8 +100,7 @@ class SequenceLengthFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(
-                "extractor 'sequenceLength' at /sequenceLength — at least one of 'hasName' or 'lacksName' must be"
-                        + " set",
+                "extractor 'sequenceLength' — at least one of 'hasName' or 'lacksName' must be" + " set",
                 exception.getMessage()
         );
     }

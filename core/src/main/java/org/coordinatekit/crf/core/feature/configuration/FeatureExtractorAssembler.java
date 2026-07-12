@@ -17,7 +17,9 @@ package org.coordinatekit.crf.core.feature.configuration;
 
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
 
-import java.nio.file.Path;
+import org.jspecify.annotations.Nullable;
+
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,24 +33,19 @@ import java.util.Objects;
  * {@link FeatureExtractorNode#type() type}, validates the node's parameters against the factory's
  * {@link FeatureExtractorFactory#parameters() parameters}, checks that the child count is within
  * the declared arity, calls the factory's
- * {@link FeatureExtractorFactory#validate(FeatureExtractorParameters, AssemblyContext) validate}
- * for any cross-parameter rule the parameters alone cannot express, then dispatches on whether the
- * factory is a {@link LeafFeatureExtractorFactory} or a {@link NestingFeatureExtractorFactory}. A
+ * {@link FeatureExtractorFactory#validate(FeatureExtractorParameters) validate} for any
+ * cross-parameter rule the parameters alone cannot express, then dispatches on whether the factory
+ * is a {@link LeafFeatureExtractorFactory} or a {@link NestingFeatureExtractorFactory}. A
  * configuration-content problem — an unknown type, an invalid parameter, an arity violation, a
- * rejected {@code validate}, or nesting past {@link #MAXIMUM_ASSEMBLY_DEPTH} — surfaces as a
- * located {@link FeatureConfigurationException}.
+ * rejected {@code validate}, a rejected {@code create}, or nesting past
+ * {@link FeatureExtractorNode#MAXIMUM_NESTING_DEPTH} — surfaces as a located
+ * {@link FeatureConfigurationException}.
  *
  * <p>
  * The {@link FeatureExtractorNode#key() key} marker is not consulted; this assembler returns only
  * the full extractor. Splitting the tree into a key/full pair arrives in a later phase.
  */
-public final class FeatureExtractorAssembler {
-    /**
-     * The deepest nesting the assembler will follow before rejecting a tree, a guard against a
-     * pathologically or maliciously deep configuration.
-     */
-    static final int MAXIMUM_ASSEMBLY_DEPTH = 64;
-
+final class FeatureExtractorAssembler {
     private final FeatureExtractorFactoryRegistry registry;
 
     /**
@@ -56,7 +53,7 @@ public final class FeatureExtractorAssembler {
      *
      * @param registry the factory registry
      */
-    public FeatureExtractorAssembler(FeatureExtractorFactoryRegistry registry) {
+    FeatureExtractorAssembler(FeatureExtractorFactoryRegistry registry) {
         this.registry = Objects.requireNonNull(registry, "registry must not be null");
     }
 
@@ -64,50 +61,51 @@ public final class FeatureExtractorAssembler {
      * Assembles the tree rooted at {@code root} into a single feature extractor.
      *
      * @param root the root node of the tree
-     * @param baseDirectory the directory that path parameters resolve against
+     * @param baseLocation the document location that resource parameters resolve against
      * @return the assembled feature extractor
      * @throws FeatureConfigurationException if any node names an unknown type, carries an invalid
-     *         parameter, violates its declared arity, fails its factory's {@code validate}, or the tree
-     *         is deeper than {@link #MAXIMUM_ASSEMBLY_DEPTH}
+     *         parameter, violates its declared arity, fails its factory's {@code validate} or
+     *         {@code create}, or the tree is deeper than
+     *         {@link FeatureExtractorNode#MAXIMUM_NESTING_DEPTH}
      */
-    public FeatureExtractor assemble(FeatureExtractorNode root, Path baseDirectory) {
+    FeatureExtractor assemble(FeatureExtractorNode root, URL baseLocation) {
         Objects.requireNonNull(root, "root must not be null");
-        Objects.requireNonNull(baseDirectory, "baseDirectory must not be null");
-        return assemble(root, DefaultAssemblyContext.root(baseDirectory), 1);
+        Objects.requireNonNull(baseLocation, "baseLocation must not be null");
+        return assemble(root, baseLocation, 1);
     }
 
     /**
      * Assembles one node at the given depth, recursing into its children first.
      *
      * @param node the node to assemble
-     * @param parentContext the context of the parent node
+     * @param baseLocation the document location that resource parameters resolve against
      * @param depth the one-based depth of this node
      * @return the assembled feature extractor for this node
      * @throws FeatureConfigurationException on any located configuration-content problem
      */
-    private FeatureExtractor assemble(FeatureExtractorNode node, DefaultAssemblyContext parentContext, int depth) {
-        DefaultAssemblyContext context = parentContext.descend(node.type());
-        if (depth > MAXIMUM_ASSEMBLY_DEPTH) {
+    private FeatureExtractor assemble(FeatureExtractorNode node, URL baseLocation, int depth) {
+        SourceLocation source = node.sourceLocation().orElse(null);
+        if (depth > FeatureExtractorNode.MAXIMUM_NESTING_DEPTH) {
             throw new FeatureConfigurationException(
                     node.type(),
-                    context.location(),
-                    "nesting is deeper than the maximum of " + MAXIMUM_ASSEMBLY_DEPTH
+                    source,
+                    "nesting is deeper than the maximum of " + FeatureExtractorNode.MAXIMUM_NESTING_DEPTH
             );
         }
 
         FeatureExtractorFactory factory = registry.find(node.type()).orElseThrow(
                 () -> new FeatureConfigurationException(
                         node.type(),
-                        context.location(),
+                        source,
                         "unknown extractor type '" + node.type() + "'"
                 )
         );
         FeatureExtractorParameters parameters = ParameterValidation
-                .validate(node.type(), node.parameters(), factory.parameters(), context);
+                .validate(node.type(), node.parameters(), factory.parameters(), baseLocation, source);
 
         int childCount = node.children().size();
         if (factory instanceof LeafFeatureExtractorFactory && childCount != 0) {
-            throw new FeatureConfigurationException(node.type(), context.location(), arityMessage(0, 0, childCount));
+            throw new FeatureConfigurationException(node.type(), source, arityMessage(0, 0, childCount));
         }
         if (factory instanceof NestingFeatureExtractorFactory nesting) {
             int minimumChildren = nesting.minimumChildren();
@@ -115,33 +113,32 @@ public final class FeatureExtractorAssembler {
             if (childCount < minimumChildren || childCount > maximumChildren) {
                 throw new FeatureConfigurationException(
                         node.type(),
-                        context.location(),
+                        source,
                         arityMessage(minimumChildren, maximumChildren, childCount)
                 );
             }
         }
 
         try {
-            factory.validate(parameters, context);
+            factory.validate(parameters);
         } catch (IllegalArgumentException exception) {
-            throw new FeatureConfigurationException(
-                    node.type(),
-                    context.location(),
-                    Objects.requireNonNullElse(exception.getMessage(), exception.toString()),
-                    exception
-            );
+            throw located(node.type(), source, exception);
         }
 
         List<FeatureExtractor> children = new ArrayList<>();
         for (FeatureExtractorNode child : node.children()) {
-            children.add(assemble(child, context, depth + 1));
+            children.add(assemble(child, baseLocation, depth + 1));
         }
 
-        if (factory instanceof LeafFeatureExtractorFactory leaf) {
-            return leaf.create(parameters);
-        }
-        if (factory instanceof NestingFeatureExtractorFactory nesting) {
-            return nesting.create(parameters, List.copyOf(children));
+        try {
+            if (factory instanceof LeafFeatureExtractorFactory leaf) {
+                return leaf.create(parameters);
+            }
+            if (factory instanceof NestingFeatureExtractorFactory nesting) {
+                return nesting.create(parameters, List.copyOf(children));
+            }
+        } catch (IllegalArgumentException exception) {
+            throw located(node.type(), source, exception);
         }
 
         // Unreachable due to validation in FeatureExtractorFactoryRegistry
@@ -171,5 +168,26 @@ public final class FeatureExtractorAssembler {
             expected = "between " + minimum + " and " + maximum + " children";
         }
         return "expected " + expected + " but got " + childCount;
+    }
+
+    /**
+     * Wraps a factory's content rejection into a located {@link FeatureConfigurationException}.
+     *
+     * @param type the extractor type reported by the rejecting node
+     * @param source the node's source location, or {@code null} if unknown
+     * @param exception the rejection thrown by the factory's {@code validate} or {@code create}
+     * @return the located exception
+     */
+    private static FeatureConfigurationException located(
+            String type,
+            @Nullable SourceLocation source,
+            IllegalArgumentException exception
+    ) {
+        return new FeatureConfigurationException(
+                type,
+                source,
+                Objects.requireNonNullElse(exception.getMessage(), exception.toString()),
+                exception
+        );
     }
 }

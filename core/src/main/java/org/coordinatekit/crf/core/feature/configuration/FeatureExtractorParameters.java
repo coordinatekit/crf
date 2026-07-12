@@ -15,7 +15,7 @@
  */
 package org.coordinatekit.crf.core.feature.configuration;
 
-import java.nio.file.Path;
+import java.net.URL;
 import java.util.Optional;
 
 /**
@@ -68,13 +68,13 @@ public interface FeatureExtractorParameters {
     Optional<Integer> findInteger(String name);
 
     /**
-     * Returns the value of an optional {@link ParameterKind#PATH} parameter, empty if absent.
+     * Returns the value of an optional {@link ParameterKind#RESOURCE} parameter, empty if absent.
      *
      * @param name the parameter name
      * @return the resolved value, or empty if the parameter is absent
-     * @throws IllegalStateException if {@code name} is not a declared path parameter
+     * @throws IllegalStateException if {@code name} is not a declared resource parameter
      */
-    Optional<Path> findPath(String name);
+    Optional<URL> findResource(String name);
 
     /**
      * Returns the value of an optional {@link ParameterKind#STRING} parameter, empty if absent.
@@ -116,14 +116,14 @@ public interface FeatureExtractorParameters {
     int getInteger(String name);
 
     /**
-     * Returns the value of a required or default-bearing {@link ParameterKind#PATH} parameter.
+     * Returns the value of a required or default-bearing {@link ParameterKind#RESOURCE} parameter.
      *
      * @param name the parameter name
      * @return the resolved value
-     * @throws IllegalStateException if {@code name} is not a declared path parameter, or is an
+     * @throws IllegalStateException if {@code name} is not a declared resource parameter, or is an
      *         optional-no-default parameter that is absent
      */
-    Path getPath(String name);
+    URL getResource(String name);
 
     /**
      * Returns the value of a required or default-bearing {@link ParameterKind#STRING} parameter.

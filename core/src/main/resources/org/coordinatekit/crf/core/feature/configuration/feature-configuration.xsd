@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2025-present Andy Marek
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!--
+  The grammar for feature-configuration documents. This grammar is library-owned and fixed; unlike
+  the training-data structural schema, there is no per-instance vocabulary to compile in alongside
+  it, so this schema is self-contained and validates a document on its own.
+
+  The schema owns two rules that XmlFeatureConfigurationParser used to hand-check: an xs:unique
+  constraint rejects a duplicate <parameter name="..."> within one <extractor>, and the empty
+  content model on <parameter> rejects any child element or text inside it. The parser's maximum
+  nesting depth is not expressed here — XSD cannot bound recursion depth — and stays a guard in
+  code.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:crf="https://coordinatekit.org/schema/crf/feature-configuration"
+           targetNamespace="https://coordinatekit.org/schema/crf/feature-configuration"
+           elementFormDefault="qualified">
+
+    <xs:element name="featureExtractors">
+        <xs:annotation>
+            <xs:documentation>The document root: wraps exactly one top-level crf:extractor.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="crf:extractor"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="extractor">
+        <xs:annotation>
+            <xs:documentation>Names a factory by its required type attribute and may carry the optional
+                boolean key attribute. crf:parameter and nested crf:extractor children may appear in any
+                order.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element ref="crf:parameter"/>
+                <xs:element ref="crf:extractor"/>
+            </xs:choice>
+            <xs:attribute name="type" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:minLength value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="key" type="xs:boolean"/>
+        </xs:complexType>
+        <xs:unique name="uniqueParameterName">
+            <xs:selector xpath="crf:parameter"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="parameter">
+        <xs:annotation>
+            <xs:documentation>A required name/value pair with no content of its own: no child element
+                and no text.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:attribute name="name" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:minLength value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="value" use="required" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

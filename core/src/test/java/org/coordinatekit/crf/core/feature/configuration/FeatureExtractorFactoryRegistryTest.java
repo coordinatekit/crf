@@ -25,6 +25,7 @@ import org.coordinatekit.crf.core.PositionedToken;
 import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -42,13 +43,7 @@ import java.util.stream.Stream;
  */
 class FeatureExtractorFactoryRegistryTest {
     /** A synthetic leaf factory declaring a configurable type and emitting nothing. */
-    private static final class SyntheticFactory implements LeafFeatureExtractorFactory {
-        private final String type;
-
-        private SyntheticFactory(String type) {
-            this.type = type;
-        }
-
+    private record SyntheticFactory(String type) implements LeafFeatureExtractorFactory {
         @Override
         public FeatureExtractor create(FeatureExtractorParameters parameters) {
             return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
@@ -226,39 +221,50 @@ class FeatureExtractorFactoryRegistryTest {
         assertSame(length, registry.find("length").orElseThrow());
     }
 
-    record InvalidDeclarationParameters(String name, FeatureExtractorFactory factory, String expectedMessageFragment) {}
+    record OfInvalidDeclarationParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessageFragment
+    ) {}
 
-    static Stream<InvalidDeclarationParameters> of__invalidDeclaration() {
+    static Stream<OfInvalidDeclarationParameters> of__invalidDeclaration() {
         return Stream.of(
-                new InvalidDeclarationParameters(
-                        "rootOnly",
-                        new RootOnlyFactory(),
+                new OfInvalidDeclarationParameters(
+                        "root_only",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new RootOnlyFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "must implement LeafFeatureExtractorFactory or NestingFeatureExtractorFactory"
                 ),
-                new InvalidDeclarationParameters(
-                        "dualKind",
-                        new DualKindFactory(),
+                new OfInvalidDeclarationParameters(
+                        "dual_kind",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new DualKindFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "must implement only one of LeafFeatureExtractorFactory or NestingFeatureExtractorFactory"
                 ),
-                new InvalidDeclarationParameters(
-                        "negativeMinimum",
-                        new NegativeMinimumFactory(),
+                new OfInvalidDeclarationParameters(
+                        "negative_minimum",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new NegativeMinimumFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "declares minimum children that must be non-negative, got: -1"
                 ),
-                new InvalidDeclarationParameters(
-                        "maximumBelowMinimum",
-                        new MaximumBelowMinimumFactory(),
+                new OfInvalidDeclarationParameters(
+                        "maximum_below_minimum",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new MaximumBelowMinimumFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "declares maximum children (2) that must not be less than minimum children (3)"
                 ),
-                new InvalidDeclarationParameters(
-                        "nestingWithNoChildren",
-                        new NestingWithNoChildrenFactory(),
+                new OfInvalidDeclarationParameters(
+                        "nesting_with_no_children",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new NestingWithNoChildrenFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "is a nesting factory but declares a minimum children of 0; a nesting factory must"
                                 + " declare at least one child"
                 ),
-                new InvalidDeclarationParameters(
-                        "duplicateParameter",
-                        new DuplicateParameterFactory(),
+                new OfInvalidDeclarationParameters(
+                        "duplicate_parameter",
+                        () -> FeatureExtractorFactoryRegistry.of(List.of(new DuplicateParameterFactory())),
+                        InvalidFactoryDeclarationException.class,
                         "declares duplicate parameter 'name'"
                 )
         );
@@ -266,12 +272,9 @@ class FeatureExtractorFactoryRegistryTest {
 
     @MethodSource
     @ParameterizedTest
-    void of__invalidDeclaration(InvalidDeclarationParameters parameters) {
+    void of__invalidDeclaration(OfInvalidDeclarationParameters parameters) {
         // ACT //
-        InvalidFactoryDeclarationException exception = assertThrows(
-                InvalidFactoryDeclarationException.class,
-                () -> FeatureExtractorFactoryRegistry.of(List.of(parameters.factory()))
-        );
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
 
         // ASSERT //
         String message = exception.getMessage();

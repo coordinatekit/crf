@@ -15,9 +15,9 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.resourceDirectory;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.resourceUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,16 +28,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.nio.file.Path;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
 /** Tests the {@code lookup} factory tests tokens against a dictionary loaded from an XML file. */
 class LookupFeatureExtractorFactoryTest {
-    private static final Path BASE_DIRECTORY = resourceDirectory(
-            "/org/coordinatekit/crf/core/feature/configuration/states.xml"
-    );
+    private static final URL BASE = resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
     private static FeatureExtractorNodes.Builder lookup() {
         return FeatureExtractorNodes.builder("lookup").parameter("dictionary", "states.xml")
@@ -51,11 +51,11 @@ class LookupFeatureExtractorFactoryTest {
                 .parameter("xpath", "/states/state[").parameter("name", "STATE").build();
 
         // ACT //
-        FeatureConfigurationException exception = assembleThrows(BASE_DIRECTORY, node);
+        FeatureConfigurationException exception = assembleThrows(BASE, node);
 
         // ASSERT //
         assertEquals(
-                "extractor 'lookup' at /lookup — parameter 'xpath' is not a valid XPath expression: '/states/state['",
+                "extractor 'lookup' — parameter 'xpath' is not a valid XPath expression: '/states/state['",
                 exception.getMessage()
         );
     }
@@ -67,7 +67,7 @@ class LookupFeatureExtractorFactoryTest {
                 .parameter("xpath", "/states/state").parameter("name", "STATE").build();
 
         // ACT //
-        FeatureConfigurationException exception = assembleThrows(BASE_DIRECTORY, node);
+        FeatureConfigurationException exception = assembleThrows(BASE, node);
 
         // ASSERT //
         String message = exception.getMessage();
@@ -76,61 +76,53 @@ class LookupFeatureExtractorFactoryTest {
                 "message should report the malformed dictionary; was: " + message
         );
         assertEquals("lookup", exception.extractorType());
-        assertEquals("/lookup", exception.location());
+        assertTrue(exception.sourceLocation().isEmpty());
     }
 
     @Test
-    void create__missingDictionaryThrowsLocatedException() {
+    void create__missingDictionaryThrowsLocatedException() throws MalformedURLException, URISyntaxException {
         // ARRANGE //
         FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup").parameter("dictionary", "missing.xml")
                 .parameter("xpath", "/states/state").parameter("name", "STATE").build();
 
         // ACT //
-        FeatureConfigurationException exception = assembleThrows(BASE_DIRECTORY, node);
+        FeatureConfigurationException exception = assembleThrows(BASE, node);
 
         // ASSERT //
         assertEquals(
-                "extractor 'lookup' at /lookup — parameter 'dictionary' points at a file that does not exist: "
-                        + BASE_DIRECTORY.resolve("missing.xml"),
+                "extractor 'lookup' — parameter 'dictionary' points at a resource that cannot be opened: "
+                        + BASE.toURI().resolve("missing.xml").toURL(),
                 exception.getMessage()
         );
     }
 
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "presentEmitsNameValue",
+                new CreateRenderParameters(
+                        "present_emits_name_value",
                         lookup().parameter("name", "STATE").parameter("value", "US")
                                 .parameter("absentName", "NON_STATE").build(),
                         List.of("Ohio"),
                         0,
                         Set.of("STATE=US")
                 ),
-                new RenderParameters(
-                        "presentEmitsBareNameWithoutValue",
+                new CreateRenderParameters(
+                        "present_emits_bare_name_without_value",
                         lookup().parameter("name", "STATE").build(),
                         List.of("Ohio"),
                         0,
                         Set.of("STATE")
                 ),
-                new RenderParameters(
-                        "absentEmitsAbsentName",
+                new CreateRenderParameters(
+                        "absent_emits_absent_name",
                         lookup().parameter("name", "STATE").parameter("value", "US")
                                 .parameter("absentName", "NON_STATE").build(),
                         List.of("Paris"),
                         0,
                         Set.of("NON_STATE")
                 ),
-                new RenderParameters(
-                        "absentEmitsNothingWithoutAbsentName",
+                new CreateRenderParameters(
+                        "absent_emits_nothing_without_absent_name",
                         lookup().parameter("name", "STATE").parameter("value", "US").build(),
                         List.of("Paris"),
                         0,
@@ -141,9 +133,9 @@ class LookupFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
-        Set<String> actual = render(BASE_DIRECTORY, parameters.node(), parameters.tokens(), parameters.position());
+        Set<String> actual = render(BASE, parameters.node(), parameters.tokens(), parameters.position());
 
         // ASSERT //
         assertEquals(parameters.expected(), actual);

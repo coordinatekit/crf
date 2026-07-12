@@ -15,11 +15,10 @@
  */
 package org.coordinatekit.crf.core.feature.configuration.factory;
 
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.assembleThrows;
-import static org.coordinatekit.crf.core.feature.configuration.factory.BuiltInFactorySupport.render;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.assembleThrows;
+import static org.coordinatekit.crf.core.feature.configuration.BuiltInFactorySupport.render;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNode;
 import org.coordinatekit.crf.core.feature.configuration.FeatureExtractorNodes;
 import org.coordinatekit.crf.core.feature.configuration.FeatureConfigurationException;
 import org.junit.jupiter.api.Test;
@@ -32,26 +31,18 @@ import java.util.stream.Stream;
 
 /** Tests the {@code composite} factory unions the features of all its children. */
 class CompositeFeatureExtractorFactoryTest {
-    record RenderParameters(
-            String name,
-            FeatureExtractorNode node,
-            List<String> tokens,
-            int position,
-            Set<String> expected
-    ) {}
-
-    static Stream<RenderParameters> create__render() {
+    static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
-                new RenderParameters(
-                        "singleChildPassesThrough",
+                new CreateRenderParameters(
+                        "single_child_passes_through",
                         FeatureExtractorNodes.builder("composite")
                                 .child(FeatureExtractorNodes.builder("length").build()).build(),
                         List.of("cats"),
                         0,
                         Set.of("LENGTH=4")
                 ),
-                new RenderParameters(
-                        "unionsChildFeatures",
+                new CreateRenderParameters(
+                        "unions_child_features",
                         FeatureExtractorNodes.builder("composite")
                                 .child(FeatureExtractorNodes.builder("length").build())
                                 .child(FeatureExtractorNodes.builder("suffix").parameter("length", "2").build())
@@ -66,7 +57,7 @@ class CompositeFeatureExtractorFactoryTest {
 
     @MethodSource
     @ParameterizedTest
-    void create__render(RenderParameters parameters) {
+    void create__render(CreateRenderParameters parameters) {
         // ACT //
         Set<String> actual = render(parameters.node(), parameters.tokens(), parameters.position());
 
@@ -80,9 +71,6 @@ class CompositeFeatureExtractorFactoryTest {
         FeatureConfigurationException exception = assembleThrows(FeatureExtractorNodes.builder("composite").build());
 
         // ASSERT //
-        assertEquals(
-                "extractor 'composite' at /composite — expected at least 1 child but got 0",
-                exception.getMessage()
-        );
+        assertEquals("extractor 'composite' — expected at least 1 child but got 0", exception.getMessage());
     }
 }

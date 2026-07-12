@@ -24,7 +24,9 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.nio.file.Path;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -37,12 +39,12 @@ import java.util.stream.Stream;
  * {@code get} is a factory bug that throws {@link IllegalStateException}.
  */
 class FeatureExtractorParametersTest {
-    private static final Path BASE_DIRECTORY = ConfigurationTestSupport
-            .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/states.xml");
+    private static final URL BASE = ConfigurationTestSupport
+            .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
     private static final Set<ParameterDescriptor> PARAMETERS = Set.of(
             ParameterDescriptor.builder("count", ParameterKind.INTEGER).required(true).build(),
-            ParameterDescriptor.builder("file", ParameterKind.PATH).required(true).build(),
+            ParameterDescriptor.builder("file", ParameterKind.RESOURCE).required(true).build(),
             ParameterDescriptor.builder("flag", ParameterKind.BOOLEAN).defaultValue("true").build(),
             ParameterDescriptor.builder("label", ParameterKind.STRING).defaultValue("X").build(),
             ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION).allowedValues(Set.of("fast", "slow"))
@@ -51,8 +53,7 @@ class FeatureExtractorParametersTest {
     );
 
     private static FeatureExtractorParameters parameters() {
-        AssemblyContext context = DefaultAssemblyContext.root(BASE_DIRECTORY);
-        return ParameterValidation.validate("test", Map.of("count", "3", "file", "states.xml"), PARAMETERS, context);
+        return ParameterValidation.validate("test", Map.of("count", "3", "file", "states.xml"), PARAMETERS, BASE, null);
     }
 
     @Test
@@ -62,14 +63,14 @@ class FeatureExtractorParametersTest {
     }
 
     @Test
-    void find__presentValuesAreOptionalsOf() {
+    void find__presentValuesAreOptionalsOf() throws MalformedURLException, URISyntaxException {
         // ARRANGE //
-        AssemblyContext context = DefaultAssemblyContext.root(BASE_DIRECTORY);
         FeatureExtractorParameters parameters = ParameterValidation.validate(
                 "test",
                 Map.of("count", "3", "file", "states.xml", "flag", "false", "mode", "slow", "note", "N"),
                 PARAMETERS,
-                context
+                BASE,
+                null
         );
 
         // ACT & ASSERT //
@@ -77,11 +78,14 @@ class FeatureExtractorParametersTest {
         assertEquals(Optional.of(false), parameters.findBoolean("flag"));
         assertEquals(Optional.of(3), parameters.findInteger("count"));
         assertEquals(Optional.of("slow"), parameters.findEnumeration("mode"));
-        assertEquals(Optional.of(BASE_DIRECTORY.resolve("states.xml")), parameters.findPath("file"));
+        assertEquals(
+                Optional.of(BASE.toURI().resolve("states.xml").toURL().toString()),
+                parameters.findResource("file").map(URL::toString)
+        );
     }
 
     @Test
-    void get__readsRequiredAndDefaults() {
+    void get__readsRequiredAndDefaults() throws MalformedURLException, URISyntaxException {
         // ARRANGE //
         FeatureExtractorParameters parameters = parameters();
 
@@ -90,36 +94,46 @@ class FeatureExtractorParametersTest {
         assertTrue(parameters.getBoolean("flag"));
         assertEquals("X", parameters.getString("label"));
         assertEquals("fast", parameters.getEnumeration("mode"));
-        assertEquals(BASE_DIRECTORY.resolve("states.xml"), parameters.getPath("file"));
+        assertEquals(BASE.toURI().resolve("states.xml").toURL().toString(), parameters.getResource("file").toString());
     }
 
-    record IllegalUseParameters(String name, Executable action, String expectedMessage) {}
+    record IllegalUseParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     static Stream<IllegalUseParameters> illegalUse() {
         return Stream.of(
                 new IllegalUseParameters(
-                        "undeclaredName",
+                        "undeclared_name",
                         () -> parameters().getString("missing"),
+                        IllegalStateException.class,
                         "no parameter named 'missing' is declared"
                 ),
                 new IllegalUseParameters(
-                        "undeclaredNameOnFind",
+                        "undeclared_name_on_find",
                         () -> parameters().findInteger("missing"),
+                        IllegalStateException.class,
                         "no parameter named 'missing' is declared"
                 ),
                 new IllegalUseParameters(
-                        "wrongKind",
+                        "wrong_kind",
                         () -> parameters().getInteger("label"),
+                        IllegalStateException.class,
                         "parameter 'label' is declared as STRING, not INTEGER"
                 ),
                 new IllegalUseParameters(
-                        "wrongKindOnFind",
+                        "wrong_kind_on_find",
                         () -> parameters().findInteger("label"),
+                        IllegalStateException.class,
                         "parameter 'label' is declared as STRING, not INTEGER"
                 ),
                 new IllegalUseParameters(
-                        "getOnAbsentOptional",
+                        "get_on_absent_optional",
                         () -> parameters().getString("note"),
+                        IllegalStateException.class,
                         "parameter 'note' has no value; it is optional with no default, so use the find accessor"
                 )
         );
@@ -129,7 +143,7 @@ class FeatureExtractorParametersTest {
     @ParameterizedTest
     void illegalUse(IllegalUseParameters parameters) {
         // ACT //
-        IllegalStateException exception = assertThrows(IllegalStateException.class, parameters.action());
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());

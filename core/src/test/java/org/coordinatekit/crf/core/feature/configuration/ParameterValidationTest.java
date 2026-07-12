@@ -22,53 +22,59 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.ServerSocket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
 
 /**
  * Tests {@link ParameterValidation}: each kind is coerced from its raw string, defaults are applied
- * for absent optionals, paths resolve against the base directory, and every content mistake
+ * for absent optionals, resources resolve against the base location, and every content mistake
  * surfaces as a located {@link FeatureConfigurationException} — including the {@code did you mean}
  * hint for a mistyped name.
  */
 class ParameterValidationTest {
-    private static final Path BASE_DIRECTORY = ConfigurationTestSupport
-            .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/states.xml");
+    private static final URL BASE = ConfigurationTestSupport
+            .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
+
+    private static final SourceLocation LOCATION = SourceLocation.of(URI.create("features.xml"), 12, 1);
 
     private static final Set<ParameterDescriptor> PARAMETERS = Set.of(
             ParameterDescriptor.builder("after", ParameterKind.INTEGER).defaultValue("0").build(),
             ParameterDescriptor.builder("before", ParameterKind.INTEGER).defaultValue("0").minimumValue(0)
                     .maximumValue(10).build(),
-            ParameterDescriptor.builder("dictionary", ParameterKind.PATH).required(true).build(),
+            ParameterDescriptor.builder("dictionary", ParameterKind.RESOURCE).required(true).build(),
             ParameterDescriptor.builder("flag", ParameterKind.BOOLEAN).defaultValue("false").build(),
             ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION).allowedValues(Set.of("fast", "slow"))
                     .defaultValue("fast").build()
     );
 
-    private static AssemblyContext context() {
-        return DefaultAssemblyContext.root(BASE_DIRECTORY).descend("window").descend("composite").descend("length");
-    }
-
     private static FeatureExtractorParameters validate(Map<String, String> raw) {
-        return ParameterValidation.validate("length", raw, PARAMETERS, context());
+        return ParameterValidation.validate("length", raw, PARAMETERS, BASE, LOCATION);
     }
 
     record RangeDescriptionParameters(String name, int minimum, int maximum, String expected) {}
 
     static Stream<RangeDescriptionParameters> rangeDescription() {
         return Stream.of(
-                new RangeDescriptionParameters("bothBounds", 1, 5, "between 1 and 5"),
-                new RangeDescriptionParameters("minimumOnly", 0, Integer.MAX_VALUE, ">= 0"),
-                new RangeDescriptionParameters("maximumOnly", Integer.MIN_VALUE, 10, "<= 10"),
-                new RangeDescriptionParameters("neitherBound", Integer.MIN_VALUE, Integer.MAX_VALUE, "any value")
+                new RangeDescriptionParameters("both_bounds", 1, 5, "between 1 and 5"),
+                new RangeDescriptionParameters("minimum_only", 0, Integer.MAX_VALUE, ">= 0"),
+                new RangeDescriptionParameters("maximum_only", Integer.MIN_VALUE, 10, "<= 10"),
+                new RangeDescriptionParameters("neither_bound", Integer.MIN_VALUE, Integer.MAX_VALUE, "any value")
         );
     }
 
@@ -102,7 +108,7 @@ class ParameterValidationTest {
     }
 
     @Test
-    void validate__coercesEachKind() {
+    void validate__coercesEachKind() throws MalformedURLException, URISyntaxException {
         // ACT //
         FeatureExtractorParameters parameters = validate(
                 Map.of("before", "3", "flag", "TRUE", "mode", "slow", "dictionary", "states.xml")
@@ -112,87 +118,102 @@ class ParameterValidationTest {
         assertEquals(3, parameters.getInteger("before"));
         assertTrue(parameters.getBoolean("flag"));
         assertEquals("slow", parameters.getEnumeration("mode"));
-        assertEquals(BASE_DIRECTORY.resolve("states.xml"), parameters.getPath("dictionary"));
+        assertEquals(
+                BASE.toURI().resolve("states.xml").toURL().toString(),
+                parameters.getResource("dictionary").toString()
+        );
     }
 
-    record ExceptionParameters(String name, Map<String, String> raw, String expectedMessage) {}
+    record ValidateExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
-    static Stream<ExceptionParameters> validate__exception() {
+    static Stream<ValidateExceptionParameters> validate__exception() throws MalformedURLException, URISyntaxException {
         return Stream.of(
-                new ExceptionParameters(
-                        "unknownParameterWithSuggestion",
-                        Map.of("beofre", "1", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — unknown parameter 'beofre'"
+                new ValidateExceptionParameters(
+                        "unknown_parameter_with_suggestion",
+                        () -> validate(Map.of("beofre", "1", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — unknown parameter 'beofre'"
                                 + " (did you mean 'before'?)"
                 ),
-                new ExceptionParameters(
-                        "unknownParameterWithoutSuggestion",
-                        Map.of("zzzzzz", "1", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — unknown parameter 'zzzzzz'"
+                new ValidateExceptionParameters(
+                        "unknown_parameter_without_suggestion",
+                        () -> validate(Map.of("zzzzzz", "1", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — unknown parameter 'zzzzzz'"
                 ),
-                new ExceptionParameters(
-                        "missingRequired",
-                        Map.of("before", "1"),
-                        "extractor 'length' at /window/composite/length — missing required parameter 'dictionary'"
+                new ValidateExceptionParameters(
+                        "missing_required",
+                        () -> validate(Map.of("before", "1")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — missing required parameter 'dictionary'"
                 ),
-                new ExceptionParameters(
-                        "badInteger",
-                        Map.of("before", "two", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'before' expects an integer"
+                new ValidateExceptionParameters(
+                        "bad_integer",
+                        () -> validate(Map.of("before", "two", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'before' expects an integer"
                                 + " but got 'two'"
                 ),
-                new ExceptionParameters(
-                        "badBoolean",
-                        Map.of("flag", "yes", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'flag' expects a boolean"
+                new ValidateExceptionParameters(
+                        "bad_boolean",
+                        () -> validate(Map.of("flag", "yes", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'flag' expects a boolean"
                                 + " (true or false) but got 'yes'"
                 ),
-                new ExceptionParameters(
-                        "enumerationOutsideAllowed",
-                        Map.of("mode", "medium", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'mode' expects one of"
+                new ValidateExceptionParameters(
+                        "enumeration_outside_allowed",
+                        () -> validate(Map.of("mode", "medium", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'mode' expects one of"
                                 + " [fast, slow] but got 'medium'"
                 ),
-                new ExceptionParameters(
-                        "integerBelowMinimum",
-                        Map.of("before", "-1", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'before' expects an integer"
+                new ValidateExceptionParameters(
+                        "integer_below_minimum",
+                        () -> validate(Map.of("before", "-1", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'before' expects an integer"
                                 + " between 0 and 10 but got '-1'"
                 ),
-                new ExceptionParameters(
-                        "integerAboveMaximum",
-                        Map.of("before", "11", "dictionary", "states.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'before' expects an integer"
+                new ValidateExceptionParameters(
+                        "integer_above_maximum",
+                        () -> validate(Map.of("before", "11", "dictionary", "states.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'before' expects an integer"
                                 + " between 0 and 10 but got '11'"
                 ),
-                new ExceptionParameters(
-                        "pathMissing",
-                        Map.of("dictionary", "missing.xml"),
-                        "extractor 'length' at /window/composite/length — parameter 'dictionary' points at a file"
-                                + " that does not exist: " + BASE_DIRECTORY.resolve("missing.xml")
+                new ValidateExceptionParameters(
+                        "path_missing",
+                        () -> validate(Map.of("dictionary", "missing.xml")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'dictionary' points at a"
+                                + " resource that cannot be opened: " + BASE.toURI().resolve("missing.xml").toURL()
                 ),
-                new ExceptionParameters(
-                        "pathNotRegularFile",
-                        Map.of("dictionary", "."),
-                        "extractor 'length' at /window/composite/length — parameter 'dictionary' points at a path"
-                                + " that is not a regular file: " + BASE_DIRECTORY.resolve(".")
+                new ValidateExceptionParameters(
+                        "absolute_url_with_illegal_syntax",
+                        () -> validate(Map.of("dictionary", "http://exa mple.com")),
+                        FeatureConfigurationException.class,
+                        "extractor 'length' at features.xml:12:1 — parameter 'dictionary' is not a valid"
+                                + " resource: 'http://exa mple.com'"
                 )
         );
     }
 
     @MethodSource
     @ParameterizedTest
-    void validate__exception(ExceptionParameters parameters) {
+    void validate__exception(ValidateExceptionParameters parameters) {
         // ACT //
-        FeatureConfigurationException exception = assertThrows(
-                FeatureConfigurationException.class,
-                () -> validate(parameters.raw())
-        );
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
-        assertEquals("length", exception.extractorType());
-        assertEquals("/window/composite/length", exception.location());
+        assertEquals("length", ((FeatureConfigurationException) exception).extractorType());
+        assertEquals(LOCATION, ((FeatureConfigurationException) exception).sourceLocation().orElseThrow());
     }
 
     @Test
@@ -206,12 +227,12 @@ class ParameterValidationTest {
         // ACT //
         FeatureConfigurationException exception = assertThrows(
                 FeatureConfigurationException.class,
-                () -> ParameterValidation.validate("length", Map.of(), parameters, context())
+                () -> ParameterValidation.validate("length", Map.of(), parameters, BASE, LOCATION)
         );
 
         // ASSERT //
         assertEquals(
-                "extractor 'length' at /window/composite/length — missing required parameter 'alpha'",
+                "extractor 'length' at features.xml:12:1 — missing required parameter 'alpha'",
                 exception.getMessage()
         );
     }
@@ -228,20 +249,19 @@ class ParameterValidationTest {
         );
 
         try {
-            AssemblyContext unreadableContext = DefaultAssemblyContext.root(tempDirectory).descend("window")
-                    .descend("composite").descend("length");
+            URL documentUrl = tempDirectory.resolve("features.xml").toUri().toURL();
 
             // ACT //
             FeatureConfigurationException exception = assertThrows(
                     FeatureConfigurationException.class,
                     () -> ParameterValidation
-                            .validate("length", Map.of("dictionary", "secret.xml"), PARAMETERS, unreadableContext)
+                            .validate("length", Map.of("dictionary", "secret.xml"), PARAMETERS, documentUrl, LOCATION)
             );
 
             // ASSERT //
             assertEquals(
-                    "extractor 'length' at /window/composite/length — parameter 'dictionary' points at a file that"
-                            + " is not readable: " + unreadable,
+                    "extractor 'length' at features.xml:12:1 — parameter 'dictionary' points at a resource"
+                            + " that cannot be opened: " + unreadable.toUri().toURL(),
                     exception.getMessage()
             );
         } finally {
@@ -249,5 +269,84 @@ class ParameterValidationTest {
                 System.err.println("failed to restore read permission on " + unreadable);
             }
         }
+    }
+
+    @Test
+    void validate__resolvesAbsoluteUrlDictionary() {
+        // ACT //
+        FeatureExtractorParameters parameters = validate(Map.of("dictionary", BASE.toString()));
+
+        // ASSERT //
+        assertEquals(BASE.toString(), parameters.getResource("dictionary").toString());
+    }
+
+    @Test
+    void validate__resolvesRelativeDictionaryAgainstJarBase(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path jarFile = tempDirectory.resolve("archive.jar");
+        try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile))) {
+            jar.putNextEntry(new JarEntry("config/features.xml"));
+            jar.closeEntry();
+            jar.putNextEntry(new JarEntry("config/dictionary.xml"));
+            jar.closeEntry();
+        }
+        URL jarBase = URI.create("jar:" + jarFile.toUri() + "!/config/features.xml").toURL();
+
+        // ACT //
+        FeatureExtractorParameters parameters = ParameterValidation
+                .validate("length", Map.of("dictionary", "dictionary.xml"), PARAMETERS, jarBase, LOCATION);
+
+        // ASSERT //
+        assertEquals(
+                "jar:" + jarFile.toUri() + "!/config/dictionary.xml",
+                parameters.getResource("dictionary").toString()
+        );
+    }
+
+    record RelativeResourceParameters(String name, String fileName) {}
+
+    static Stream<RelativeResourceParameters> validate__resolvesRelativeDictionaryWithUriSignificantCharacters() {
+        return Stream.of(
+                new RelativeResourceParameters("space", "dict with space.xml"),
+                new RelativeResourceParameters("hash", "dict#1.xml"),
+                new RelativeResourceParameters("percent", "dict%1.xml")
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void validate__resolvesRelativeDictionaryWithUriSignificantCharacters(
+            RelativeResourceParameters parameters,
+            @TempDir Path tempDirectory
+    ) throws IOException {
+        // ARRANGE //
+        Path dictionaryFile = tempDirectory.resolve(parameters.fileName());
+        Files.writeString(dictionaryFile, "<a/>");
+        URL documentUrl = tempDirectory.resolve("features.xml").toUri().toURL();
+
+        // ACT //
+        FeatureExtractorParameters result = ParameterValidation
+                .validate("length", Map.of("dictionary", parameters.fileName()), PARAMETERS, documentUrl, LOCATION);
+
+        // ASSERT //
+        assertEquals(dictionaryFile.toUri().toURL().toString(), result.getResource("dictionary").toString());
+    }
+
+    @Test
+    void validate__skipsProbeForNonLocalResource() throws IOException {
+        // ARRANGE //
+        int refusedPort;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            refusedPort = socket.getLocalPort();
+        }
+        String dictionaryUrl = "http://127.0.0.1:" + refusedPort + "/dictionary.xml";
+
+        // ACT //
+        // network resources defer their open to build time, so a connection-refused address still
+        // passes validation here
+        FeatureExtractorParameters parameters = validate(Map.of("dictionary", dictionaryUrl));
+
+        // ASSERT //
+        assertEquals(dictionaryUrl, parameters.getResource("dictionary").toString());
     }
 }

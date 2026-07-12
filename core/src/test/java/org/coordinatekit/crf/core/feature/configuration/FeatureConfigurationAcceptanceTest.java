@@ -18,13 +18,8 @@ package org.coordinatekit.crf.core.feature.configuration;
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.coordinatekit.crf.core.InputSequence;
-import org.coordinatekit.crf.core.PositionedToken;
-import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.feature.CompositeFeatureExtractor;
-import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
-import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.feature.SubstringFeatureExtractor;
 import org.coordinatekit.crf.core.feature.TransformingFeatureExtractor;
 import org.coordinatekit.crf.core.feature.WindowFeatureExtractor;
@@ -37,13 +32,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
- * The Phase 2 acceptance guarantee: a windowed, composite tree assembled from configuration nodes
- * renders the exact same feature strings — including the {@code PREV_n__}/{@code NEXT_n__} offsets
- * — as the equivalent hand-coded extractor composition, so a model trained through a
- * config-assembled extractor is interchangeable with one trained from code.
+ * The Phase 3 acceptance guarantee: a windowed, composite tree assembled from a configuration
+ * <strong>file</strong> renders the exact same feature strings — including the {@code PREV_n__}/
+ * {@code NEXT_n__} offsets — as the equivalent hand-coded extractor composition, so a model trained
+ * through a config-assembled extractor is interchangeable with one trained from code.
  */
 class FeatureConfigurationAcceptanceTest {
     private static final List<String> TOKENS = List.of("Ohio", "is", "a", "state");
@@ -70,33 +64,19 @@ class FeatureConfigurationAcceptanceTest {
                 .build();
     }
 
-    private static FeatureExtractorNode node() {
-        return FeatureExtractorNodes.builder("window").parameter("before", "3").parameter("after", "3").child(
-                FeatureExtractorNodes.builder("composite").child(FeatureExtractorNodes.builder("length").build())
-                        .child(
-                                FeatureExtractorNodes.builder("prefix").parameter("name", "PREFIX2")
-                                        .parameter("length", "2").build()
-                        )
-                        .child(
-                                FeatureExtractorNodes.builder("lookup").parameter("name", "STATE")
-                                        .parameter("value", "US").parameter("dictionary", "states.xml")
-                                        .parameter("xpath", "/states/state").build()
-                        ).build()
-        ).build();
+    private static Path featuresXml() {
+        return baseDirectory().resolve("features.xml");
     }
 
     private static Set<String> render(FeatureExtractor extractor, int position) {
-        FeatureFormat format = new DefaultFeatureFormat();
-        Sequence<PositionedToken> sequence = new InputSequence(TOKENS);
-        return extractor.extractAt(sequence, position).stream().map(format::render).collect(Collectors.toSet());
+        return ConfigurationTestSupport.renderFeatures(extractor, TOKENS, position);
     }
 
     @Test
     void assembledTreeMatchesHandCodedComposition() throws IOException {
         // ARRANGE //
         Path baseDirectory = baseDirectory();
-        FeatureExtractor assembled = new FeatureExtractorAssembler(FeatureExtractorFactoryRegistry.load())
-                .assemble(node(), baseDirectory);
+        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml());
         FeatureExtractor handCoded = handCoded(baseDirectory);
 
         // ACT & ASSERT //
@@ -112,9 +92,7 @@ class FeatureConfigurationAcceptanceTest {
     @Test
     void assembledTreeStampsWindowOffsetsAtFirstToken() {
         // ARRANGE //
-        Path baseDirectory = baseDirectory();
-        FeatureExtractor assembled = new FeatureExtractorAssembler(FeatureExtractorFactoryRegistry.load())
-                .assemble(node(), baseDirectory);
+        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml());
 
         // ACT //
         Set<String> rendered = render(assembled, 0);

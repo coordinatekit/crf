@@ -17,7 +17,7 @@ package org.coordinatekit.crf.core.feature.configuration;
 
 import org.jspecify.annotations.Nullable;
 
-import java.nio.file.Path;
+import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,7 +30,7 @@ import java.util.Set;
  * {@code values} holds only the parameters that carry a value — required parameters,
  * default-bearing parameters (with the default already coerced), and optional-no-default parameters
  * that a configuration supplied. Each value is pre-coerced to the Java type its
- * {@link ParameterKind} maps to: {@link Boolean}, {@link Integer}, {@link Path}, or {@link String}.
+ * {@link ParameterKind} maps to: {@link Boolean}, {@link Integer}, {@link URL}, or {@link String}.
  * The {@code parameters} are kept so the accessors can tell a factory bug (an undeclared name or
  * wrong kind) apart from an absent optional value.
  *
@@ -55,8 +55,8 @@ record DefaultFeatureExtractorParameters(Set<ParameterDescriptor> parameters, Ma
     }
 
     @Override
-    public Optional<Path> findPath(String name) {
-        return find(name, ParameterKind.PATH, Path.class);
+    public Optional<URL> findResource(String name) {
+        return find(name, ParameterKind.RESOURCE, URL.class);
     }
 
     @Override
@@ -80,8 +80,8 @@ record DefaultFeatureExtractorParameters(Set<ParameterDescriptor> parameters, Ma
     }
 
     @Override
-    public Path getPath(String name) {
-        return get(name, ParameterKind.PATH, Path.class);
+    public URL getResource(String name) {
+        return get(name, ParameterKind.RESOURCE, URL.class);
     }
 
     @Override
