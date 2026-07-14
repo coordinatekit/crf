@@ -60,6 +60,11 @@ import picocli.CommandLine.Spec;
 final class RetokenizeCommand implements Callable<Integer> {
     private final ResolvedServices.Builder servicesBuilder;
 
+    @Option(names = "--feature-configuration", description = "Feature-configuration file (for example features.xml) "
+            + "that declares the extractors to use. Optional; overrides any registered feature extractor.")
+    @Nullable
+    Path featureConfiguration;
+
     @Option(names = {"-i", "--input"}, required = true, description = "XML training-data file to review.")
     @Nullable
     Path input;
@@ -96,6 +101,7 @@ final class RetokenizeCommand implements Callable<Integer> {
         RetokenizeConfiguration configuration = configuration();
         RetokenizeRunner.ReviewerFactory factory;
         try {
+            ResolvedServicesFactory.applyFeatureConfiguration(servicesBuilder, featureConfiguration);
             servicesBuilder.taggerLoaderName(taggerLoader);
             factory = ResolvedServicesFactory.reviewerFactory(servicesBuilder, model);
         } catch (CrfStartupException exception) {

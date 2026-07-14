@@ -41,18 +41,18 @@ import java.util.Set;
  * Each slot is resolved independently by {@link Builder#resolve()} with the precedence
  * {@code explicit > single service-provider implementation > built-in default}. The full feature
  * extractor has no built-in default: when none is supplied or discovered it resolves to
- * {@code null}, and callers can warn before tagging without features. The key feature extractor
- * falls back to the full extractor when neither is supplied nor discovered. The feature format
- * always resolves to a non-null value (the single registered format, or the built-in fallback). The
- * set is internally untyped — the tag type is erased to a wildcard — because the slots come from
- * independent sources that cannot prove their agreement at compile time. The companion
- * {@link ResolvedServicesFactory} assembles them into a typed annotator or reviewer with the
- * unchecked casts that gap requires. The resolved {@link FeatureExtractor}, {@link FeatureFormat},
- * and {@link TagProvider} are threaded into both the tagger (via {@link #loadTagger}) and the
- * runner's verbose view, so they are coherent by construction; the key extractor feeds the runner's
- * key view only. {@link CrfTaggerLoader#load} is generic in the tag type, so the tagger it returns
- * is bound to the services it is handed rather than to a type of its own (see
- * {@link CrfTaggerLoader}).
+ * {@code null}, and callers can warn before tagging without features. The key feature extractor has
+ * no built-in default either: when neither is supplied nor discovered it resolves to {@code null}.
+ * The feature format always resolves to a non-null value (the single registered format, or the
+ * built-in fallback). The set is internally untyped — the tag type is erased to a wildcard —
+ * because the slots come from independent sources that cannot prove their agreement at compile
+ * time. The companion {@link ResolvedServicesFactory} assembles them into a typed annotator or
+ * reviewer with the unchecked casts that gap requires. The resolved {@link FeatureExtractor},
+ * {@link FeatureFormat}, and {@link TagProvider} are threaded into both the tagger (via
+ * {@link #loadTagger}) and the runner's verbose view, so they are coherent by construction; the key
+ * extractor feeds the runner's key view only. {@link CrfTaggerLoader#load} is generic in the tag
+ * type, so the tagger it returns is bound to the services it is handed rather than to a type of its
+ * own (see {@link CrfTaggerLoader}).
  *
  * @see Builder
  * @see ResolvedServicesFactory
@@ -145,12 +145,11 @@ final class ResolvedServices {
     }
 
     /**
-     * Returns the resolved key feature extractor, falling back to the full extractor when no key
-     * extractor was supplied or discovered.
+     * Returns the resolved key feature extractor, or {@code null} when none was supplied or discovered.
      *
      * <p>
-     * The key extractor feeds the runner's key view. It is {@code null} only when neither a key nor a
-     * full extractor is available.
+     * The key extractor feeds the runner's key view; a {@code null} extractor means the runner offers
+     * only the verbose view.
      *
      * @return the key feature extractor, or {@code null}
      */
@@ -291,7 +290,7 @@ final class ResolvedServices {
          * <p>
          * The tokenizer defaults to {@link WhitespaceTokenizer}; the feature format defaults to the single
          * registered format or the built-in fallback; the full feature extractor defaults to absent (the
-         * tagger then runs without features); the key feature extractor defaults to the full extractor; the
+         * tagger then runs without features); the key feature extractor defaults to absent as well; the
          * tagger loader defaults to absent; the tag provider has no built-in default (tag-set inference is
          * not yet implemented) and must be supplied explicitly or by a single registered service.
          *
@@ -310,8 +309,7 @@ final class ResolvedServices {
                 resolvedTokenizer = CrfServices.tokenizer(tokenizer);
                 resolvedFeatureFormat = CrfServices.featureFormat();
                 resolvedFullFeatureExtractor = CrfServices.fullFeatureExtractor(fullFeatureExtractor).orElse(null);
-                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor)
-                        .orElse(resolvedFullFeatureExtractor);
+                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor).orElse(null);
                 resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
                 resolvedTagProvider = CrfServices.tagProvider(tagProvider).orElseThrow(
                         () -> new CrfStartupException(

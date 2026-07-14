@@ -19,7 +19,12 @@ import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.coordinatekit.crf.annotator.AnnotatorModels.taggingResult;
 import static org.coordinatekit.crf.annotator.TaggingAction.EXIT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.coordinatekit.crf.annotator.Annotator;
 import org.coordinatekit.crf.annotator.AnnotatorConfiguration;
@@ -30,10 +35,16 @@ import org.coordinatekit.crf.annotator.RetokenizeConfiguration;
 import org.coordinatekit.crf.annotator.RetokenizeReviewer;
 import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.TaggingResult;
+import org.coordinatekit.crf.core.InputSequence;
+import org.coordinatekit.crf.core.PositionedToken;
+import org.coordinatekit.crf.core.Sequence;
 import org.coordinatekit.crf.core.StringTagProvider;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.io.XmlTrainingData;
+import org.coordinatekit.crf.core.feature.DefaultFeatureFormat;
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
+import org.coordinatekit.crf.core.feature.FeatureFormat;
 import org.coordinatekit.crf.core.preprocessing.TrainingSequence;
 import org.coordinatekit.crf.core.preprocessing.WhitespaceTokenizer;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -57,6 +68,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -72,7 +84,9 @@ import java.util.stream.Stream;
  * by {@link ResolvedServicesTest}.
  */
 class ResolvedServicesFactoryTest {
+    private static final String FEATURE_CONFIGURATION_NAMESPACE = "https://coordinatekit.org/schema/crf/feature-configuration";
     private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> Set.of();
+    private static final FeatureFormat FEATURE_FORMAT = new DefaultFeatureFormat();
     private static final FeatureExtractor FULL_EXTRACTOR = (sequence, position) -> Set
             .of(createFeature("VERBOSE_" + sequence.get(position).token()));
     private static final FeatureExtractor KEY_EXTRACTOR = (sequence, position) -> Set
@@ -188,9 +202,94 @@ class ResolvedServicesFactoryTest {
         );
     }
 
+    @Test
+    void applyFeatureConfiguration__malformedFileTranslatesToStartupException(@TempDir Path tempDirectory)
+            throws IOException {
+        // ARRANGE //
+        Path file = tempDirectory.resolve("features.xml");
+        Files.writeString(file, "not xml");
+        ResolvedServices.Builder builder = ResolvedServices.builder();
+
+        // ACT //
+        CrfStartupException exception = assertThrows(
+                CrfStartupException.class,
+                () -> ResolvedServicesFactory.applyFeatureConfiguration(builder, file)
+        );
+
+        // ASSERT //
+        String message = exception.getMessage();
+        assertNotNull(message);
+        assertTrue(
+                message.contains("failed to load feature configuration from " + file),
+                "message should name the file; was: " + message
+        );
+        Throwable cause = exception.getCause();
+        assertInstanceOf(UncheckedCrfException.class, cause);
+        assertTrue(
+                message.contains(cause.getMessage()),
+                "message should append the underlying reason; was: " + message
+        );
+    }
+
+    @Test
+    void applyFeatureConfiguration__nullFileIsNoop() {
+        // ARRANGE //
+        ResolvedServices.Builder builder = builder();
+
+        // ACT //
+        ResolvedServicesFactory.applyFeatureConfiguration(builder, null);
+
+        // ASSERT //
+        assertSame(FEATURE_EXTRACTOR, builder.resolve().fullFeatureExtractor());
+    }
+
+    @Test
+    void applyFeatureConfiguration__wiresAssembledExtractors(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path file = writeFeatureConfiguration(
+                tempDirectory,
+                "<extractor type=\"window\"><parameter name=\"before\" value=\"1\"/>"
+                        + "<parameter name=\"after\" value=\"0\"/>"
+                        + "<extractor type=\"composite\" key=\"true\"><extractor type=\"length\"/></extractor>"
+                        + "</extractor>"
+        );
+        ResolvedServices.Builder builder = configuredBuilder();
+
+        // ACT //
+        ResolvedServicesFactory.applyFeatureConfiguration(builder, file);
+
+        // ASSERT //
+        ResolvedServices resolved = builder.resolve();
+        FeatureExtractor full = resolved.fullFeatureExtractor();
+        FeatureExtractor key = resolved.keyFeatureExtractor();
+        assertNotNull(full);
+        assertNotNull(key);
+        assertEquals(Set.of("LENGTH=3", "PREV_1__LENGTH=2"), renderFeatures(full, List.of("ab", "cde"), 1));
+        assertEquals(Set.of("LENGTH=3"), renderFeatures(key, List.of("ab", "cde"), 1));
+    }
+
+    @Test
+    void applyFeatureConfiguration__withoutKeyMarkerLeavesKeyUnset(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        Path file = writeFeatureConfiguration(tempDirectory, "<extractor type=\"length\"/>");
+        ResolvedServices.Builder builder = configuredBuilder();
+
+        // ACT //
+        ResolvedServicesFactory.applyFeatureConfiguration(builder, file);
+
+        // ASSERT //
+        ResolvedServices resolved = builder.resolve();
+        assertNotNull(resolved.fullFeatureExtractor());
+        assertNull(resolved.keyFeatureExtractor());
+    }
+
     private static ResolvedServices.Builder builder() {
         return ResolvedServices.builder().tagProvider(TAG_PROVIDER).fullFeatureExtractor(FEATURE_EXTRACTOR)
                 .tokenizer(new WhitespaceTokenizer()).taggerLoader(TAGGER_LOADER);
+    }
+
+    private static ResolvedServices.Builder configuredBuilder() {
+        return ResolvedServices.builder().tagProvider(TAG_PROVIDER).tokenizer(new WhitespaceTokenizer());
     }
 
     private static DumbTerminal dumbTerminal(OutputStream output) throws IOException {
@@ -235,6 +334,11 @@ class ResolvedServicesFactoryTest {
         assertNotNull(assembled, parameters.name() + " factory should assemble a non-null instance");
     }
 
+    private static Set<String> renderFeatures(FeatureExtractor extractor, List<String> tokens, int position) {
+        Sequence<PositionedToken> sequence = new InputSequence(tokens);
+        return extractor.extractAt(sequence, position).stream().map(FEATURE_FORMAT::render).collect(Collectors.toSet());
+    }
+
     private static RetokenizeConfiguration retokenizeConfiguration() {
         return RetokenizeConfiguration.builder().input(Path.of("in.xml")).output(Path.of("out.xml")).build();
     }
@@ -261,6 +365,16 @@ class ResolvedServicesFactoryTest {
         // ASSERT //
         assertEquals(1, tagging.presented.size(), "exactly one sequence should be presented");
         assertRoutedToViews(tagging.presented.getFirst());
+    }
+
+    private static Path writeFeatureConfiguration(Path directory, String extractorsBody) throws IOException {
+        Path file = directory.resolve("features.xml");
+        Files.writeString(
+                file,
+                "<featureExtractors xmlns=\"" + FEATURE_CONFIGURATION_NAMESPACE + "\">" + extractorsBody
+                        + "</featureExtractors>"
+        );
+        return file;
     }
 
     /**

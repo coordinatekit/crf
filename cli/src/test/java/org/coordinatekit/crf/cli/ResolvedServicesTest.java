@@ -224,17 +224,16 @@ class ResolvedServicesTest {
     }
 
     @Test
-    void resolve__keyFeatureExtractorFallsBackToFull() {
+    void resolve__keyFeatureExtractorAbsentWhenUnset() {
         // ARRANGE //
         FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
         ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
                 .fullFeatureExtractor(fullFeatureExtractor).resolve();
 
         // ACT & ASSERT //
-        assertSame(
-                fullFeatureExtractor,
+        assertNull(
                 resolvedServices.keyFeatureExtractor(),
-                "the key view should fall back to the full extractor when no key extractor is registered"
+                "the key view stays absent when no key extractor is registered"
         );
     }
 

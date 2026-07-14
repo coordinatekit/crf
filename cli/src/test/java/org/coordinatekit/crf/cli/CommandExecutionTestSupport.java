@@ -21,11 +21,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
@@ -72,6 +76,32 @@ abstract class CommandExecutionTestSupport {
         // ASSERT //
         assertEquals(0, execution.exitCode());
         assertTrue(execution.out().contains("--input"), "help should list the options; was: " + execution.out());
+    }
+
+    @Test
+    void execute__malformedFeatureConfigurationFailsFast(@TempDir Path tempDirectory) throws IOException {
+        // ARRANGE //
+        // Proves --feature-configuration reaches ResolvedServicesFactory.applyFeatureConfiguration before
+        // the tag provider is resolved, mirroring execute__unknownTaggerLoaderNameFailsFast.
+        Path file = tempDirectory.resolve("features.xml");
+        Files.writeString(file, "not xml");
+
+        // ACT //
+        Execution execution = execute(
+                "--input",
+                "input",
+                "--output",
+                "output.xml",
+                "--feature-configuration",
+                file.toString()
+        );
+
+        // ASSERT //
+        assertEquals(1, execution.exitCode());
+        assertTrue(
+                execution.err().contains("failed to load feature configuration from " + file),
+                "stderr should name the malformed file; was: " + execution.err()
+        );
     }
 
     @Test

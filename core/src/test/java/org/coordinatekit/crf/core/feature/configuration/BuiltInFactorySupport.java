@@ -79,7 +79,7 @@ public final class BuiltInFactorySupport {
      * @return the rendered feature strings
      */
     public static Set<String> render(URL baseLocation, FeatureExtractorNode node, List<String> tokens, int position) {
-        FeatureExtractor extractor = ASSEMBLER.assemble(node, baseLocation);
+        FeatureExtractor extractor = ASSEMBLER.assemble(node, baseLocation).fullFeatureExtractor();
         return ConfigurationTestSupport.renderFeatures(extractor, tokens, position);
     }
 

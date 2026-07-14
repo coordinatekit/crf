@@ -107,7 +107,8 @@ public final class CrfServices {
      *
      * <p>
      * The key extractor is the simpler pre-window extractor that feeds the annotator's key ("key
-     * features") view. When none is registered, callers fall the key view back to the full extractor.
+     * features") view. When none is registered, the key view stays absent rather than falling back to
+     * the full extractor.
      *
      * @return the resolved key feature extractor, or empty if none is registered
      * @throws AmbiguousServiceException if more than one key feature extractor is registered
