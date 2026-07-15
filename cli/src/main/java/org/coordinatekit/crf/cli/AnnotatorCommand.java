@@ -61,6 +61,11 @@ import picocli.CommandLine.Spec;
 final class AnnotatorCommand implements Callable<Integer> {
     private final ResolvedServices.Builder servicesBuilder;
 
+    @Option(names = "--feature-configuration", description = "Feature-configuration file (for example features.xml) "
+            + "that declares the extractors to use. Optional; overrides any registered feature extractor.")
+    @Nullable
+    Path featureConfiguration;
+
     @Option(names = {"-i",
                     "--input"}, required = true, description = "Plain-text input file (UTF-8), one sequence per line.")
     @Nullable
@@ -98,6 +103,7 @@ final class AnnotatorCommand implements Callable<Integer> {
         AnnotatorConfiguration configuration = configuration();
         AnnotatorRunner.AnnotatorFactory factory;
         try {
+            ResolvedServicesFactory.applyFeatureConfiguration(servicesBuilder, featureConfiguration);
             servicesBuilder.taggerLoaderName(taggerLoader);
             factory = ResolvedServicesFactory.annotatorFactory(servicesBuilder, model);
         } catch (CrfStartupException exception) {

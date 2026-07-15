@@ -76,7 +76,7 @@ class FeatureConfigurationAcceptanceTest {
     void assembledTreeMatchesHandCodedComposition() throws IOException {
         // ARRANGE //
         Path baseDirectory = baseDirectory();
-        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml());
+        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml()).fullFeatureExtractor();
         FeatureExtractor handCoded = handCoded(baseDirectory);
 
         // ACT & ASSERT //
@@ -92,7 +92,7 @@ class FeatureConfigurationAcceptanceTest {
     @Test
     void assembledTreeStampsWindowOffsetsAtFirstToken() {
         // ARRANGE //
-        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml());
+        FeatureExtractor assembled = FeatureConfiguration.load(featuresXml()).fullFeatureExtractor();
 
         // ACT //
         Set<String> rendered = render(assembled, 0);

@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Assembles a tree of {@link FeatureExtractorNode}s into a single {@link FeatureExtractor}.
+ * Assembles a tree of {@link FeatureExtractorNode}s into a full/key pair of
+ * {@link FeatureExtractor}s, returned as an {@link AssembledFeatureExtractors}.
  *
  * <p>
  * Assembly is depth-first: each node's children are built before the node itself, so a nesting
@@ -42,8 +43,11 @@ import java.util.Objects;
  * {@link FeatureConfigurationException}.
  *
  * <p>
- * The {@link FeatureExtractorNode#key() key} marker is not consulted; this assembler returns only
- * the full extractor. Splitting the tree into a key/full pair arrives in a later phase.
+ * At most one node in the tree may carry the {@link FeatureExtractorNode#key() key} marker. Because
+ * assembly is post-order and a marked node's extractor is the same instance its parent wraps, the
+ * captured key extractor is the shared subtree instance, not a rebuilt copy; when no node is
+ * marked, no key extractor is produced. A second marked node surfaces as a located
+ * {@link FeatureConfigurationException}.
  */
 final class FeatureExtractorAssembler {
     private final FeatureExtractorFactoryRegistry registry;
@@ -58,20 +62,27 @@ final class FeatureExtractorAssembler {
     }
 
     /**
-     * Assembles the tree rooted at {@code root} into a single feature extractor.
+     * Assembles the tree rooted at {@code root} into a full/key pair of feature extractors.
      *
      * @param root the root node of the tree
      * @param baseLocation the document location that resource parameters resolve against
-     * @return the assembled feature extractor
+     * @return the assembled full and key feature extractors
      * @throws FeatureConfigurationException if any node names an unknown type, carries an invalid
      *         parameter, violates its declared arity, fails its factory's {@code validate} or
-     *         {@code create}, or the tree is deeper than
-     *         {@link FeatureExtractorNode#MAXIMUM_NESTING_DEPTH}
+     *         {@code create}, the tree is deeper than
+     *         {@link FeatureExtractorNode#MAXIMUM_NESTING_DEPTH}, or more than one node carries the
+     *         {@link FeatureExtractorNode#key() key} marker
      */
-    FeatureExtractor assemble(FeatureExtractorNode root, URL baseLocation) {
+    AssembledFeatureExtractors assemble(FeatureExtractorNode root, URL baseLocation) {
         Objects.requireNonNull(root, "root must not be null");
         Objects.requireNonNull(baseLocation, "baseLocation must not be null");
-        return assemble(root, baseLocation, 1);
+        // `keyHolder` is a mutable slot shared across the recursion's stack frames. The key-marked
+        // node can sit anywhere in the tree, so its exact extractor instance has to climb back out to
+        // this top-level call, and a shared array is how one value does that. A filled slot also means
+        // a key node was already captured, so a second marker is a duplicate.
+        FeatureExtractor[] keyHolder = new FeatureExtractor[1];
+        FeatureExtractor full = assemble(root, baseLocation, 1, keyHolder);
+        return AssembledFeatureExtractors.of(full, keyHolder[0]);
     }
 
     /**
@@ -80,10 +91,18 @@ final class FeatureExtractorAssembler {
      * @param node the node to assemble
      * @param baseLocation the document location that resource parameters resolve against
      * @param depth the one-based depth of this node
+     * @param keyHolder a single-slot holder capturing the key-marked node's extractor, empty until a
+     *        marked node is assembled
      * @return the assembled feature extractor for this node
-     * @throws FeatureConfigurationException on any located configuration-content problem
+     * @throws FeatureConfigurationException on any located configuration-content problem, including a
+     *         second node carrying the {@link FeatureExtractorNode#key() key} marker
      */
-    private FeatureExtractor assemble(FeatureExtractorNode node, URL baseLocation, int depth) {
+    private FeatureExtractor assemble(
+            FeatureExtractorNode node,
+            URL baseLocation,
+            int depth,
+            @Nullable FeatureExtractor[] keyHolder
+    ) {
         SourceLocation source = node.sourceLocation().orElse(null);
         if (depth > FeatureExtractorNode.MAXIMUM_NESTING_DEPTH) {
             throw new FeatureConfigurationException(
@@ -127,25 +146,33 @@ final class FeatureExtractorAssembler {
 
         List<FeatureExtractor> children = new ArrayList<>();
         for (FeatureExtractorNode child : node.children()) {
-            children.add(assemble(child, baseLocation, depth + 1));
+            children.add(assemble(child, baseLocation, depth + 1, keyHolder));
         }
 
+        FeatureExtractor extractor;
         try {
             if (factory instanceof LeafFeatureExtractorFactory leaf) {
-                return leaf.create(parameters);
-            }
-            if (factory instanceof NestingFeatureExtractorFactory nesting) {
-                return nesting.create(parameters, List.copyOf(children));
+                extractor = leaf.create(parameters);
+            } else if (factory instanceof NestingFeatureExtractorFactory nesting) {
+                extractor = nesting.create(parameters, List.copyOf(children));
+            } else {
+                // Unreachable due to validation in FeatureExtractorFactoryRegistry
+                throw new IllegalStateException(
+                        "factory for type '" + node.type() + "' (" + factory.getClass().getName()
+                                + ") is neither a LeafFeatureExtractorFactory nor a NestingFeatureExtractorFactory"
+                );
             }
         } catch (IllegalArgumentException exception) {
             throw located(node.type(), source, exception);
         }
 
-        // Unreachable due to validation in FeatureExtractorFactoryRegistry
-        throw new IllegalStateException(
-                "factory for type '" + node.type() + "' (" + factory.getClass().getName()
-                        + ") is neither a LeafFeatureExtractorFactory nor a NestingFeatureExtractorFactory"
-        );
+        if (node.key()) {
+            if (keyHolder[0] != null) {
+                throw new FeatureConfigurationException(node.type(), source, "at most one node may be marked key");
+            }
+            keyHolder[0] = extractor;
+        }
+        return extractor;
     }
 
     /**

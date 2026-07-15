@@ -64,7 +64,7 @@ class EnumerationFactoryTest {
     );
 
     private static Set<String> render(FeatureExtractorNode node) {
-        FeatureExtractor extractor = ASSEMBLER.assemble(node, currentDirectoryUrl());
+        FeatureExtractor extractor = ASSEMBLER.assemble(node, currentDirectoryUrl()).fullFeatureExtractor();
         return renderFeatures(extractor, List.of("token"), 0);
     }
 

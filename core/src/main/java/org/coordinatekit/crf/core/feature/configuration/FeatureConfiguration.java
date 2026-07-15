@@ -15,7 +15,6 @@
  */
 package org.coordinatekit.crf.core.feature.configuration;
 
-import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.spi.AmbiguousServiceException;
 import org.coordinatekit.crf.core.spi.CrfServices;
 
@@ -26,9 +25,9 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 /**
- * The façade that turns a configuration file into a single {@link FeatureExtractor}: resolves the
- * {@link FeatureConfigurationParser}, parses the file into a {@link FeatureExtractorNode} tree, and
- * assembles that tree into the extractor.
+ * The façade that turns a configuration file into an {@link AssembledFeatureExtractors} pair:
+ * resolves the {@link FeatureConfigurationParser}, parses the file into a
+ * {@link FeatureExtractorNode} tree, and assembles that tree into the full and key extractors.
  *
  * <p>
  * {@link #load(Path)} loads from the filesystem; {@link #load(URL)} loads from the filesystem,
@@ -46,14 +45,14 @@ public final class FeatureConfiguration {
      * against the file's own location.
      *
      * @param file the configuration file to load
-     * @return the assembled feature extractor
+     * @return the assembled full and key feature extractors
      * @throws AmbiguousServiceException if more than one {@link FeatureConfigurationParser} is
      *         registered
      * @throws FeatureConfigurationParseException if the file is not well-formed in the resolved
      *         parser's format
      * @throws FeatureConfigurationException if the parsed tree's content is invalid
      */
-    public static FeatureExtractor load(Path file) {
+    public static AssembledFeatureExtractors load(Path file) {
         Objects.requireNonNull(file, "file must not be null");
         FeatureConfigurationParser parser = CrfServices
                 .resolve(FeatureConfigurationParser.class, null, new XmlFeatureConfigurationParser());
@@ -72,14 +71,14 @@ public final class FeatureConfiguration {
      * against {@code url} itself.
      *
      * @param url the configuration URL to load
-     * @return the assembled feature extractor
+     * @return the assembled full and key feature extractors
      * @throws AmbiguousServiceException if more than one {@link FeatureConfigurationParser} is
      *         registered
      * @throws FeatureConfigurationParseException if the URL's content is not well-formed in the
      *         resolved parser's format
      * @throws FeatureConfigurationException if the parsed tree's content is invalid
      */
-    public static FeatureExtractor load(URL url) {
+    public static AssembledFeatureExtractors load(URL url) {
         return load(url, url);
     }
 
@@ -89,14 +88,14 @@ public final class FeatureConfiguration {
      *
      * @param url the configuration URL to load
      * @param baseLocation the document location that {@code RESOURCE} parameters resolve against
-     * @return the assembled feature extractor
+     * @return the assembled full and key feature extractors
      * @throws AmbiguousServiceException if more than one {@link FeatureConfigurationParser} is
      *         registered
      * @throws FeatureConfigurationParseException if the URL's content is not well-formed in the
      *         resolved parser's format
      * @throws FeatureConfigurationException if the parsed tree's content is invalid
      */
-    public static FeatureExtractor load(URL url, URL baseLocation) {
+    public static AssembledFeatureExtractors load(URL url, URL baseLocation) {
         Objects.requireNonNull(url, "url must not be null");
         Objects.requireNonNull(baseLocation, "baseLocation must not be null");
         FeatureConfigurationParser parser = CrfServices

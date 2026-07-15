@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<featureExtractors xmlns="https://coordinatekit.org/schema/crf/feature-configuration">
+    <extractor type="window">
+        <parameter name="before" value="1"/>
+        <parameter name="after" value="0"/>
+        <extractor type="composite" key="true">
+            <extractor type="length"/>
+            <extractor type="prefix">
+                <parameter name="name" value="PREFIX2"/>
+                <parameter name="length" value="2"/>
+            </extractor>
+        </extractor>
+    </extractor>
+</featureExtractors>

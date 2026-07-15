@@ -22,11 +22,15 @@ import org.coordinatekit.crf.annotator.RetokenizeRunner;
 import org.coordinatekit.crf.annotator.TaggingInterface;
 import org.coordinatekit.crf.annotator.terminal.TerminalTaggingInterface;
 import org.coordinatekit.crf.core.TagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
+import org.coordinatekit.crf.core.feature.configuration.AssembledFeatureExtractors;
+import org.coordinatekit.crf.core.feature.configuration.FeatureConfiguration;
 import org.coordinatekit.crf.core.tag.CrfTagger;
 import org.jline.terminal.Terminal;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 
 /**
@@ -118,6 +122,32 @@ final class ResolvedServicesFactory {
         ResolvedServices resolvedServices = servicesBuilder.resolve();
         CrfTagger<?> tagger = resolvedServices.loadTagger(modelPath);
         return (configuration, terminal) -> annotator(resolvedServices, tagger, terminal, configuration.threshold());
+    }
+
+    /**
+     * Loads {@code file} as a feature configuration and wires the assembled full extractor, and the key
+     * extractor when a node was marked key, onto {@code builder} as explicit overrides, or does nothing
+     * when {@code file} is {@code null}.
+     *
+     * @param builder the services builder to wire the assembled extractors onto
+     * @param file the feature-configuration file to load, or {@code null} to leave the builder
+     *        untouched
+     * @throws CrfStartupException if {@code file} cannot be parsed or its content is invalid
+     */
+    static void applyFeatureConfiguration(ResolvedServices.Builder builder, @Nullable Path file) {
+        if (file == null) {
+            return;
+        }
+        try {
+            AssembledFeatureExtractors extractors = FeatureConfiguration.load(file);
+            builder.fullFeatureExtractor(extractors.fullFeatureExtractor());
+            extractors.keyFeatureExtractor().ifPresent(builder::keyFeatureExtractor);
+        } catch (UncheckedCrfException | UncheckedIOException exception) {
+            throw new CrfStartupException(
+                    "failed to load feature configuration from " + file + ": " + exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     // See annotator(...): the production path builds the tagging interface, then delegates the

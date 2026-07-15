@@ -19,6 +19,8 @@ import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -152,7 +154,7 @@ class FeatureExtractorAssemblerTest {
         FeatureExtractorNode node = nestedComposites(FeatureExtractorNode.MAXIMUM_NESTING_DEPTH - 1);
 
         // ACT //
-        FeatureExtractor extractor = DISCOVERED_ASSEMBLER.assemble(node, BASE_LOCATION);
+        FeatureExtractor extractor = DISCOVERED_ASSEMBLER.assemble(node, BASE_LOCATION).fullFeatureExtractor();
 
         // ASSERT //
         assertEquals(Set.of("LENGTH=3"), render(extractor, List.of("abc"), 0));
@@ -256,6 +258,40 @@ class FeatureExtractorAssemblerTest {
     }
 
     @Test
+    void assemble__keyedNestedNodeSharesInstanceWithParent() {
+        // ARRANGE //
+        // Mutable capture cell: lifts the exact instance the factory returns out of the recursion for
+        // the later assertSame.
+        FeatureExtractor[] captured = new FeatureExtractor[1];
+        LeafFeatureExtractorFactory keyedLeafFactory = new LeafFeatureExtractorFactory() {
+            @Override
+            public FeatureExtractor create(FeatureExtractorParameters parameters) {
+                captured[0] = (sequence, position) -> Set.of(createFeature("KEY"));
+                return captured[0];
+            }
+
+            @Override
+            public String type() {
+                return "keyed-leaf";
+            }
+        };
+        FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
+                FeatureExtractorFactoryRegistry.of(List.of(new SyntheticNestingFactory(), keyedLeafFactory))
+        );
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-nesting")
+                .child(FeatureExtractorNodes.builder("keyed-leaf").key(true).build()).build();
+
+        // ACT //
+        AssembledFeatureExtractors assembled = assembler.assemble(node, BASE_LOCATION);
+        FeatureExtractor key = assembled.keyFeatureExtractor().orElseThrow();
+
+        // ASSERT //
+        assertSame(captured[0], key, "the key extractor must be the marked node's own instance");
+        assertNotSame(assembled.fullFeatureExtractor(), key);
+        assertEquals(Set.of("KEY"), render(key, List.of("x"), 0));
+    }
+
+    @Test
     void assemble__leaf() {
         // ARRANGE //
         FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-leaf").build();
@@ -264,7 +300,7 @@ class FeatureExtractorAssemblerTest {
         );
 
         // ACT //
-        FeatureExtractor extractor = assembler.assemble(node, BASE_LOCATION);
+        FeatureExtractor extractor = assembler.assemble(node, BASE_LOCATION).fullFeatureExtractor();
 
         // ASSERT //
         assertEquals(Set.of("SYNTH"), render(extractor, List.of("abc"), 0));
@@ -284,7 +320,7 @@ class FeatureExtractorAssemblerTest {
                 ).build();
 
         // ACT //
-        FeatureExtractor extractor = DISCOVERED_ASSEMBLER.assemble(node, BASE_LOCATION);
+        FeatureExtractor extractor = DISCOVERED_ASSEMBLER.assemble(node, BASE_LOCATION).fullFeatureExtractor();
 
         // ASSERT //
         assertEquals(
@@ -310,10 +346,67 @@ class FeatureExtractorAssemblerTest {
         );
 
         // ACT //
-        FeatureExtractor extractor = assembler.assemble(node, BASE_LOCATION);
+        FeatureExtractor extractor = assembler.assemble(node, BASE_LOCATION).fullFeatureExtractor();
 
         // ASSERT //
         assertEquals(Set.of("A", "B"), render(extractor, List.of("x"), 0));
+    }
+
+    @Test
+    void assemble__noKeyMarkerYieldsEmptyKeyExtractor() {
+        // ARRANGE //
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-leaf").build();
+        FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
+                FeatureExtractorFactoryRegistry.of(List.of(new SyntheticLeafFactory("synthetic-leaf", "SYNTH")))
+        );
+
+        // ACT //
+        AssembledFeatureExtractors assembled = assembler.assemble(node, BASE_LOCATION);
+
+        // ASSERT //
+        assertTrue(assembled.keyFeatureExtractor().isEmpty());
+    }
+
+    @Test
+    void assemble__rootKeyMarkerSharesFullInstance() {
+        // ARRANGE //
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-leaf").key(true).build();
+        FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
+                FeatureExtractorFactoryRegistry.of(List.of(new SyntheticLeafFactory("synthetic-leaf", "SYNTH")))
+        );
+
+        // ACT //
+        AssembledFeatureExtractors assembled = assembler.assemble(node, BASE_LOCATION);
+        FeatureExtractor key = assembled.keyFeatureExtractor().orElseThrow();
+
+        // ASSERT //
+        assertSame(assembled.fullFeatureExtractor(), key, "a root-marked key shares the full extractor instance");
+    }
+
+    @Test
+    void assemble__twoKeyMarkersThrowsLocatedException() {
+        // ARRANGE //
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-nesting")
+                .child(FeatureExtractorNodes.builder("synthetic-a").key(true).build())
+                .child(FeatureExtractorNodes.builder("synthetic-b").key(true).build()).build();
+        FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
+                FeatureExtractorFactoryRegistry.of(
+                        List.of(
+                                new SyntheticNestingFactory(),
+                                new SyntheticLeafFactory("synthetic-a", "A"),
+                                new SyntheticLeafFactory("synthetic-b", "B")
+                        )
+                )
+        );
+
+        // ACT //
+        FeatureConfigurationException exception = assertThrows(
+                FeatureConfigurationException.class,
+                () -> assembler.assemble(node, BASE_LOCATION)
+        );
+
+        // ASSERT //
+        assertEquals("extractor 'synthetic-b' — at most one node may be marked key", exception.getMessage());
     }
 
     @Test

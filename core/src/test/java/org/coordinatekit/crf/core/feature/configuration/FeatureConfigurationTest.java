@@ -45,6 +45,11 @@ class FeatureConfigurationTest {
                 .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/facade/length.xml");
     }
 
+    private static Path keyedDirectory() {
+        return ConfigurationTestSupport
+                .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/keyed/features.xml");
+    }
+
     private static Path locatedErrorDirectory() {
         return ConfigurationTestSupport
                 .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/located-error/features.xml");
@@ -65,7 +70,7 @@ class FeatureConfigurationTest {
         URL url = file.toUri().toURL();
         URL baseLocation = ConfigurationTestSupport
                 .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/features.xml");
-        FeatureExtractor extractor = FeatureConfiguration.load(url, baseLocation);
+        FeatureExtractor extractor = FeatureConfiguration.load(url, baseLocation).fullFeatureExtractor();
 
         // ACT //
         Set<String> rendered = ConfigurationTestSupport.renderFeatures(extractor, List.of("Ohio"), 0);
@@ -77,13 +82,39 @@ class FeatureConfigurationTest {
     @Test
     void load__fileAssembles() {
         // ARRANGE //
-        FeatureExtractor extractor = FeatureConfiguration.load(facadeDirectory().resolve("length.xml"));
+        FeatureExtractor extractor = FeatureConfiguration.load(facadeDirectory().resolve("length.xml"))
+                .fullFeatureExtractor();
 
         // ACT //
         Set<String> rendered = ConfigurationTestSupport.renderFeatures(extractor, List.of("hi"), 0);
 
         // ASSERT //
         assertEquals(Set.of("LENGTH=2"), rendered);
+    }
+
+    @Test
+    void load__keylessFileYieldsEmptyKeyExtractor() {
+        // ACT //
+        AssembledFeatureExtractors assembled = FeatureConfiguration.load(facadeDirectory().resolve("length.xml"));
+
+        // ASSERT //
+        assertTrue(assembled.keyFeatureExtractor().isEmpty());
+    }
+
+    @Test
+    void load__keyMarkerYieldsDistinctFullAndKeyExtractors() {
+        // ARRANGE //
+        AssembledFeatureExtractors assembled = FeatureConfiguration.load(keyedDirectory().resolve("features.xml"));
+
+        // ACT //
+        Set<String> fullRendered = ConfigurationTestSupport
+                .renderFeatures(assembled.fullFeatureExtractor(), List.of("ab", "cde"), 1);
+        Set<String> keyRendered = ConfigurationTestSupport
+                .renderFeatures(assembled.keyFeatureExtractor().orElseThrow(), List.of("ab", "cde"), 1);
+
+        // ASSERT //
+        assertEquals(Set.of("LENGTH=3", "PREFIX2=cd", "PREV_1__LENGTH=2", "PREV_1__PREFIX2=ab"), fullRendered);
+        assertEquals(Set.of("LENGTH=3", "PREFIX2=cd"), keyRendered);
     }
 
     @Test
@@ -118,7 +149,7 @@ class FeatureConfigurationTest {
         // ARRANGE //
         URL url = ConfigurationTestSupport
                 .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/features.xml");
-        FeatureExtractor extractor = FeatureConfiguration.load(url);
+        FeatureExtractor extractor = FeatureConfiguration.load(url).fullFeatureExtractor();
 
         // ACT //
         Set<String> rendered = ConfigurationTestSupport.renderFeatures(extractor, List.of("Ohio"), 0);
