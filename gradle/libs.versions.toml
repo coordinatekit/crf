@@ -5,7 +5,7 @@ picocli = "4.7.7"
 
 # implementation — keep current
 jline = "3.30.15"
-mallet = "2.0.8"
+mallet = "2.1.0"
 slf4j = "2.0.18"
 
 # test — always latest
