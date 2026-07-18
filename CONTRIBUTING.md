@@ -12,23 +12,20 @@ participating, you are expected to uphold this code. Please report unacceptable 
 
 ### Reporting Bugs
 
-Before creating a bug report, please check existing issues to avoid duplicates. When creating a bug report, include:
-
-- A clear, descriptive title
-- Steps to reproduce the issue
-- Expected behavior vs actual behavior
-- Your environment (Java version, OS, library version)
-- Relevant logs or error messages
-- A minimal code example that reproduces the issue
+Before creating a bug report, please check existing issues to avoid duplicates. Then open a
+[bug report](https://github.com/coordinatekit/crf/issues/new?template=bug_report.yml), which walks through the
+reproduction steps, environment, and expected/actual behavior a maintainer needs.
 
 ### Suggesting Enhancements
 
-Enhancement suggestions are welcome! Please include:
+Enhancement suggestions are welcome! Open a
+[feature request](https://github.com/coordinatekit/crf/issues/new?template=feature_request.yml) describing the
+problem you're trying to solve and the solution you have in mind.
 
-- A clear, descriptive title
-- A detailed description of the proposed enhancement
-- The motivation and use case
-- Examples of how the enhancement would be used
+### Filing a Task
+
+For internally driven work with no user-facing behavior change, such as a chore, refactor, doc update, or build/CI
+change, open a [task](https://github.com/coordinatekit/crf/issues/new?template=task.yml) instead.
 
 ### Pull Requests
 
@@ -108,7 +105,7 @@ We use a fork and pull request workflow:
 
 ### Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Git
 
 ### Building the Project
@@ -120,7 +117,8 @@ We use a fork and pull request workflow:
 # Build a specific module
 ./gradlew :core:build
 ./gradlew :mallet:build
-./gradlew :lingpipe:build
+./gradlew :annotator:build
+./gradlew :cli:build
 ```
 
 ### Running Tests
@@ -132,7 +130,8 @@ We use a fork and pull request workflow:
 # Run tests for a specific module
 ./gradlew :core:test
 ./gradlew :mallet:test
-./gradlew :lingpipe:test
+./gradlew :annotator:test
+./gradlew :cli:test
 
 # Run a specific test class
 ./gradlew :core:test --tests "org.coordinatekit.crf.core.InputSequenceTest"
