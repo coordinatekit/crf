@@ -14,7 +14,7 @@ logback = "1.5.38"
 
 # build — keep current
 errorprone = "2.50.0"
-nullaway = "0.13.7"
+nullaway = "0.13.8"
 
 # plugins
 dependency-license-report = "3.1.4"
