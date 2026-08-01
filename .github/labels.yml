@@ -22,6 +22,10 @@
   color: e99695
   description: Blocked on an external dependency or another issue
 
+- name: epic
+  color: 9b7fd4
+  description: Tracks a body of work spanning multiple issues
+
 - name: good first issue
   color: d4c5f9
   description: Approachable for a first-time contributor

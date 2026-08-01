@@ -65,7 +65,7 @@ crf/
 ## Requirements
 
 - Java 21 or higher
-- Gradle 8.x (wrapper included)
+- Gradle 9.x (wrapper included)
 
 ## Installation
 

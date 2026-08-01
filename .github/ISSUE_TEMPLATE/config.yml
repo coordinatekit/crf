@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question
+    url: https://github.com/coordinatekit/crf/blob/main/CONTRIBUTING.md#questions
+    about: Open a blank issue and add the "question" label. Not for bugs or feature requests.
