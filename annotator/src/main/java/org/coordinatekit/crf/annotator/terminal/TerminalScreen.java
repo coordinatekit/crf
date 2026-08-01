@@ -84,7 +84,7 @@ final class TerminalScreen {
      */
     void render(SequenceScreenRenderer renderer, TaggingViewModel viewModel) {
         AttributedStringBuilder builder = new AttributedStringBuilder();
-        renderer.appendTo(builder, viewModel, terminal.getWidth());
+        renderer.appendTo(builder, viewModel, terminal.getSize().getColumns());
         write(builder);
     }
 
