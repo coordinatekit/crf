@@ -4,7 +4,8 @@ jspecify = "1.0.0"
 picocli = "4.7.7"
 
 # implementation — keep current
-jline = "3.30.15"
+coordinatekit-foundation = "0.1.0"
+jline = "4.3.1"
 mallet = "2.0.8"
 slf4j = "2.0.18"
 
@@ -24,9 +25,9 @@ sonatype-central-portal-publisher = "1.2.4"
 spotless = "8.8.0"
 
 [libraries]
+coordinatekit-cli-brand = { module = "org.coordinatekit.foundation:cli-brand", version.ref = "coordinatekit-foundation" }
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
-jline-terminal-jansi = { module = "org.jline:jline-terminal-jansi", version.ref = "jline" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }

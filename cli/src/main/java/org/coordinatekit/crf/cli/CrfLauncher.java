@@ -49,15 +49,6 @@ import picocli.CommandLine;
  */
 @NullMarked
 public final class CrfLauncher {
-    /**
-     * The CRF wordmark: its figlet art and the cyan accent the "CRF" name is painted in. The
-     * "CoordinateKit" half of the banner and the brand colors are fixed inside {@link Banner}; this is
-     * the only product-specific piece, so a sibling tool reuses {@code Banner} unchanged and supplies
-     * its own product here.
-     */
-    private static final Banner.Product CRF_PRODUCT = Banner.Product
-            .fromResources(CrfLauncher.class, "banner/crf-big.txt", "banner/crf-small.txt", 91, 199, 227);
-
     private CrfLauncher() {
         throw new UnsupportedOperationException("CrfLauncher is a utility class and cannot be instantiated");
     }
@@ -76,7 +67,7 @@ public final class CrfLauncher {
         // Show the brand banner above the root usage (crf --help and bare crf). Only the root command's
         // section map is touched, so subcommand help and --version are unaffected.
         Map<String, CommandLine.IHelpSectionRenderer> sections = commandLine.getHelpSectionMap();
-        sections.put(CommandLine.Model.UsageMessageSpec.SECTION_KEY_HEADER, new Banner(CRF_PRODUCT));
+        sections.put(CommandLine.Model.UsageMessageSpec.SECTION_KEY_HEADER, new BannerHeaderRenderer());
         commandLine.setHelpSectionMap(sections);
         return commandLine.addSubcommand(new AnnotatorCommand(servicesBuilder))
                 .addSubcommand(new RetokenizeCommand(servicesBuilder));

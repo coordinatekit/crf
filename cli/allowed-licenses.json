@@ -42,6 +42,10 @@
       "moduleLicense": "GNU Lesser General Public License, Version 3.0"
     },
     {
+      "moduleName": "org.coordinatekit.foundation:cli-brand",
+      "moduleLicense": "Apache License, Version 2.0"
+    },
+    {
       "moduleName": "org.jline:jline",
       "moduleLicense": "The 3-Clause BSD License"
     },
