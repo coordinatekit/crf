@@ -17,7 +17,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Code Style
 
-- Uses Google Java Style Guide enforced via Spotless (Eclipse formatter config in `.infra/eclipse_java_coordinatekit.xml`)
+- Uses Google Java Style Guide enforced via Spotless (Eclipse formatter profile from `org.coordinatekit.foundation:conventions`)
 - JSpecify annotations for null safety (`@NullMarked` on classes, `@Nullable` for nullable parameters/returns)
 - All source files require Apache 2.0 license header (template in `.infra/license_header.txt`)
 - Requires Java 21+

@@ -26,6 +26,7 @@ spotless = "8.9.0"
 
 [libraries]
 coordinatekit-cli-brand = { module = "org.coordinatekit.foundation:cli-brand", version.ref = "coordinatekit-foundation" }
+coordinatekit-conventions = { module = "org.coordinatekit.foundation:conventions", version.ref = "coordinatekit-foundation" }
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
