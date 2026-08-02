@@ -311,13 +311,14 @@ final class ResolvedServices {
                 resolvedFullFeatureExtractor = CrfServices.fullFeatureExtractor(fullFeatureExtractor).orElse(null);
                 resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor).orElse(null);
                 resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
-                resolvedTagProvider = CrfServices.tagProvider(tagProvider).orElseThrow(
-                        () -> new CrfStartupException(
-                                "no TagProvider is available: register a TagProvider service"
-                                        + " (a META-INF/services/org.coordinatekit.crf.core.TagProvider entry)"
-                                        + " so the launcher can build the label space"
-                        )
-                );
+                resolvedTagProvider = CrfServices.tagProvider(tagProvider)
+                        .orElseThrow(
+                                () -> new CrfStartupException(
+                                        "no TagProvider is available: register a TagProvider service"
+                                                + " (a META-INF/services/org.coordinatekit.crf.core.TagProvider entry)"
+                                                + " so the launcher can build the label space"
+                                )
+                        );
             } catch (UnknownServiceException exception) {
                 throw unknownServiceStartupException(exception);
             } catch (AmbiguousServiceException exception) {

@@ -598,7 +598,9 @@ class AnnotatorSequenceTest {
                 ),
                 new ImmutabilityParameters(
                         "verboseFeatures_add",
-                        () -> immutableFeaturedSequence().tokens().getFirst().verboseFeatures()
+                        () -> immutableFeaturedSequence().tokens()
+                                .getFirst()
+                                .verboseFeatures()
                                 .add(createFeature("extra"))
                 )
         );

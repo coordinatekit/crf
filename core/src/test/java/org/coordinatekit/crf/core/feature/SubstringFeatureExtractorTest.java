@@ -239,8 +239,10 @@ class SubstringFeatureExtractorTest {
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
         SubstringFeatureExtractor extractor = SubstringFeatureExtractor.builder(parameters.featureMapper())
-                .ending(parameters.ending()).includeIfLessThanLength(parameters.includeIfLessThanLength())
-                .length(parameters.length()).build();
+                .ending(parameters.ending())
+                .includeIfLessThanLength(parameters.includeIfLessThanLength())
+                .length(parameters.length())
+                .build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //

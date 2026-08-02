@@ -88,7 +88,9 @@ class ModelOutputEvaluatorTest {
                 ),
                 new EvaluateParameters(
                         "usesCustomFilePrefixAndSuffix",
-                        ModelOutputConfiguration.builder().filePrefix("crf_model_iter").fileSuffix(".bin")
+                        ModelOutputConfiguration.builder()
+                                .filePrefix("crf_model_iter")
+                                .fileSuffix(".bin")
                                 .iterationInterval(1),
                         null,
                         false,
@@ -97,7 +99,9 @@ class ModelOutputEvaluatorTest {
                 ),
                 new EvaluateParameters(
                         "writesModelAtMatchingIteration",
-                        ModelOutputConfiguration.builder().filePrefix(FILE_PREFIX).fileSuffix(FILE_SUFFIX)
+                        ModelOutputConfiguration.builder()
+                                .filePrefix(FILE_PREFIX)
+                                .fileSuffix(FILE_SUFFIX)
                                 .iterationInterval(5),
                         CURRENT_DIRECTORY,
                         true,
@@ -326,7 +330,8 @@ class ModelOutputEvaluatorTest {
 
     private static SortedSet<Path> listDirectory(Path directory) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
-            return paths.filter(Files::isRegularFile).map(directory::relativize)
+            return paths.filter(Files::isRegularFile)
+                    .map(directory::relativize)
                     .collect(Collectors.toCollection(TreeSet::new));
         }
     }

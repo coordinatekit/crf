@@ -45,8 +45,11 @@ class ParserFreeImportsTest {
         Path source = sourceFile(className);
 
         // ACT //
-        List<String> picocliImports = Files.readAllLines(source, StandardCharsets.UTF_8).stream().map(String::trim)
-                .filter(line -> line.startsWith("import ") && line.contains("picocli")).toList();
+        List<String> picocliImports = Files.readAllLines(source, StandardCharsets.UTF_8)
+                .stream()
+                .map(String::trim)
+                .filter(line -> line.startsWith("import ") && line.contains("picocli"))
+                .toList();
 
         // ASSERT //
         assertTrue(
@@ -59,8 +62,13 @@ class ParserFreeImportsTest {
         String relativePath = "org/coordinatekit/crf/annotator/" + className + ".java";
         List<Path> candidates = List
                 .of(Path.of("src/main/java", relativePath), Path.of("annotator/src/main/java", relativePath));
-        return candidates.stream().filter(Files::exists).findFirst().orElseThrow(
-                () -> new AssertionError("could not locate source for " + className + " under any of " + candidates)
-        );
+        return candidates.stream()
+                .filter(Files::exists)
+                .findFirst()
+                .orElseThrow(
+                        () -> new AssertionError(
+                                "could not locate source for " + className + " under any of " + candidates
+                        )
+                );
     }
 }

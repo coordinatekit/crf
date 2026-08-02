@@ -47,8 +47,10 @@ public final class LengthFeatureExtractorFactory implements LeafFeatureExtractor
     @Override
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
-                ParameterDescriptor.builder("name", ParameterKind.STRING).defaultValue("LENGTH")
-                        .description("feature name to emit the character length under").build()
+                ParameterDescriptor.builder("name", ParameterKind.STRING)
+                        .defaultValue("LENGTH")
+                        .description("feature name to emit the character length under")
+                        .build()
         );
     }
 

@@ -164,8 +164,10 @@ class XPathFeatureExtractorTest {
         // ARRANGE //
         XPathFeatureExtractor extractor = XPathFeatureExtractor
                 .builder(classpathResource("english_conjunctions.xml").get(), "/conjunctions/conjunction")
-                .caseSensitive(parameters.caseSensitive()).notPresentFeature(parameters.notPresentFeature())
-                .presentFeature(parameters.presentFeature()).build();
+                .caseSensitive(parameters.caseSensitive())
+                .notPresentFeature(parameters.notPresentFeature())
+                .presentFeature(parameters.presentFeature())
+                .build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //

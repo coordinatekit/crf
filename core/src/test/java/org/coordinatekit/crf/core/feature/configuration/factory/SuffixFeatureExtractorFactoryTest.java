@@ -57,7 +57,9 @@ class SuffixFeatureExtractorFactoryTest {
         return Stream.of(
                 new CreateRenderParameters(
                         "custom_name",
-                        FeatureExtractorNodes.builder("suffix").parameter("name", "SUF").parameter("length", "3")
+                        FeatureExtractorNodes.builder("suffix")
+                                .parameter("name", "SUF")
+                                .parameter("length", "3")
                                 .build(),
                         List.of("running"),
                         0,
@@ -79,8 +81,10 @@ class SuffixFeatureExtractorFactoryTest {
                 ),
                 new CreateRenderParameters(
                         "excludes_short_tokens_when_configured",
-                        FeatureExtractorNodes.builder("suffix").parameter("length", "3")
-                                .parameter("includeIfLessThanLength", "false").build(),
+                        FeatureExtractorNodes.builder("suffix")
+                                .parameter("length", "3")
+                                .parameter("includeIfLessThanLength", "false")
+                                .build(),
                         List.of("hi"),
                         0,
                         Set.of()

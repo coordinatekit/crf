@@ -45,12 +45,16 @@ public final class SequenceLengthFeatureExtractorFactory implements LeafFeatureE
     @Override
     public FeatureExtractor create(FeatureExtractorParameters parameters) {
         LengthFeatureExtractor.Builder builder = LengthFeatureExtractor.builder(parameters.getInteger("limit"));
-        parameters.findString("hasName").ifPresent(
-                hasName -> builder.hasLengthFeatureMapper(length -> createFeatureWithValue(hasName, "" + length))
-        );
-        parameters.findString("lacksName").ifPresent(
-                lacksName -> builder.lacksLengthFeatureMapper(length -> createFeatureWithValue(lacksName, "" + length))
-        );
+        parameters.findString("hasName")
+                .ifPresent(
+                        hasName -> builder
+                                .hasLengthFeatureMapper(length -> createFeatureWithValue(hasName, "" + length))
+                );
+        parameters.findString("lacksName")
+                .ifPresent(
+                        lacksName -> builder
+                                .lacksLengthFeatureMapper(length -> createFeatureWithValue(lacksName, "" + length))
+                );
         return builder.build();
     }
 
@@ -58,11 +62,16 @@ public final class SequenceLengthFeatureExtractorFactory implements LeafFeatureE
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
                 ParameterDescriptor.builder("hasName", ParameterKind.STRING)
-                        .description("feature name emitted for each length the sequence has").build(),
+                        .description("feature name emitted for each length the sequence has")
+                        .build(),
                 ParameterDescriptor.builder("lacksName", ParameterKind.STRING)
-                        .description("feature name emitted for each length the sequence lacks").build(),
-                ParameterDescriptor.builder("limit", ParameterKind.INTEGER).required(true).minimumValue(1)
-                        .description("the largest length to emit a feature for").build()
+                        .description("feature name emitted for each length the sequence lacks")
+                        .build(),
+                ParameterDescriptor.builder("limit", ParameterKind.INTEGER)
+                        .required(true)
+                        .minimumValue(1)
+                        .description("the largest length to emit a feature for")
+                        .build()
         );
     }
 

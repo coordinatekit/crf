@@ -125,9 +125,11 @@ final class RetokenizeCommand implements Callable<Integer> {
     RetokenizeConfiguration configuration() {
         try {
             return RetokenizeConfiguration.builder()
-                    .input(Objects.requireNonNull(input, "input must not be null after parsing")).model(model)
+                    .input(Objects.requireNonNull(input, "input must not be null after parsing"))
+                    .model(model)
                     .output(Objects.requireNonNull(output, "output must not be null after parsing"))
-                    .threshold(threshold).build();
+                    .threshold(threshold)
+                    .build();
         } catch (IllegalArgumentException exception) {
             throw new ParameterException(commandLine(), exception.getMessage());
         }

@@ -47,8 +47,10 @@ class FeatureExtractorParametersTest {
             ParameterDescriptor.builder("file", ParameterKind.RESOURCE).required(true).build(),
             ParameterDescriptor.builder("flag", ParameterKind.BOOLEAN).defaultValue("true").build(),
             ParameterDescriptor.builder("label", ParameterKind.STRING).defaultValue("X").build(),
-            ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION).allowedValues(Set.of("fast", "slow"))
-                    .defaultValue("fast").build(),
+            ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
+                    .allowedValues(Set.of("fast", "slow"))
+                    .defaultValue("fast")
+                    .build(),
             ParameterDescriptor.builder("note", ParameterKind.STRING).build()
     );
 

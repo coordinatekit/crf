@@ -58,8 +58,11 @@ final class SequenceScreenRenderer {
         builder.append(viewModel.headerLine());
         builder.append(System.lineSeparator());
 
-        TerminalTable.Builder tokenTable = TerminalTable.builder().column(NUMBER_COLUMN)
-                .column(TOKEN_COLUMN, maxTokenDisplayWidth).column(TAG_COLUMN).column(CONFIDENCE_COLUMN);
+        TerminalTable.Builder tokenTable = TerminalTable.builder()
+                .column(NUMBER_COLUMN)
+                .column(TOKEN_COLUMN, maxTokenDisplayWidth)
+                .column(TAG_COLUMN)
+                .column(CONFIDENCE_COLUMN);
         for (TaggingViewModel.TokenRow row : viewModel.tokenRows()) {
             AttributedStyle style = row.lowConfidence() ? AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW)
                     : AttributedStyle.DEFAULT;
@@ -69,8 +72,10 @@ final class SequenceScreenRenderer {
 
         if (viewModel.featureRows() != null) {
             builder.append(System.lineSeparator());
-            TerminalTable.Builder featuresTable = TerminalTable.builder().terminalWidth(terminalWidth)
-                    .column(NUMBER_COLUMN).column(TOKEN_COLUMN, maxTokenDisplayWidth)
+            TerminalTable.Builder featuresTable = TerminalTable.builder()
+                    .terminalWidth(terminalWidth)
+                    .column(NUMBER_COLUMN)
+                    .column(TOKEN_COLUMN, maxTokenDisplayWidth)
                     .wrappingColumn(FEATURES_COLUMN, FEATURE_SEPARATOR);
             for (TaggingViewModel.FeatureRow row : viewModel.featureRows()) {
                 featuresTable.row(AttributedStyle.DEFAULT, row.number(), row.token(), row.featuresText());

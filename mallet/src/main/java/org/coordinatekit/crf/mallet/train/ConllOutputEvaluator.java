@@ -106,7 +106,8 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
         }
 
         if (instances.isEmpty()) {
-            logger.atDebug().addArgument(iteration)
+            logger.atDebug()
+                    .addArgument(iteration)
                     .log("Iteration {}: No instances to evaluate, skipping CoNLL output");
             return;
         }
@@ -116,10 +117,15 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
 
         try {
             writeConllOutput(trainer.getTransducer(), instances, outputFile);
-            logger.atInfo().addArgument(iteration).addArgument(outputFile)
+            logger.atInfo()
+                    .addArgument(iteration)
+                    .addArgument(outputFile)
                     .log("Iteration {}: Wrote CoNLL output to {}");
         } catch (IOException e) {
-            logger.atError().addArgument(iteration).addArgument(outputFile).setCause(e)
+            logger.atError()
+                    .addArgument(iteration)
+                    .addArgument(outputFile)
+                    .setCause(e)
                     .log("Iteration {}: Failed to write CoNLL output to {}");
         }
     }

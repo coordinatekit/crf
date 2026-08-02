@@ -38,8 +38,10 @@ class SequenceLengthFeatureExtractorFactoryTest {
     @Test
     void create__limitBelowMinimumThrowsLocatedException() {
         // ARRANGE //
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "0")
-                .parameter("hasName", "HAS").build();
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("sequenceLength")
+                .parameter("limit", "0")
+                .parameter("hasName", "HAS")
+                .build();
 
         // ACT //
         FeatureConfigurationException exception = assembleThrows(node);
@@ -55,24 +57,31 @@ class SequenceLengthFeatureExtractorFactoryTest {
         return Stream.of(
                 new CreateRenderParameters(
                         "distinguishes_had_and_lacked_lengths",
-                        FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
-                                .parameter("hasName", "HAS").parameter("lacksName", "LACKS").build(),
+                        FeatureExtractorNodes.builder("sequenceLength")
+                                .parameter("limit", "3")
+                                .parameter("hasName", "HAS")
+                                .parameter("lacksName", "LACKS")
+                                .build(),
                         List.of("a", "bb"),
                         0,
                         Set.of("HAS=1", "HAS=2", "LACKS=3")
                 ),
                 new CreateRenderParameters(
                         "emits_only_had_lengths_when_lacks_name_unset",
-                        FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
-                                .parameter("hasName", "HAS").build(),
+                        FeatureExtractorNodes.builder("sequenceLength")
+                                .parameter("limit", "3")
+                                .parameter("hasName", "HAS")
+                                .build(),
                         List.of("a", "bb"),
                         0,
                         Set.of("HAS=1", "HAS=2")
                 ),
                 new CreateRenderParameters(
                         "emits_only_lacked_lengths_when_has_name_unset",
-                        FeatureExtractorNodes.builder("sequenceLength").parameter("limit", "3")
-                                .parameter("lacksName", "LACKS").build(),
+                        FeatureExtractorNodes.builder("sequenceLength")
+                                .parameter("limit", "3")
+                                .parameter("lacksName", "LACKS")
+                                .build(),
                         List.of("a", "bb"),
                         0,
                         Set.of("LACKS=3")

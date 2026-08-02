@@ -48,8 +48,10 @@ class EnumerationFactoryTest {
         @Override
         public Set<ParameterDescriptor> parameters() {
             return Set.of(
-                    ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION).allowedValues(Set.of("fast", "slow"))
-                            .defaultValue("fast").build()
+                    ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
+                            .allowedValues(Set.of("fast", "slow"))
+                            .defaultValue("fast")
+                            .build()
             );
         }
 

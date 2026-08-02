@@ -156,11 +156,13 @@ class TaggedTokenizationTest {
                         "wrong_sized_tags",
                         IllegalArgumentException.class,
                         "tags must have one entry per token, got: tags=1, tokens=2",
-                        () -> TaggedTokenizations.of(
-                                taggedSequence(List.of("Brown", "Fox")),
-                                tokenization(token("Brown"), excluded(" "), token("Fox")),
-                                tags -> 1.0
-                        ).probabilityOf(List.of("DET"))
+                        () -> TaggedTokenizations
+                                .of(
+                                        taggedSequence(List.of("Brown", "Fox")),
+                                        tokenization(token("Brown"), excluded(" "), token("Fox")),
+                                        tags -> 1.0
+                                )
+                                .probabilityOf(List.of("DET"))
                 )
         );
     }

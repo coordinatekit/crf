@@ -49,8 +49,10 @@ class AnnotatorRunnerTest {
     @Test
     void run__dumbTerminalRejected(@TempDir Path tempDirectory) throws IOException {
         // ARRANGE //
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(tempDirectory.resolve("in.txt"))
-                .output(tempDirectory.resolve("out.xml")).build();
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(tempDirectory.resolve("in.txt"))
+                .output(tempDirectory.resolve("out.xml"))
+                .build();
         AnnotatorRunner.AnnotatorFactory factory = (parsed, terminal) -> {
             throw new AssertionError("factory should not be invoked");
         };
@@ -75,8 +77,11 @@ class AnnotatorRunnerTest {
         Path inputFile = tempDirectory.resolve("in.txt");
         Path outputFile = tempDirectory.resolve("out.xml");
         Files.writeString(inputFile, "the quick brown\nfox jumps over\nthe lazy dog\n", StandardCharsets.UTF_8);
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(inputFile).output(outputFile)
-                .threshold(0.80).build();
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(inputFile)
+                .output(outputFile)
+                .threshold(0.80)
+                .build();
 
         // ACT //
         try (Terminal terminal = interactiveTerminal("A\nA\nX\n")) {
@@ -95,8 +100,10 @@ class AnnotatorRunnerTest {
     void run__ioExceptionReturnsExitCodeOne(@TempDir Path tempDirectory) throws IOException {
         // ARRANGE //
         Path missingInput = tempDirectory.resolve("does-not-exist.txt");
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(missingInput)
-                .output(tempDirectory.resolve("out.xml")).build();
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(missingInput)
+                .output(tempDirectory.resolve("out.xml"))
+                .build();
 
         // ACT //
         int exitCode;
@@ -118,7 +125,9 @@ class AnnotatorRunnerTest {
         Path outputFile = tempDirectory.resolve("out.xml");
         Files.writeString(inputFile, "the quick brown\n", StandardCharsets.UTF_8);
         Files.writeString(outputFile, MALFORMED_XML, StandardCharsets.UTF_8);
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(inputFile).output(outputFile)
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(inputFile)
+                .output(outputFile)
                 .build();
 
         // ACT //

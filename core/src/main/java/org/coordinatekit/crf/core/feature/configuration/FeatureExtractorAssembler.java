@@ -112,13 +112,14 @@ final class FeatureExtractorAssembler {
             );
         }
 
-        FeatureExtractorFactory factory = registry.find(node.type()).orElseThrow(
-                () -> new FeatureConfigurationException(
-                        node.type(),
-                        source,
-                        "unknown extractor type '" + node.type() + "'"
-                )
-        );
+        FeatureExtractorFactory factory = registry.find(node.type())
+                .orElseThrow(
+                        () -> new FeatureConfigurationException(
+                                node.type(),
+                                source,
+                                "unknown extractor type '" + node.type() + "'"
+                        )
+                );
         FeatureExtractorParameters parameters = ParameterValidation
                 .validate(node.type(), node.parameters(), factory.parameters(), baseLocation, source);
 

@@ -46,8 +46,10 @@ class WindowFeatureExtractorFactoryTest {
                 new CreateExceptionParameters(
                         "negative_before",
                         () -> render(
-                                FeatureExtractorNodes.builder("window").parameter("before", "-1")
-                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                FeatureExtractorNodes.builder("window")
+                                        .parameter("before", "-1")
+                                        .child(FeatureExtractorNodes.builder("length").build())
+                                        .build(),
                                 List.of("a"),
                                 0
                         ),
@@ -57,8 +59,10 @@ class WindowFeatureExtractorFactoryTest {
                 new CreateExceptionParameters(
                         "negative_after",
                         () -> render(
-                                FeatureExtractorNodes.builder("window").parameter("after", "-1")
-                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                FeatureExtractorNodes.builder("window")
+                                        .parameter("after", "-1")
+                                        .child(FeatureExtractorNodes.builder("length").build())
+                                        .build(),
                                 List.of("a"),
                                 0
                         ),
@@ -82,33 +86,45 @@ class WindowFeatureExtractorFactoryTest {
         return Stream.of(
                 new CreateRenderParameters(
                         "excludes_current_token_when_configured",
-                        FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
+                        FeatureExtractorNodes.builder("window")
+                                .parameter("before", "1")
+                                .parameter("after", "1")
                                 .parameter("includeCurrentToken", "false")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build(),
                         List.of("a", "bb", "ccc"),
                         1,
                         Set.of("PREV_1__LENGTH=1", "NEXT_1__LENGTH=3")
                 ),
                 new CreateRenderParameters(
                         "skips_neighbor_after_sequence_end",
-                        FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
+                        FeatureExtractorNodes.builder("window")
+                                .parameter("before", "1")
+                                .parameter("after", "1")
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build(),
                         List.of("a", "bb", "ccc"),
                         2,
                         Set.of("PREV_1__LENGTH=2", "LENGTH=3")
                 ),
                 new CreateRenderParameters(
                         "skips_neighbor_before_sequence_start",
-                        FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
+                        FeatureExtractorNodes.builder("window")
+                                .parameter("before", "1")
+                                .parameter("after", "1")
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build(),
                         List.of("a", "bb", "ccc"),
                         0,
                         Set.of("LENGTH=1", "NEXT_1__LENGTH=2")
                 ),
                 new CreateRenderParameters(
                         "stamps_neighbor_offsets",
-                        FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "1")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
+                        FeatureExtractorNodes.builder("window")
+                                .parameter("before", "1")
+                                .parameter("after", "1")
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build(),
                         List.of("a", "bb", "ccc"),
                         1,
                         Set.of("PREV_1__LENGTH=1", "LENGTH=2", "NEXT_1__LENGTH=3")
@@ -129,9 +145,12 @@ class WindowFeatureExtractorFactoryTest {
     @Test
     void create__requiresNonEmptyWindow() {
         // ARRANGE //
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("window").parameter("before", "0")
-                .parameter("after", "0").parameter("includeCurrentToken", "false")
-                .child(FeatureExtractorNodes.builder("length").build()).build();
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("window")
+                .parameter("before", "0")
+                .parameter("after", "0")
+                .parameter("includeCurrentToken", "false")
+                .child(FeatureExtractorNodes.builder("length").build())
+                .build();
 
         // ACT //
         FeatureConfigurationException exception = assembleThrows(node);

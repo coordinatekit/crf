@@ -40,7 +40,9 @@ final class EditScreenRenderer {
         builder.append(viewModel.tokenLine());
         builder.append(System.lineSeparator());
 
-        TerminalTable.Builder table = TerminalTable.builder().column(NUMBER_COLUMN).column(TAG_COLUMN)
+        TerminalTable.Builder table = TerminalTable.builder()
+                .column(NUMBER_COLUMN)
+                .column(TAG_COLUMN)
                 .column(CONFIDENCE_COLUMN);
         for (EditViewModel.TagRow row : viewModel.tagRows()) {
             table.row(AttributedStyle.DEFAULT, row.number(), row.tagText(), row.confidenceText());

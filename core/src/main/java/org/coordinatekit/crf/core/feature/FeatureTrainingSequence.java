@@ -88,7 +88,8 @@ public class FeatureTrainingSequence<T> implements Sequence<FeatureTrainingPosit
                                 Set.copyOf(features.get(index)),
                                 tags.get(index)
                         )
-                ).toList();
+                )
+                .toList();
     }
 
     @Override

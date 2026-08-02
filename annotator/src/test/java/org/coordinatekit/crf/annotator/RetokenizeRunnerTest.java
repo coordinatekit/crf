@@ -53,8 +53,10 @@ class RetokenizeRunnerTest {
     @Test
     void run__dumbTerminalRejected(@TempDir Path tempDirectory) throws IOException {
         // ARRANGE //
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(tempDirectory.resolve("in.xml"))
-                .output(tempDirectory.resolve("out.xml")).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(tempDirectory.resolve("in.xml"))
+                .output(tempDirectory.resolve("out.xml"))
+                .build();
         RetokenizeRunner.ReviewerFactory factory = (parsed, terminal) -> {
             throw new AssertionError("factory should not be invoked");
         };
@@ -78,8 +80,11 @@ class RetokenizeRunnerTest {
         // ARRANGE //
         Path inputFile = writeInput(tempDirectory, words(List.of("Smith,", "Jones"), List.of("NN", "NN")));
         Path outputFile = tempDirectory.resolve("out.xml");
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(inputFile).output(outputFile)
-                .threshold(0.80).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(inputFile)
+                .output(outputFile)
+                .threshold(0.80)
+                .build();
 
         // ACT //
         try (Terminal terminal = interactiveTerminal("A\n")) {
@@ -100,8 +105,10 @@ class RetokenizeRunnerTest {
         // ARRANGE //
         Path inputFile = tempDirectory.resolve("in.xml");
         Files.writeString(inputFile, MALFORMED_XML, StandardCharsets.UTF_8);
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(inputFile)
-                .output(tempDirectory.resolve("out.xml")).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(inputFile)
+                .output(tempDirectory.resolve("out.xml"))
+                .build();
 
         // ACT //
         int exitCode;
@@ -127,7 +134,9 @@ class RetokenizeRunnerTest {
                 tempDirectory.resolve("out.xml"),
                 words(List.of("already", "here"), List.of("NN", "NN"))
         );
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(inputFile).output(outputFile)
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(inputFile)
+                .output(outputFile)
                 .build();
 
         // ACT //
@@ -147,8 +156,10 @@ class RetokenizeRunnerTest {
     void run__reviewIOExceptionReturnsExitCodeOne(@TempDir Path tempDirectory) throws IOException {
         // ARRANGE //
         Path missingInput = tempDirectory.resolve("does-not-exist.xml");
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(missingInput)
-                .output(tempDirectory.resolve("out.xml")).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(missingInput)
+                .output(tempDirectory.resolve("out.xml"))
+                .build();
 
         // ACT //
         int exitCode;

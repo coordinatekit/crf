@@ -57,7 +57,9 @@ class PrefixFeatureExtractorFactoryTest {
         return Stream.of(
                 new CreateRenderParameters(
                         "custom_name",
-                        FeatureExtractorNodes.builder("prefix").parameter("name", "PREFIX2").parameter("length", "2")
+                        FeatureExtractorNodes.builder("prefix")
+                                .parameter("name", "PREFIX2")
+                                .parameter("length", "2")
                                 .build(),
                         List.of("517"),
                         0,
@@ -79,8 +81,10 @@ class PrefixFeatureExtractorFactoryTest {
                 ),
                 new CreateRenderParameters(
                         "excludes_short_tokens_when_configured",
-                        FeatureExtractorNodes.builder("prefix").parameter("length", "4")
-                                .parameter("includeIfLessThanLength", "false").build(),
+                        FeatureExtractorNodes.builder("prefix")
+                                .parameter("length", "4")
+                                .parameter("includeIfLessThanLength", "false")
+                                .build(),
                         List.of("ab"),
                         0,
                         Set.of()

@@ -237,10 +237,12 @@ class PositionFeatureExtractorTest {
     @ParameterizedTest
     void extractAt(ExtractAtParameters parameters) {
         // ARRANGE //
-        PositionFeatureExtractor extractor = PositionFeatureExtractor.builder().firstFeature(parameters.firstFeature())
+        PositionFeatureExtractor extractor = PositionFeatureExtractor.builder()
+                .firstFeature(parameters.firstFeature())
                 .lastFeature(parameters.lastFeature())
                 .positionFromStartFeatureMapper(parameters.positionFromStartFeatureMapper())
-                .positionFromEndFeatureMapper(parameters.positionFromEndFeatureMapper()).build();
+                .positionFromEndFeatureMapper(parameters.positionFromEndFeatureMapper())
+                .build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //

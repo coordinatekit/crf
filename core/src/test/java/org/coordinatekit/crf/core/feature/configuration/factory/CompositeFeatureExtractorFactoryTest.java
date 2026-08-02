@@ -36,7 +36,8 @@ class CompositeFeatureExtractorFactoryTest {
                 new CreateRenderParameters(
                         "single_child_passes_through",
                         FeatureExtractorNodes.builder("composite")
-                                .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build(),
                         List.of("cats"),
                         0,
                         Set.of("LENGTH=4")

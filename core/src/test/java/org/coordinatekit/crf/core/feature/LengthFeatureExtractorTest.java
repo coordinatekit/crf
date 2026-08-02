@@ -155,7 +155,8 @@ class LengthFeatureExtractorTest {
         // ARRANGE //
         LengthFeatureExtractor extractor = LengthFeatureExtractor.builder(parameters.lengthUpperLimit())
                 .hasLengthFeatureMapper(parameters.hasLengthFeatureMapper())
-                .lacksLengthFeatureMapper(parameters.lacksLengthFeatureMapper()).build();
+                .lacksLengthFeatureMapper(parameters.lacksLengthFeatureMapper())
+                .build();
         InputSequence sequence = new InputSequence(parameters.tokens());
 
         // ACT //

@@ -82,7 +82,9 @@ class ConllOutputEvaluatorTest {
         return Stream.of(
                 new EvaluateParameters(
                         "doesNotWriteOutputAtNonMatchingIteration",
-                        ConllOutputConfiguration.builder().filePrefix(FILE_PREFIX).fileSuffix(FILE_SUFFIX)
+                        ConllOutputConfiguration.builder()
+                                .filePrefix(FILE_PREFIX)
+                                .fileSuffix(FILE_SUFFIX)
                                 .iterationInterval(10),
                         null,
                         false,
@@ -110,7 +112,9 @@ class ConllOutputEvaluatorTest {
                 ),
                 new EvaluateParameters(
                         "usesCustomFilePrefixAndSuffix",
-                        ConllOutputConfiguration.builder().filePrefix("predictions_iter").fileSuffix(".tsv")
+                        ConllOutputConfiguration.builder()
+                                .filePrefix("predictions_iter")
+                                .fileSuffix(".tsv")
                                 .iterationInterval(1),
                         null,
                         false,
@@ -378,7 +382,8 @@ class ConllOutputEvaluatorTest {
 
     private static SortedSet<Path> listDirectory(Path directory) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
-            return paths.filter(Files::isRegularFile).map(directory::relativize)
+            return paths.filter(Files::isRegularFile)
+                    .map(directory::relativize)
                     .collect(Collectors.toCollection(TreeSet::new));
         }
     }
@@ -415,12 +420,13 @@ class ConllOutputEvaluatorTest {
         if (lines.size() >= 3) {
             Pattern linePattern = Pattern.compile("^(?:|\\S+\\s\\S+\\s\\S+\\s\\d+\\.\\d+)$");
             assertAll(
-                    IntStream.range(1, lines.size()).mapToObj(
-                            i -> () -> assertTrue(
-                                    linePattern.matcher(lines.get(i)).matches(),
-                                    String.format("Line %d should match pattern: '%s'", i + 1, lines.get(i))
+                    IntStream.range(1, lines.size())
+                            .mapToObj(
+                                    i -> () -> assertTrue(
+                                            linePattern.matcher(lines.get(i)).matches(),
+                                            String.format("Line %d should match pattern: '%s'", i + 1, lines.get(i))
+                                    )
                             )
-                    )
             );
         }
         assertTrue(

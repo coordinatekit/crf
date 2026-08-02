@@ -31,7 +31,9 @@ class XmlTrainingDataConfigurationTest {
     void builder__storesConfiguredValues() {
         // ARRANGE & ACT //
         XmlTrainingDataConfiguration configuration = XmlTrainingDataConfiguration.builder()
-                .rootElementName("AddressCollection").targetNamespace("https://example.org/tags").build();
+                .rootElementName("AddressCollection")
+                .targetNamespace("https://example.org/tags")
+                .build();
 
         // ASSERT //
         assertEquals("AddressCollection", configuration.rootElementName());

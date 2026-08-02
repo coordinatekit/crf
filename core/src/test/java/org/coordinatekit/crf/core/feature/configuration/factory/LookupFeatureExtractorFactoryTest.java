@@ -40,15 +40,19 @@ class LookupFeatureExtractorFactoryTest {
     private static final URL BASE = resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
     private static FeatureExtractorNodes.Builder lookup() {
-        return FeatureExtractorNodes.builder("lookup").parameter("dictionary", "states.xml")
+        return FeatureExtractorNodes.builder("lookup")
+                .parameter("dictionary", "states.xml")
                 .parameter("xpath", "/states/state");
     }
 
     @Test
     void create__invalidXPathThrowsLocatedException() {
         // ARRANGE //
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup").parameter("dictionary", "states.xml")
-                .parameter("xpath", "/states/state[").parameter("name", "STATE").build();
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup")
+                .parameter("dictionary", "states.xml")
+                .parameter("xpath", "/states/state[")
+                .parameter("name", "STATE")
+                .build();
 
         // ACT //
         FeatureConfigurationException exception = assembleThrows(BASE, node);
@@ -63,8 +67,11 @@ class LookupFeatureExtractorFactoryTest {
     @Test
     void create__malformedDictionaryThrowsLocatedException() {
         // ARRANGE //
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup").parameter("dictionary", "malformed.txt")
-                .parameter("xpath", "/states/state").parameter("name", "STATE").build();
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup")
+                .parameter("dictionary", "malformed.txt")
+                .parameter("xpath", "/states/state")
+                .parameter("name", "STATE")
+                .build();
 
         // ACT //
         FeatureConfigurationException exception = assembleThrows(BASE, node);
@@ -82,8 +89,11 @@ class LookupFeatureExtractorFactoryTest {
     @Test
     void create__missingDictionaryThrowsLocatedException() throws MalformedURLException, URISyntaxException {
         // ARRANGE //
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup").parameter("dictionary", "missing.xml")
-                .parameter("xpath", "/states/state").parameter("name", "STATE").build();
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("lookup")
+                .parameter("dictionary", "missing.xml")
+                .parameter("xpath", "/states/state")
+                .parameter("name", "STATE")
+                .build();
 
         // ACT //
         FeatureConfigurationException exception = assembleThrows(BASE, node);
@@ -100,8 +110,10 @@ class LookupFeatureExtractorFactoryTest {
         return Stream.of(
                 new CreateRenderParameters(
                         "present_emits_name_value",
-                        lookup().parameter("name", "STATE").parameter("value", "US")
-                                .parameter("absentName", "NON_STATE").build(),
+                        lookup().parameter("name", "STATE")
+                                .parameter("value", "US")
+                                .parameter("absentName", "NON_STATE")
+                                .build(),
                         List.of("Ohio"),
                         0,
                         Set.of("STATE=US")
@@ -115,8 +127,10 @@ class LookupFeatureExtractorFactoryTest {
                 ),
                 new CreateRenderParameters(
                         "absent_emits_absent_name",
-                        lookup().parameter("name", "STATE").parameter("value", "US")
-                                .parameter("absentName", "NON_STATE").build(),
+                        lookup().parameter("name", "STATE")
+                                .parameter("value", "US")
+                                .parameter("absentName", "NON_STATE")
+                                .build(),
                         List.of("Paris"),
                         0,
                         Set.of("NON_STATE")

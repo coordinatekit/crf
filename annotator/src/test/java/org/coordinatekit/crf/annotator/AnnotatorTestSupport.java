@@ -71,10 +71,17 @@ public final class AnnotatorTestSupport {
     /** Builds the annotate flow's typed beans (string tags, whitespace tokenizer) onto a terminal. */
     public static AnnotatorRunner.AnnotatorFactory annotatorFactory() {
         return (configuration, sharedTerminal) -> {
-            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder().tagProvider(TAG_PROVIDER)
-                    .terminal(sharedTerminal).threshold(configuration.threshold()).build();
-            return Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui).terminal(sharedTerminal)
-                    .tokenizer(new WhitespaceTokenizer()).build();
+            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .terminal(sharedTerminal)
+                    .threshold(configuration.threshold())
+                    .build();
+            return Annotator.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .taggingInterface(ui)
+                    .terminal(sharedTerminal)
+                    .tokenizer(new WhitespaceTokenizer())
+                    .build();
         };
     }
 
@@ -182,10 +189,17 @@ public final class AnnotatorTestSupport {
      */
     public static RetokenizeRunner.ReviewerFactory reviewerFactory() {
         return (configuration, sharedTerminal) -> {
-            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder().tagProvider(TAG_PROVIDER)
-                    .terminal(sharedTerminal).threshold(configuration.threshold()).build();
-            return RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(ui)
-                    .terminal(sharedTerminal).tokenizer(new PunctuationTokenizer()).build();
+            TerminalTaggingInterface<String> ui = TerminalTaggingInterface.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .terminal(sharedTerminal)
+                    .threshold(configuration.threshold())
+                    .build();
+            return RetokenizeReviewer.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .taggingInterface(ui)
+                    .terminal(sharedTerminal)
+                    .tokenizer(new PunctuationTokenizer())
+                    .build();
         };
     }
 

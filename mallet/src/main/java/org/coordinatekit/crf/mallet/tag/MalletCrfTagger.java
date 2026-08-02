@@ -113,7 +113,8 @@ public final class MalletCrfTagger<T extends Comparable<T>> implements CrfTagger
             var tokenFeatures = featureSequence.get(i).features();
             int[] featureIndices = tokenFeatures.stream()
                     .mapToInt(feature -> crf.getInputAlphabet().lookupIndex(featureFormat.render(feature), false))
-                    .filter(index -> index >= 0).toArray();
+                    .filter(index -> index >= 0)
+                    .toArray();
             featureVectors[i] = new FeatureVector(crf.getInputAlphabet(), featureIndices);
         }
 

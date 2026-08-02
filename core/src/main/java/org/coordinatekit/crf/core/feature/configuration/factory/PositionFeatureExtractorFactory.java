@@ -46,15 +46,18 @@ public final class PositionFeatureExtractorFactory implements LeafFeatureExtract
         PositionFeatureExtractor.Builder builder = PositionFeatureExtractor.builder();
         parameters.findString("firstName").ifPresent(firstName -> builder.firstFeature(createFeature(firstName)));
         parameters.findString("lastName").ifPresent(lastName -> builder.lastFeature(createFeature(lastName)));
-        parameters.findString("fromStartName").ifPresent(
-                fromStartName -> builder.positionFromStartFeatureMapper(
-                        position -> createFeatureWithValue(fromStartName, "" + position)
-                )
-        );
-        parameters.findString("fromEndName").ifPresent(
-                fromEndName -> builder
-                        .positionFromEndFeatureMapper(position -> createFeatureWithValue(fromEndName, "" + position))
-        );
+        parameters.findString("fromStartName")
+                .ifPresent(
+                        fromStartName -> builder.positionFromStartFeatureMapper(
+                                position -> createFeatureWithValue(fromStartName, "" + position)
+                        )
+                );
+        parameters.findString("fromEndName")
+                .ifPresent(
+                        fromEndName -> builder.positionFromEndFeatureMapper(
+                                position -> createFeatureWithValue(fromEndName, "" + position)
+                        )
+                );
         return builder.build();
     }
 
@@ -62,13 +65,17 @@ public final class PositionFeatureExtractorFactory implements LeafFeatureExtract
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
                 ParameterDescriptor.builder("firstName", ParameterKind.STRING)
-                        .description("valueless feature name emitted at the first token").build(),
+                        .description("valueless feature name emitted at the first token")
+                        .build(),
                 ParameterDescriptor.builder("fromEndName", ParameterKind.STRING)
-                        .description("feature name emitted with the zero-based distance from the end").build(),
+                        .description("feature name emitted with the zero-based distance from the end")
+                        .build(),
                 ParameterDescriptor.builder("fromStartName", ParameterKind.STRING)
-                        .description("feature name emitted with the zero-based distance from the start").build(),
+                        .description("feature name emitted with the zero-based distance from the start")
+                        .build(),
                 ParameterDescriptor.builder("lastName", ParameterKind.STRING)
-                        .description("valueless feature name emitted at the last token").build()
+                        .description("valueless feature name emitted at the last token")
+                        .build()
         );
     }
 

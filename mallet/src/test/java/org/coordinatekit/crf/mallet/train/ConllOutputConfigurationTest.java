@@ -65,8 +65,12 @@ class ConllOutputConfigurationTest {
     @Test
     void builder_withAllCustomValues_returnsConfigWithCustomValues() {
         Path customDirectory = Path.of("custom", "dir");
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(customDirectory)
-                .filePrefix("predictions").fileSuffix("tsv").iterationInterval(5).build();
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
+                .outputDirectory(customDirectory)
+                .filePrefix("predictions")
+                .fileSuffix("tsv")
+                .iterationInterval(5)
+                .build();
 
         assertEquals(customDirectory, config.outputDirectory());
         assertEquals("predictions", config.filePrefix());
@@ -90,24 +94,30 @@ class ConllOutputConfigurationTest {
 
     @Test
     void builder_filePrefix_acceptsValidValues() {
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .filePrefix("my_prefix").build();
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .filePrefix("my_prefix")
+                .build();
 
         assertEquals("my_prefix", config.filePrefix());
     }
 
     @Test
     void builder_fileSuffix_acceptsValidValues() {
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .fileSuffix("txt").build();
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .fileSuffix("txt")
+                .build();
 
         assertEquals("txt", config.fileSuffix());
     }
 
     @Test
     void builder_iterationInterval_acceptsPositive() {
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .iterationInterval(1).build();
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .iterationInterval(1)
+                .build();
 
         assertEquals(1, config.iterationInterval());
     }

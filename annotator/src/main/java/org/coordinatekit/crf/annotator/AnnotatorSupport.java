@@ -110,7 +110,9 @@ final class AnnotatorSupport {
      * @throws IllegalArgumentException if {@code finalTags} does not have one tag per token segment
      */
     static <T> List<TrainingSegment<T>> toSegments(Tokenization tokenized, List<T> finalTags) {
-        long tokenSegmentCount = tokenized.segments().stream().filter(segment -> segment.kind() == SegmentKind.TOKEN)
+        long tokenSegmentCount = tokenized.segments()
+                .stream()
+                .filter(segment -> segment.kind() == SegmentKind.TOKEN)
                 .count();
         if (finalTags.size() != tokenSegmentCount) {
             throw new IllegalArgumentException(

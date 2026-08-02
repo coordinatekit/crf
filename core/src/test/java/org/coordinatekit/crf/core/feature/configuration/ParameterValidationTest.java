@@ -55,12 +55,17 @@ class ParameterValidationTest {
 
     private static final Set<ParameterDescriptor> PARAMETERS = Set.of(
             ParameterDescriptor.builder("after", ParameterKind.INTEGER).defaultValue("0").build(),
-            ParameterDescriptor.builder("before", ParameterKind.INTEGER).defaultValue("0").minimumValue(0)
-                    .maximumValue(10).build(),
+            ParameterDescriptor.builder("before", ParameterKind.INTEGER)
+                    .defaultValue("0")
+                    .minimumValue(0)
+                    .maximumValue(10)
+                    .build(),
             ParameterDescriptor.builder("dictionary", ParameterKind.RESOURCE).required(true).build(),
             ParameterDescriptor.builder("flag", ParameterKind.BOOLEAN).defaultValue("false").build(),
-            ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION).allowedValues(Set.of("fast", "slow"))
-                    .defaultValue("fast").build()
+            ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
+                    .allowedValues(Set.of("fast", "slow"))
+                    .defaultValue("fast")
+                    .build()
     );
 
     private static FeatureExtractorParameters validate(Map<String, String> raw) {

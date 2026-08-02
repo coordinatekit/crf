@@ -73,7 +73,8 @@ class FeatureExtractorAssemblerTest {
         @Override
         public FeatureExtractor create(FeatureExtractorParameters parameters, List<FeatureExtractor> children) {
             return (Sequence<? extends PositionedToken> sequence, int position) -> children.stream()
-                    .flatMap(child -> child.extractAt(sequence, position).stream()).collect(Collectors.toSet());
+                    .flatMap(child -> child.extractAt(sequence, position).stream())
+                    .collect(Collectors.toSet());
         }
 
         @Override
@@ -112,7 +113,8 @@ class FeatureExtractorAssemblerTest {
                         () -> DISCOVERED_ASSEMBLER.assemble(
                                 FeatureExtractorNodes.builder("window")
                                         .child(FeatureExtractorNodes.builder("length").build())
-                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                        .child(FeatureExtractorNodes.builder("length").build())
+                                        .build(),
                                 BASE_LOCATION
                         ),
                         FeatureConfigurationException.class,
@@ -129,7 +131,8 @@ class FeatureExtractorAssemblerTest {
                         "leaf_given_children",
                         () -> DISCOVERED_ASSEMBLER.assemble(
                                 FeatureExtractorNodes.builder("length")
-                                        .child(FeatureExtractorNodes.builder("length").build()).build(),
+                                        .child(FeatureExtractorNodes.builder("length").build())
+                                        .build(),
                                 BASE_LOCATION
                         ),
                         FeatureConfigurationException.class,
@@ -279,7 +282,8 @@ class FeatureExtractorAssemblerTest {
                 FeatureExtractorFactoryRegistry.of(List.of(new SyntheticNestingFactory(), keyedLeafFactory))
         );
         FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-nesting")
-                .child(FeatureExtractorNodes.builder("keyed-leaf").key(true).build()).build();
+                .child(FeatureExtractorNodes.builder("keyed-leaf").key(true).build())
+                .build();
 
         // ACT //
         AssembledFeatureExtractors assembled = assembler.assemble(node, BASE_LOCATION);
@@ -312,12 +316,17 @@ class FeatureExtractorAssemblerTest {
         // Two windows each looking back one token. Because withOffset replaces the offset, the
         // outer window overwrites the inner one's -1 rather than accumulating to -2, so no PREV_2__
         // feature is ever produced.
-        FeatureExtractorNode node = FeatureExtractorNodes.builder("window").parameter("before", "1")
+        FeatureExtractorNode node = FeatureExtractorNodes.builder("window")
+                .parameter("before", "1")
                 .parameter("after", "0")
                 .child(
-                        FeatureExtractorNodes.builder("window").parameter("before", "1").parameter("after", "0")
-                                .child(FeatureExtractorNodes.builder("length").build()).build()
-                ).build();
+                        FeatureExtractorNodes.builder("window")
+                                .parameter("before", "1")
+                                .parameter("after", "0")
+                                .child(FeatureExtractorNodes.builder("length").build())
+                                .build()
+                )
+                .build();
 
         // ACT //
         FeatureExtractor extractor = DISCOVERED_ASSEMBLER.assemble(node, BASE_LOCATION).fullFeatureExtractor();
@@ -334,7 +343,8 @@ class FeatureExtractorAssemblerTest {
         // ARRANGE //
         FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-nesting")
                 .child(FeatureExtractorNodes.builder("synthetic-a").build())
-                .child(FeatureExtractorNodes.builder("synthetic-b").build()).build();
+                .child(FeatureExtractorNodes.builder("synthetic-b").build())
+                .build();
         FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
                 FeatureExtractorFactoryRegistry.of(
                         List.of(
@@ -388,7 +398,8 @@ class FeatureExtractorAssemblerTest {
         // ARRANGE //
         FeatureExtractorNode node = FeatureExtractorNodes.builder("synthetic-nesting")
                 .child(FeatureExtractorNodes.builder("synthetic-a").key(true).build())
-                .child(FeatureExtractorNodes.builder("synthetic-b").key(true).build()).build();
+                .child(FeatureExtractorNodes.builder("synthetic-b").key(true).build())
+                .build();
         FeatureExtractorAssembler assembler = new FeatureExtractorAssembler(
                 FeatureExtractorFactoryRegistry.of(
                         List.of(
