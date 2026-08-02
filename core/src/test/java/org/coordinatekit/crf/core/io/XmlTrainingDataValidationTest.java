@@ -202,8 +202,10 @@ class XmlTrainingDataValidationTest {
         // ARRANGE //
         XmlTrainingData<String> data = new XmlTrainingData<>(
                 new StringTagProvider(Set.of("Adjective", "Noun"), "Noun"),
-                XmlTrainingDataConfiguration.builder().rootElementName("AddressCollection")
-                        .targetNamespace(TAGS_NAMESPACE).build()
+                XmlTrainingDataConfiguration.builder()
+                        .rootElementName("AddressCollection")
+                        .targetNamespace(TAGS_NAMESPACE)
+                        .build()
         );
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (var writer = data.writer(output)) {

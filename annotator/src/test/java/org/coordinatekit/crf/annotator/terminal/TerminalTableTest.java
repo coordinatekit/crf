@@ -44,8 +44,10 @@ class TerminalTableTest {
     @Test
     void appendTo__appliesRowStyleToDataRowsOnly() {
         // ARRANGE //
-        TerminalTable table = TerminalTable.builder().column("Tag")
-                .row(AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW), "Noun").build();
+        TerminalTable table = TerminalTable.builder()
+                .column("Tag")
+                .row(AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW), "Noun")
+                .build();
         AttributedStringBuilder builder = new AttributedStringBuilder();
 
         // ACT //
@@ -61,7 +63,9 @@ class TerminalTableTest {
     @Test
     void appendTo__cappedColumnTruncatesWithEllipsis() {
         // ARRANGE //
-        TerminalTable table = TerminalTable.builder().column("Token", 5).row(AttributedStyle.DEFAULT, "abcdefgh")
+        TerminalTable table = TerminalTable.builder()
+                .column("Token", 5)
+                .row(AttributedStyle.DEFAULT, "abcdefgh")
                 .build();
 
         // ACT //
@@ -75,8 +79,12 @@ class TerminalTableTest {
     @Test
     void appendTo__rendersHeaderSeparatorAndPaddedRows() {
         // ARRANGE //
-        TerminalTable table = TerminalTable.builder().column("##").column("Tag").column("Confidence")
-                .row(AttributedStyle.DEFAULT, "1", "Noun", "0.9000").row(AttributedStyle.DEFAULT, "2", "Verb", "0.1000")
+        TerminalTable table = TerminalTable.builder()
+                .column("##")
+                .column("Tag")
+                .column("Confidence")
+                .row(AttributedStyle.DEFAULT, "1", "Noun", "0.9000")
+                .row(AttributedStyle.DEFAULT, "2", "Verb", "0.1000")
                 .build();
 
         // ACT //
@@ -122,9 +130,13 @@ class TerminalTableTest {
     @ParameterizedTest
     void appendTo__wrapsLastColumn(WrapParameters parameters) {
         // ARRANGE //
-        TerminalTable table = TerminalTable.builder().terminalWidth(parameters.terminalWidth()).column("##")
-                .column("Token", 30).wrappingColumn("Features", ", ")
-                .row(AttributedStyle.DEFAULT, "1", "fox", parameters.features()).build();
+        TerminalTable table = TerminalTable.builder()
+                .terminalWidth(parameters.terminalWidth())
+                .column("##")
+                .column("Token", 30)
+                .wrappingColumn("Features", ", ")
+                .row(AttributedStyle.DEFAULT, "1", "fox", parameters.features())
+                .build();
 
         // ACT //
         String rendered = render(table);

@@ -47,7 +47,8 @@ public final class PatternFeatureExtractorFactory implements LeafFeatureExtracto
     @Override
     public FeatureExtractor create(FeatureExtractorParameters parameters) {
         String name = parameters.getString("name");
-        Feature matchedFeature = parameters.findString("value").map(value -> createFeatureWithValue(name, value))
+        Feature matchedFeature = parameters.findString("value")
+                .map(value -> createFeatureWithValue(name, value))
                 .orElseGet(() -> createFeature(name));
         PatternMatchingFeatureExtractor.Builder builder = PatternMatchingFeatureExtractor
                 .builder(parameters.getString("regex"), parameters.getBoolean("caseSensitive"))
@@ -60,16 +61,24 @@ public final class PatternFeatureExtractorFactory implements LeafFeatureExtracto
     @Override
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
-                ParameterDescriptor.builder("caseSensitive", ParameterKind.BOOLEAN).defaultValue("true")
-                        .description("whether the regular expression matches case-sensitively").build(),
-                ParameterDescriptor.builder("name", ParameterKind.STRING).required(true)
-                        .description("feature name emitted when the token matches").build(),
+                ParameterDescriptor.builder("caseSensitive", ParameterKind.BOOLEAN)
+                        .defaultValue("true")
+                        .description("whether the regular expression matches case-sensitively")
+                        .build(),
+                ParameterDescriptor.builder("name", ParameterKind.STRING)
+                        .required(true)
+                        .description("feature name emitted when the token matches")
+                        .build(),
                 ParameterDescriptor.builder("notMatchedName", ParameterKind.STRING)
-                        .description("feature name emitted when the token does not match").build(),
-                ParameterDescriptor.builder("regex", ParameterKind.STRING).required(true)
-                        .description("the regular expression each token is tested against").build(),
+                        .description("feature name emitted when the token does not match")
+                        .build(),
+                ParameterDescriptor.builder("regex", ParameterKind.STRING)
+                        .required(true)
+                        .description("the regular expression each token is tested against")
+                        .build(),
                 ParameterDescriptor.builder("value", ParameterKind.STRING)
-                        .description("feature value emitted with the name when the token matches").build()
+                        .description("feature value emitted with the name when the token matches")
+                        .build()
         );
     }
 

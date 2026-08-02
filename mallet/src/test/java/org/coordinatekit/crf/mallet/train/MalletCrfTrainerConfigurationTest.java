@@ -154,7 +154,8 @@ class MalletCrfTrainerConfigurationTest {
         MalletCrfTrainerConfiguration configNegative = MalletCrfTrainerConfiguration.builder().randomSeed(-100).build();
         MalletCrfTrainerConfiguration configZero = MalletCrfTrainerConfiguration.builder().randomSeed(0).build();
         MalletCrfTrainerConfiguration configPositive = MalletCrfTrainerConfiguration.builder()
-                .randomSeed(Integer.MAX_VALUE).build();
+                .randomSeed(Integer.MAX_VALUE)
+                .build();
 
         assertEquals(-100, configNegative.randomSeed());
         assertEquals(0, configZero.randomSeed());
@@ -163,7 +164,8 @@ class MalletCrfTrainerConfigurationTest {
 
     @Test
     void builder_trainingFraction_acceptsValidRange() {
-        MalletCrfTrainerConfiguration configMin = MalletCrfTrainerConfiguration.builder().trainingFraction(0.001)
+        MalletCrfTrainerConfiguration configMin = MalletCrfTrainerConfiguration.builder()
+                .trainingFraction(0.001)
                 .build();
         MalletCrfTrainerConfiguration configMax = MalletCrfTrainerConfiguration.builder().trainingFraction(1.0).build();
 
@@ -182,9 +184,15 @@ class MalletCrfTrainerConfigurationTest {
 
     @Test
     void builder_withAllCustomValues_returnsConfigWithCustomValues() {
-        MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().gaussianVariance(5.0)
-                .trainingFraction(0.8).randomSeed(42).iterations(1000).fullyConnected(false)
-                .weightsType(WeightsType.SPARSE).threads(12).build();
+        MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder()
+                .gaussianVariance(5.0)
+                .trainingFraction(0.8)
+                .randomSeed(42)
+                .iterations(1000)
+                .fullyConnected(false)
+                .weightsType(WeightsType.SPARSE)
+                .threads(12)
+                .build();
 
         assertEquals(5.0, config.gaussianVariance());
         assertEquals(0.8, config.trainingFraction());

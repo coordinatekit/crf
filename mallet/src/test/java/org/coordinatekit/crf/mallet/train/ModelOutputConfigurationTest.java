@@ -65,8 +65,12 @@ class ModelOutputConfigurationTest {
     @Test
     void builder_withAllCustomValues_returnsConfigWithCustomValues() {
         Path customDirectory = Path.of("custom", "dir");
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(customDirectory)
-                .filePrefix("crf_model").fileSuffix("bin").iterationInterval(5).build();
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
+                .outputDirectory(customDirectory)
+                .filePrefix("crf_model")
+                .fileSuffix("bin")
+                .iterationInterval(5)
+                .build();
 
         assertEquals(customDirectory, config.outputDirectory());
         assertEquals("crf_model", config.filePrefix());
@@ -90,24 +94,30 @@ class ModelOutputConfigurationTest {
 
     @Test
     void builder_filePrefix_acceptsValidValues() {
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .filePrefix("my_prefix").build();
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .filePrefix("my_prefix")
+                .build();
 
         assertEquals("my_prefix", config.filePrefix());
     }
 
     @Test
     void builder_fileSuffix_acceptsValidValues() {
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .fileSuffix("bin").build();
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .fileSuffix("bin")
+                .build();
 
         assertEquals("bin", config.fileSuffix());
     }
 
     @Test
     void builder_iterationInterval_acceptsPositive() {
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR)
-                .iterationInterval(1).build();
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
+                .outputDirectory(TEST_OUTPUT_DIR)
+                .iterationInterval(1)
+                .build();
 
         assertEquals(1, config.iterationInterval());
     }

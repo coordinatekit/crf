@@ -103,10 +103,11 @@ class SequenceScreenRendererTest {
         // ASSERT //
         assertTrue(output.contains("Sequence 1 of 1: The fox"), "expected the header line");
         assertTrue(
-                output.lines().anyMatch(
-                        line -> line.contains("##") && line.contains("Token") && line.contains("Tag")
-                                && line.contains("Confidence")
-                ),
+                output.lines()
+                        .anyMatch(
+                                line -> line.contains("##") && line.contains("Token") && line.contains("Tag")
+                                        && line.contains("Confidence")
+                        ),
                 "expected the column header row"
         );
         assertTrue(

@@ -85,7 +85,10 @@ public class CompositeTestAccuracyEvaluator extends TransducerEvaluator {
             double instanceAccuracy = instanceAccuracyEvaluator.getAccuracy(description);
             double tokenAccuracy = tokenAccuracyEvaluator.getAccuracy(description);
 
-            logger.atInfo().addArgument(iteration).addArgument(logLikelihood).addArgument(instanceAccuracy)
+            logger.atInfo()
+                    .addArgument(iteration)
+                    .addArgument(logLikelihood)
+                    .addArgument(instanceAccuracy)
                     .addArgument(tokenAccuracy)
                     .log("Iteration {}: log likelihood = {}, instance accuracy = {}, token accuracy = {}");
         }

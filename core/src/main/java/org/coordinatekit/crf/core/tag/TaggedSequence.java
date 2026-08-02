@@ -46,7 +46,8 @@ public class TaggedSequence<T extends Comparable<T>> implements Sequence<TaggedP
     private record TaggedSequenceTagScore<T extends Comparable<T>> (T tag, double score) implements TagScore<T> {
         @Override
         public int compareTo(TagScore<T> that) {
-            return Comparator.comparingDouble((TagScore<T> ts) -> -1 * ts.score()).thenComparing(TagScore::tag)
+            return Comparator.comparingDouble((TagScore<T> ts) -> -1 * ts.score())
+                    .thenComparing(TagScore::tag)
                     .compare(this, that);
         }
     }
@@ -115,11 +116,14 @@ public class TaggedSequence<T extends Comparable<T>> implements Sequence<TaggedP
                                 index,
                                 tokens.get(index),
                                 Set.copyOf(features.get(index)),
-                                tagScores.get(index).entrySet().stream()
+                                tagScores.get(index)
+                                        .entrySet()
+                                        .stream()
                                         .map(entry -> new TaggedSequenceTagScore<>(entry.getKey(), entry.getValue()))
                                         .collect(Collectors.toCollection(TreeSet::new))
                         )
-                ).toList();
+                )
+                .toList();
     }
 
     @Override

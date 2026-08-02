@@ -33,16 +33,22 @@ import java.util.stream.Stream;
 /** Tests the {@code position} factory emits features derived from a token's position. */
 class PositionFeatureExtractorFactoryTest {
     private static FeatureExtractorNode allNames() {
-        return FeatureExtractorNodes.builder("position").parameter("firstName", "FIRST").parameter("lastName", "LAST")
-                .parameter("fromStartName", "START").parameter("fromEndName", "END").build();
+        return FeatureExtractorNodes.builder("position")
+                .parameter("firstName", "FIRST")
+                .parameter("lastName", "LAST")
+                .parameter("fromStartName", "START")
+                .parameter("fromEndName", "END")
+                .build();
     }
 
     static Stream<CreateRenderParameters> create__render() {
         return Stream.of(
                 new CreateRenderParameters(
                         "emits_only_configured_names",
-                        FeatureExtractorNodes.builder("position").parameter("firstName", "FIRST")
-                                .parameter("fromStartName", "START").build(),
+                        FeatureExtractorNodes.builder("position")
+                                .parameter("firstName", "FIRST")
+                                .parameter("fromStartName", "START")
+                                .build(),
                         List.of("a", "bb", "ccc"),
                         0,
                         Set.of("FIRST", "START=0")

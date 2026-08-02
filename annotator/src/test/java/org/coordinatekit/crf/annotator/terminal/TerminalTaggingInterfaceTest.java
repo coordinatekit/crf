@@ -256,14 +256,17 @@ class TerminalTaggingInterfaceTest {
                 new BuilderExceptionParameters(
                         "buildWithoutTerminal",
                         () -> TerminalTaggingInterface.<PartOfSpeech>builder()
-                                .tagProvider(new PartOfSpeechTagProvider()).build(),
+                                .tagProvider(new PartOfSpeechTagProvider())
+                                .build(),
                         IllegalStateException.class,
                         "terminal must be set"
                 ),
                 new BuilderExceptionParameters("buildWithEmptyTags", () -> {
                     try (Terminal terminal = quietTerminal()) {
-                        TerminalTaggingInterface.<PartOfSpeech>builder().tagProvider(emptyTagProvider())
-                                .terminal(terminal).build();
+                        TerminalTaggingInterface.<PartOfSpeech>builder()
+                                .tagProvider(emptyTagProvider())
+                                .terminal(terminal)
+                                .build();
                     }
                 }, IllegalStateException.class, "tagProvider.tags() must not be empty")
         );
@@ -499,7 +502,8 @@ class TerminalTaggingInterfaceTest {
 
         // ASSERT //
         assertEquals(TaggingAction.ACCEPT, interaction.result().action());
-        boolean promptLineFound = interaction.output().lines()
+        boolean promptLineFound = interaction.output()
+                .lines()
                 .anyMatch(line -> line.trim().equals(parameters.expectedPrompt()));
         assertTrue(promptLineFound, "expected footer prompt: " + parameters.expectedPrompt());
     }
@@ -565,7 +569,8 @@ class TerminalTaggingInterfaceTest {
         // A row is styled exactly when its confidence falls below the threshold, so the expected count
         // is derived from the fixture's confidences rather than hard-coded.
         long expectedStyledRowCount = WITH_MODEL_CONFIDENCES.stream()
-                .filter(confidence -> confidence < parameters.threshold()).count();
+                .filter(confidence -> confidence < parameters.threshold())
+                .count();
 
         // ACT //
         var interaction = run("A\n", sequence, builder -> builder.threshold(parameters.threshold()));
@@ -730,7 +735,8 @@ class TerminalTaggingInterfaceTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
             TerminalTaggingInterface.Builder<PartOfSpeech> builder = TerminalTaggingInterface.<PartOfSpeech>builder()
-                    .tagProvider(new PartOfSpeechTagProvider()).terminal(terminal);
+                    .tagProvider(new PartOfSpeechTagProvider())
+                    .terminal(terminal);
             customize.accept(builder);
             TerminalTaggingInterface<PartOfSpeech> ui = builder.build();
             TaggingResult<PartOfSpeech> result = ui.present(sequence);
@@ -749,7 +755,10 @@ class TerminalTaggingInterfaceTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
             TerminalTaggingInterface<PartOfSpeech> ui = TerminalTaggingInterface.<PartOfSpeech>builder()
-                    .tagProvider(new PartOfSpeechTagProvider()).terminal(terminal).maxTokenDisplayWidth(30).build();
+                    .tagProvider(new PartOfSpeechTagProvider())
+                    .terminal(terminal)
+                    .maxTokenDisplayWidth(30)
+                    .build();
             TaggingResult<PartOfSpeech> result = null;
             for (AnnotatorSequence<PartOfSpeech> sequence : sequences) {
                 result = ui.present(sequence);

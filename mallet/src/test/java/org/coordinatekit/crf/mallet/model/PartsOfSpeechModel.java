@@ -65,8 +65,11 @@ public enum PartsOfSpeechModel {
                 featureFormat(),
                 tagProvider(),
                 new XmlTrainingData<>(tagProvider()),
-                MalletCrfTrainerConfiguration.builder().conllOutputEnabled(false).modelOutputEnabled(false)
-                        .trainingFraction(1).build()
+                MalletCrfTrainerConfiguration.builder()
+                        .conllOutputEnabled(false)
+                        .modelOutputEnabled(false)
+                        .trainingFraction(1)
+                        .build()
         );
         trainer.train(resourcePath(TRAINING_DATA_RESOURCE), modelPath);
     }

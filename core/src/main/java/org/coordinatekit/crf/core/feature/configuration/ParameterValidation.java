@@ -71,7 +71,8 @@ final class ParameterValidation {
             URL baseLocation,
             @Nullable SourceLocation source
     ) {
-        List<ParameterDescriptor> ordered = parameters.stream().sorted(Comparator.comparing(ParameterDescriptor::name))
+        List<ParameterDescriptor> ordered = parameters.stream()
+                .sorted(Comparator.comparing(ParameterDescriptor::name))
                 .toList();
         for (String name : rawParameters.keySet()) {
             if (lookup(parameters, name) == null) {

@@ -166,7 +166,9 @@ class ResolvedServicesFactoryTest {
                 ),
                 new WarningParameters(
                         "missing_extractor_with_model_warns",
-                        () -> ResolvedServices.builder().tagProvider(TAG_PROVIDER).tokenizer(new WhitespaceTokenizer())
+                        () -> ResolvedServices.builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .tokenizer(new WhitespaceTokenizer())
                                 .taggerLoader(TAGGER_LOADER),
                         Path.of("model.bin"),
                         true
@@ -284,8 +286,11 @@ class ResolvedServicesFactoryTest {
     }
 
     private static ResolvedServices.Builder builder() {
-        return ResolvedServices.builder().tagProvider(TAG_PROVIDER).fullFeatureExtractor(FEATURE_EXTRACTOR)
-                .tokenizer(new WhitespaceTokenizer()).taggerLoader(TAGGER_LOADER);
+        return ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(FEATURE_EXTRACTOR)
+                .tokenizer(new WhitespaceTokenizer())
+                .taggerLoader(TAGGER_LOADER);
     }
 
     private static ResolvedServices.Builder configuredBuilder() {
@@ -344,8 +349,12 @@ class ResolvedServicesFactoryTest {
     }
 
     private static ResolvedServices routingServices() {
-        return ResolvedServices.builder().tagProvider(TAG_PROVIDER).tokenizer(new WhitespaceTokenizer())
-                .fullFeatureExtractor(FULL_EXTRACTOR).keyFeatureExtractor(KEY_EXTRACTOR).resolve();
+        return ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .tokenizer(new WhitespaceTokenizer())
+                .fullFeatureExtractor(FULL_EXTRACTOR)
+                .keyFeatureExtractor(KEY_EXTRACTOR)
+                .resolve();
     }
 
     @Test

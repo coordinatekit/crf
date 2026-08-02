@@ -97,8 +97,10 @@ class ResolvedServicesTest {
     void loadTagger__loadFailuresWrappedAsStartupException(LoadFailureParameters parameters) {
         // ARRANGE //
         FeatureExtractor featureExtractor = (sequence, position) -> Set.of();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.throwing(parameters.thrown()))
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(featureExtractor)
+                .taggerLoader(TestCrfTaggerLoader.throwing(parameters.thrown()))
                 .resolve();
 
         // ACT //
@@ -116,8 +118,10 @@ class ResolvedServicesTest {
     void loadTagger__loadsViaTaggerLoader() {
         // ARRANGE //
         FeatureExtractor featureExtractor = (sequence, position) -> Set.of();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(featureExtractor).taggerLoader(TestCrfTaggerLoader.returning(UNUSED_TAGGER))
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(featureExtractor)
+                .taggerLoader(TestCrfTaggerLoader.returning(UNUSED_TAGGER))
                 .resolve();
 
         // ACT //
@@ -132,8 +136,11 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
         TestCrfTaggerLoader loader = TestCrfTaggerLoader.returning(UNUSED_TAGGER);
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(fullFeatureExtractor).taggerLoader(loader).resolve();
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor)
+                .taggerLoader(loader)
+                .resolve();
 
         // ACT //
         resolvedServices.loadTagger(Path.of("model.bin"));
@@ -151,7 +158,9 @@ class ResolvedServicesTest {
     void loadTagger__modelWithoutFeatureExtractorLoads() {
         // ARRANGE //
         TestCrfTaggerLoader loader = TestCrfTaggerLoader.returning(UNUSED_TAGGER);
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).taggerLoader(loader)
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggerLoader(loader)
                 .resolve();
 
         // ACT //
@@ -216,7 +225,9 @@ class ResolvedServicesTest {
     void resolve__explicitTokenizerOverridesDefault() {
         // ARRANGE //
         Tokenizer tokenizer = new WhitespaceTokenizer();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER).tokenizer(tokenizer)
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .tokenizer(tokenizer)
                 .resolve();
 
         // ACT & ASSERT //
@@ -227,8 +238,10 @@ class ResolvedServicesTest {
     void resolve__keyFeatureExtractorAbsentWhenUnset() {
         // ARRANGE //
         FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(fullFeatureExtractor).resolve();
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor)
+                .resolve();
 
         // ACT & ASSERT //
         assertNull(
@@ -242,8 +255,11 @@ class ResolvedServicesTest {
         // ARRANGE //
         FeatureExtractor fullFeatureExtractor = (sequence, position) -> Set.of();
         FeatureExtractor keyFeatureExtractor = (sequence, position) -> Set.of();
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .fullFeatureExtractor(fullFeatureExtractor).keyFeatureExtractor(keyFeatureExtractor).resolve();
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .fullFeatureExtractor(fullFeatureExtractor)
+                .keyFeatureExtractor(keyFeatureExtractor)
+                .resolve();
 
         // ACT & ASSERT //
         assertSame(keyFeatureExtractor, resolvedServices.keyFeatureExtractor(), "the explicit key extractor wins");
@@ -256,8 +272,10 @@ class ResolvedServicesTest {
         FeatureExtractor keyFeatureExtractor = (sequence, position) -> Set.of();
 
         // ACT //
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .keyFeatureExtractor(keyFeatureExtractor).resolve();
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .keyFeatureExtractor(keyFeatureExtractor)
+                .resolve();
 
         // ASSERT //
         assertSame(keyFeatureExtractor, resolvedServices.keyFeatureExtractor());
@@ -279,8 +297,10 @@ class ResolvedServicesTest {
     @Test
     void resolve__taggerLoaderNameSelectsBundledLoader() {
         // ACT //
-        ResolvedServices resolvedServices = ResolvedServices.builder().tagProvider(TAG_PROVIDER)
-                .taggerLoaderName("mallet").resolve();
+        ResolvedServices resolvedServices = ResolvedServices.builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggerLoaderName("mallet")
+                .resolve();
 
         // ASSERT //
         assertInstanceOf(MalletCrfTaggerLoader.class, resolvedServices.taggerLoader());

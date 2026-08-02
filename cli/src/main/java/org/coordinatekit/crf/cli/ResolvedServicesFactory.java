@@ -76,8 +76,12 @@ final class ResolvedServicesFactory {
     ) {
         warnIfMissingFeatureExtractor(resolvedServices, tagger, terminal);
         TagProvider tagProvider = resolvedServices.tagProvider();
-        TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
-                .terminal(terminal).threshold(threshold).featureFormat(resolvedServices.featureFormat()).build();
+        TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder()
+                .tagProvider(tagProvider)
+                .terminal(terminal)
+                .threshold(threshold)
+                .featureFormat(resolvedServices.featureFormat())
+                .build();
         return annotator(resolvedServices, tagger, terminal, taggingInterface);
     }
 
@@ -100,9 +104,15 @@ final class ResolvedServicesFactory {
             TaggingInterface taggingInterface
     ) {
         TagProvider tagProvider = resolvedServices.tagProvider();
-        return Annotator.builder().tagProvider(tagProvider).taggingInterface(taggingInterface).terminal(terminal)
-                .tokenizer(resolvedServices.tokenizer()).featureExtractor(resolvedServices.keyFeatureExtractor())
-                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor()).tagger(tagger).build();
+        return Annotator.builder()
+                .tagProvider(tagProvider)
+                .taggingInterface(taggingInterface)
+                .terminal(terminal)
+                .tokenizer(resolvedServices.tokenizer())
+                .featureExtractor(resolvedServices.keyFeatureExtractor())
+                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor())
+                .tagger(tagger)
+                .build();
     }
 
     /**
@@ -161,8 +171,12 @@ final class ResolvedServicesFactory {
     ) {
         warnIfMissingFeatureExtractor(resolvedServices, tagger, terminal);
         TagProvider tagProvider = resolvedServices.tagProvider();
-        TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder().tagProvider(tagProvider)
-                .terminal(terminal).threshold(threshold).featureFormat(resolvedServices.featureFormat()).build();
+        TerminalTaggingInterface taggingInterface = TerminalTaggingInterface.builder()
+                .tagProvider(tagProvider)
+                .terminal(terminal)
+                .threshold(threshold)
+                .featureFormat(resolvedServices.featureFormat())
+                .build();
         return reviewer(resolvedServices, tagger, terminal, taggingInterface);
     }
 
@@ -184,10 +198,15 @@ final class ResolvedServicesFactory {
             TaggingInterface taggingInterface
     ) {
         TagProvider tagProvider = resolvedServices.tagProvider();
-        return RetokenizeReviewer.builder().tagProvider(tagProvider).taggingInterface(taggingInterface)
-                .terminal(terminal).tokenizer(resolvedServices.tokenizer())
+        return RetokenizeReviewer.builder()
+                .tagProvider(tagProvider)
+                .taggingInterface(taggingInterface)
+                .terminal(terminal)
+                .tokenizer(resolvedServices.tokenizer())
                 .featureExtractor(resolvedServices.keyFeatureExtractor())
-                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor()).tagger(tagger).build();
+                .verboseFeatureExtractor(resolvedServices.fullFeatureExtractor())
+                .tagger(tagger)
+                .build();
     }
 
     /**

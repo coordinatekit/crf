@@ -134,8 +134,11 @@ public class XPathFeatureExtractor implements FeatureExtractor {
 
         NodeList nodeList = (NodeList) xPath.evaluate(xpath, document, XPathConstants.NODESET);
 
-        return IntStream.range(0, nodeList.getLength()).mapToObj(nodeList::item).map(Node::getTextContent)
-                .map(String::trim).filter(s -> !s.isEmpty());
+        return IntStream.range(0, nodeList.getLength())
+                .mapToObj(nodeList::item)
+                .map(Node::getTextContent)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty());
     }
 
     /**

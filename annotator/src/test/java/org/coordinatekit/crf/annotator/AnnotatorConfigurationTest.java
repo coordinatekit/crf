@@ -45,8 +45,12 @@ class AnnotatorConfigurationTest {
         Path output = Path.of("out.xml");
 
         // ACT //
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(input).model(model).output(output)
-                .threshold(0.5).build();
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(input)
+                .model(model)
+                .output(output)
+                .threshold(0.5)
+                .build();
         AnnotatorConfiguration defaulted = AnnotatorConfiguration.builder().input(input).output(output).build();
 
         // ASSERT //
@@ -116,8 +120,11 @@ class AnnotatorConfigurationTest {
     @ParameterizedTest
     void build__thresholdBoundariesAccepted(ThresholdAcceptedParameters parameters) {
         // ACT //
-        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder().input(Path.of("in.txt"))
-                .output(Path.of("out.xml")).threshold(parameters.threshold()).build();
+        AnnotatorConfiguration configuration = AnnotatorConfiguration.builder()
+                .input(Path.of("in.txt"))
+                .output(Path.of("out.xml"))
+                .threshold(parameters.threshold())
+                .build();
 
         // ASSERT //
         assertEquals(

@@ -211,8 +211,11 @@ class MalletCrfTrainerTest {
         return Stream.of(
                 new CreateCrfTrainerParameters(null, true, true),
                 new CreateCrfTrainerParameters(
-                        MalletCrfTrainerConfiguration.builder().weightsType(WeightsType.DENSE).threads(1)
-                                .gaussianVariance(20.0).build(),
+                        MalletCrfTrainerConfiguration.builder()
+                                .weightsType(WeightsType.DENSE)
+                                .threads(1)
+                                .gaussianVariance(20.0)
+                                .build(),
                         false,
                         false
                 ),
@@ -222,8 +225,11 @@ class MalletCrfTrainerTest {
                         true
                 ),
                 new CreateCrfTrainerParameters(
-                        MalletCrfTrainerConfiguration.builder().weightsType(WeightsType.SPARSE).threads(2)
-                                .gaussianVariance(5.0).build(),
+                        MalletCrfTrainerConfiguration.builder()
+                                .weightsType(WeightsType.SPARSE)
+                                .threads(2)
+                                .gaussianVariance(5.0)
+                                .build(),
                         true,
                         false
                 )
@@ -279,7 +285,8 @@ class MalletCrfTrainerTest {
         List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER).read(trainingDataStream)
                 .toList();
 
-        return trainingSequences.stream().map(seq -> trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, seq))
+        return trainingSequences.stream()
+                .map(seq -> trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, seq))
                 .collect(Collectors.toCollection(() -> new InstanceList(dataAlphabet, targetAlphabet)));
     }
 
@@ -309,8 +316,13 @@ class MalletCrfTrainerTest {
     }
 
     private static TrainingTestSplit splitWithSeed(int randomSeed) throws IOException, URISyntaxException {
-        var configuration = MalletCrfTrainerConfiguration.builder().iterations(1).trainingFraction(0.6)
-                .randomSeed(randomSeed).conllOutputEnabled(false).modelOutputEnabled(false).build();
+        var configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(1)
+                .trainingFraction(0.6)
+                .randomSeed(randomSeed)
+                .conllOutputEnabled(false)
+                .modelOutputEnabled(false)
+                .build();
         var trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
@@ -408,11 +420,13 @@ class MalletCrfTrainerTest {
         Alphabet dataAlphabet = new Alphabet();
         LabelAlphabet targetAlphabet = new LabelAlphabet();
 
-        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER).read(
-                Objects.requireNonNull(
-                        getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
+        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER)
+                .read(
+                        Objects.requireNonNull(
+                                getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
+                        )
                 )
-        ).toList();
+                .toList();
         MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
@@ -444,20 +458,32 @@ class MalletCrfTrainerTest {
         return Stream.of(
                 new TrainParameters(
                         "defaultConfiguration",
-                        MalletCrfTrainerConfiguration.builder().iterations(1).trainingFraction(1.0)
-                                .conllOutputEnabled(false).modelOutputEnabled(false).build(),
+                        MalletCrfTrainerConfiguration.builder()
+                                .iterations(1)
+                                .trainingFraction(1.0)
+                                .conllOutputEnabled(false)
+                                .modelOutputEnabled(false)
+                                .build(),
                         3
                 ),
                 new TrainParameters(
                         "withTestSplit",
-                        MalletCrfTrainerConfiguration.builder().iterations(1).trainingFraction(0.8)
-                                .conllOutputEnabled(false).modelOutputEnabled(false).build(),
+                        MalletCrfTrainerConfiguration.builder()
+                                .iterations(1)
+                                .trainingFraction(0.8)
+                                .conllOutputEnabled(false)
+                                .modelOutputEnabled(false)
+                                .build(),
                         3
                 ),
                 new TrainParameters(
                         "withAllTags",
-                        MalletCrfTrainerConfiguration.builder().iterations(1).trainingFraction(1.0)
-                                .conllOutputEnabled(false).modelOutputEnabled(false).build(),
+                        MalletCrfTrainerConfiguration.builder()
+                                .iterations(1)
+                                .trainingFraction(1.0)
+                                .conllOutputEnabled(false)
+                                .modelOutputEnabled(false)
+                                .build(),
                         3
                 )
         );
@@ -507,11 +533,15 @@ class MalletCrfTrainerTest {
         Path modelPath = temporaryDirectory.resolve("model.ser");
         Path conllOutputDir = temporaryDirectory.resolve("conll");
 
-        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder().iterations(10)
-                .trainingFraction(0.6).conllOutputEnabled(true)
+        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(10)
+                .trainingFraction(0.6)
+                .conllOutputEnabled(true)
                 .conllOutputConfiguration(
                         ConllOutputConfiguration.builder().outputDirectory(conllOutputDir).iterationInterval(10).build()
-                ).modelOutputEnabled(false).build();
+                )
+                .modelOutputEnabled(false)
+                .build();
 
         MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
@@ -536,11 +566,15 @@ class MalletCrfTrainerTest {
         Path modelPath = temporaryDirectory.resolve("model.ser");
         Path modelOutputDir = temporaryDirectory.resolve("checkpoints");
 
-        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder().iterations(10)
-                .trainingFraction(0.6).conllOutputEnabled(false).modelOutputEnabled(true)
+        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(10)
+                .trainingFraction(0.6)
+                .conllOutputEnabled(false)
+                .modelOutputEnabled(true)
                 .modelOutputConfiguration(
                         ModelOutputConfiguration.builder().outputDirectory(modelOutputDir).iterationInterval(10).build()
-                ).build();
+                )
+                .build();
 
         MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
@@ -563,8 +597,12 @@ class MalletCrfTrainerTest {
         var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
         Path modelPath = temporaryDirectory.resolve("model.ser");
 
-        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder().iterations(5)
-                .trainingFraction(1.0).conllOutputEnabled(false).modelOutputEnabled(false).build();
+        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(5)
+                .trainingFraction(1.0)
+                .conllOutputEnabled(false)
+                .modelOutputEnabled(false)
+                .build();
 
         MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,

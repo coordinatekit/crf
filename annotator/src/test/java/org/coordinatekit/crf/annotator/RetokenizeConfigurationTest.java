@@ -45,8 +45,12 @@ class RetokenizeConfigurationTest {
         Path output = Path.of("out.xml");
 
         // ACT //
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(input).model(model)
-                .output(output).threshold(0.5).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(input)
+                .model(model)
+                .output(output)
+                .threshold(0.5)
+                .build();
         RetokenizeConfiguration defaulted = RetokenizeConfiguration.builder().input(input).output(output).build();
 
         // ASSERT //
@@ -116,8 +120,11 @@ class RetokenizeConfigurationTest {
     @ParameterizedTest
     void build__thresholdBoundariesAccepted(ThresholdAcceptedParameters parameters) {
         // ACT //
-        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder().input(Path.of("in.xml"))
-                .output(Path.of("out.xml")).threshold(parameters.threshold()).build();
+        RetokenizeConfiguration configuration = RetokenizeConfiguration.builder()
+                .input(Path.of("in.xml"))
+                .output(Path.of("out.xml"))
+                .threshold(parameters.threshold())
+                .build();
 
         // ASSERT //
         assertEquals(

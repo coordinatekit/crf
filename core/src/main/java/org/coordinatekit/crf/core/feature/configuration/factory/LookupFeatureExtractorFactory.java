@@ -54,13 +54,15 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
 
     private static FeatureExtractor buildExtractor(FeatureExtractorParameters parameters) {
         String name = parameters.getString("name");
-        Feature presentFeature = parameters.findString("value").map(value -> createFeatureWithValue(name, value))
+        Feature presentFeature = parameters.findString("value")
+                .map(value -> createFeatureWithValue(name, value))
                 .orElseGet(() -> createFeature(name));
         URL dictionary = parameters.getResource("dictionary");
         try (InputStream dictionaryStream = dictionary.openStream()) {
             XPathFeatureExtractor.Builder builder = XPathFeatureExtractor
                     .builder(dictionaryStream, parameters.getString("xpath"))
-                    .caseSensitive(parameters.getBoolean("caseSensitive")).presentFeature(presentFeature);
+                    .caseSensitive(parameters.getBoolean("caseSensitive"))
+                    .presentFeature(presentFeature);
             parameters.findString("absentName")
                     .ifPresent(absentName -> builder.notPresentFeature(createFeature(absentName)));
             return builder.build();
@@ -85,17 +87,27 @@ public final class LookupFeatureExtractorFactory implements LeafFeatureExtractor
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
                 ParameterDescriptor.builder("absentName", ParameterKind.STRING)
-                        .description("feature name emitted when the token is absent from the dictionary").build(),
-                ParameterDescriptor.builder("caseSensitive", ParameterKind.BOOLEAN).defaultValue("true")
-                        .description("whether membership testing is case-sensitive").build(),
-                ParameterDescriptor.builder("dictionary", ParameterKind.RESOURCE).required(true)
-                        .description("URL of the XML file holding the value set").build(),
-                ParameterDescriptor.builder("name", ParameterKind.STRING).required(true)
-                        .description("feature name emitted when the token is present").build(),
+                        .description("feature name emitted when the token is absent from the dictionary")
+                        .build(),
+                ParameterDescriptor.builder("caseSensitive", ParameterKind.BOOLEAN)
+                        .defaultValue("true")
+                        .description("whether membership testing is case-sensitive")
+                        .build(),
+                ParameterDescriptor.builder("dictionary", ParameterKind.RESOURCE)
+                        .required(true)
+                        .description("URL of the XML file holding the value set")
+                        .build(),
+                ParameterDescriptor.builder("name", ParameterKind.STRING)
+                        .required(true)
+                        .description("feature name emitted when the token is present")
+                        .build(),
                 ParameterDescriptor.builder("value", ParameterKind.STRING)
-                        .description("feature value emitted with the name when the token is present").build(),
-                ParameterDescriptor.builder("xpath", ParameterKind.STRING).required(true)
-                        .description("XPath selecting the value elements from the dictionary").build()
+                        .description("feature value emitted with the name when the token is present")
+                        .build(),
+                ParameterDescriptor.builder("xpath", ParameterKind.STRING)
+                        .required(true)
+                        .description("XPath selecting the value elements from the dictionary")
+                        .build()
         );
     }
 

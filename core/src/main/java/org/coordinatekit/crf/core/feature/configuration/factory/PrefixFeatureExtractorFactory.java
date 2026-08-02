@@ -41,20 +41,29 @@ public final class PrefixFeatureExtractorFactory implements LeafFeatureExtractor
     @Override
     public FeatureExtractor create(FeatureExtractorParameters parameters) {
         String name = parameters.getString("name");
-        return SubstringFeatureExtractor.builder(substring -> createFeatureWithValue(name, substring)).ending(false)
+        return SubstringFeatureExtractor.builder(substring -> createFeatureWithValue(name, substring))
+                .ending(false)
                 .includeIfLessThanLength(parameters.getBoolean("includeIfLessThanLength"))
-                .length(parameters.getInteger("length")).build();
+                .length(parameters.getInteger("length"))
+                .build();
     }
 
     @Override
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
-                ParameterDescriptor.builder("includeIfLessThanLength", ParameterKind.BOOLEAN).defaultValue("true")
-                        .description("whether to emit a feature for tokens shorter than the length").build(),
-                ParameterDescriptor.builder("length", ParameterKind.INTEGER).required(true).minimumValue(1)
-                        .description("number of leading characters to take").build(),
-                ParameterDescriptor.builder("name", ParameterKind.STRING).defaultValue("PREFIX")
-                        .description("feature name to emit the prefix under").build()
+                ParameterDescriptor.builder("includeIfLessThanLength", ParameterKind.BOOLEAN)
+                        .defaultValue("true")
+                        .description("whether to emit a feature for tokens shorter than the length")
+                        .build(),
+                ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                        .required(true)
+                        .minimumValue(1)
+                        .description("number of leading characters to take")
+                        .build(),
+                ParameterDescriptor.builder("name", ParameterKind.STRING)
+                        .defaultValue("PREFIX")
+                        .description("feature name to emit the prefix under")
+                        .build()
         );
     }
 

@@ -87,38 +87,52 @@ class RetokenizeReviewerTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "no_tagProvider",
-                        () -> RetokenizeReviewer.<String>builder().taggingInterface(new ScriptedTaggingInterface<>())
-                                .terminal(quietTerminal()).tokenizer(new PunctuationTokenizer()).build(),
+                        () -> RetokenizeReviewer.<String>builder()
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .tokenizer(new PunctuationTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "tagProvider must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_taggingInterface",
-                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).terminal(quietTerminal())
-                                .tokenizer(new PunctuationTokenizer()).build(),
+                        () -> RetokenizeReviewer.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .terminal(quietTerminal())
+                                .tokenizer(new PunctuationTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "taggingInterface must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_terminal",
-                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
+                        () -> RetokenizeReviewer.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
                                 .taggingInterface(new ScriptedTaggingInterface<>())
-                                .tokenizer(new PunctuationTokenizer()).build(),
+                                .tokenizer(new PunctuationTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "terminal must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_tokenizer",
-                        () -> RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
-                                .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal()).build(),
+                        () -> RetokenizeReviewer.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .build(),
                         IllegalStateException.class,
                         "tokenizer must be set"
                 ),
                 new BuilderExceptionParameters(
                         "empty_tags",
-                        () -> RetokenizeReviewer.<String>builder().tagProvider(new StringTagProvider("NN"))
-                                .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal())
-                                .tokenizer(new PunctuationTokenizer()).build(),
+                        () -> RetokenizeReviewer.<String>builder()
+                                .tagProvider(new StringTagProvider("NN"))
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .tokenizer(new PunctuationTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "tagProvider.tags() must not be empty"
                 )
@@ -402,8 +416,14 @@ class RetokenizeReviewerTest {
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).tagger(tagger).taggingInterface(tagging)
-                    .terminal(terminal).tokenizer(new PunctuationTokenizer()).build().review(inputFile, outputFile);
+            RetokenizeReviewer.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .tagger(tagger)
+                    .taggingInterface(tagging)
+                    .terminal(terminal)
+                    .tokenizer(new PunctuationTokenizer())
+                    .build()
+                    .review(inputFile, outputFile);
         }
 
         // ASSERT //
@@ -437,8 +457,12 @@ class RetokenizeReviewerTest {
 
         // ACT & ASSERT //
         try (Terminal terminal = quietTerminal()) {
-            RetokenizeReviewer<String> reviewer = RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER)
-                    .tagger(tagger).taggingInterface(tagging).terminal(terminal).tokenizer(new PunctuationTokenizer())
+            RetokenizeReviewer<String> reviewer = RetokenizeReviewer.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .tagger(tagger)
+                    .taggingInterface(tagging)
+                    .terminal(terminal)
+                    .tokenizer(new PunctuationTokenizer())
                     .build();
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -476,8 +500,14 @@ class RetokenizeReviewerTest {
 
         // ACT //
         try (Terminal terminal = capturingTerminal(captured)) {
-            RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).tagger(tagger).taggingInterface(tagging)
-                    .terminal(terminal).tokenizer(new PunctuationTokenizer()).build().review(inputFile, outputFile);
+            RetokenizeReviewer.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .tagger(tagger)
+                    .taggingInterface(tagging)
+                    .terminal(terminal)
+                    .tokenizer(new PunctuationTokenizer())
+                    .build()
+                    .review(inputFile, outputFile);
             terminal.flush();
         }
 
@@ -567,8 +597,12 @@ class RetokenizeReviewerTest {
     }
 
     private static RetokenizeReviewer<String> reviewerWith(TaggingInterface<String> tagging, Terminal terminal) {
-        return RetokenizeReviewer.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
-                .terminal(terminal).tokenizer(new PunctuationTokenizer()).build();
+        return RetokenizeReviewer.<String>builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggingInterface(tagging)
+                .terminal(terminal)
+                .tokenizer(new PunctuationTokenizer())
+                .build();
     }
 
     private static TaggingResult<String> skip() {

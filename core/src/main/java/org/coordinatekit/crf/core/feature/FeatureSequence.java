@@ -72,7 +72,8 @@ public class FeatureSequence implements Sequence<FeaturePositionedToken> {
         this.tokens = IntStream.range(0, tokens.size())
                 .<FeaturePositionedToken>mapToObj(
                         index -> new FeatureSequenceToken(index, tokens.get(index), Set.copyOf(features.get(index)))
-                ).toList();
+                )
+                .toList();
     }
 
     @Override

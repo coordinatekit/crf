@@ -108,7 +108,10 @@ public class ModelOutputEvaluator extends TransducerEvaluator {
             writeModel(trainer.getTransducer(), outputFile);
             logger.atInfo().addArgument(iteration).addArgument(outputFile).log("Iteration {}: Wrote model to {}");
         } catch (IOException e) {
-            logger.atError().addArgument(iteration).addArgument(outputFile).setCause(e)
+            logger.atError()
+                    .addArgument(iteration)
+                    .addArgument(outputFile)
+                    .setCause(e)
                     .log("Iteration {}: Failed to write model to {}");
         }
     }

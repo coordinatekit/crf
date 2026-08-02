@@ -70,7 +70,8 @@ class AnnotatorTest {
     private static final List<String> INPUT_LINES = List
             .of("the quick brown", "fox jumps over", "the lazy dog", "a second sentence", "one more line");
 
-    private static final List<List<String>> INPUT_TOKENS = INPUT_LINES.stream().map(line -> List.of(line.split(" ")))
+    private static final List<List<String>> INPUT_TOKENS = INPUT_LINES.stream()
+            .map(line -> List.of(line.split(" ")))
             .toList();
 
     private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
@@ -103,38 +104,52 @@ class AnnotatorTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "no_tagProvider",
-                        () -> Annotator.<String>builder().taggingInterface(new ScriptedTaggingInterface<>())
-                                .terminal(quietTerminal()).tokenizer(new WhitespaceTokenizer()).build(),
+                        () -> Annotator.<String>builder()
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .tokenizer(new WhitespaceTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "tagProvider must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_taggingInterface",
-                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER).terminal(quietTerminal())
-                                .tokenizer(new WhitespaceTokenizer()).build(),
+                        () -> Annotator.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .terminal(quietTerminal())
+                                .tokenizer(new WhitespaceTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "taggingInterface must be set"
                 ),
                 new BuilderExceptionParameters(
                         "no_terminal",
-                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER)
-                                .taggingInterface(new ScriptedTaggingInterface<>()).tokenizer(new WhitespaceTokenizer())
+                        () -> Annotator.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .tokenizer(new WhitespaceTokenizer())
                                 .build(),
                         IllegalStateException.class,
                         "terminal must be set"
                 ),
                 new BuilderExceptionParameters(
                         "empty_tags",
-                        () -> Annotator.<String>builder().tagProvider(new StringTagProvider("NN"))
-                                .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal())
-                                .tokenizer(new WhitespaceTokenizer()).build(),
+                        () -> Annotator.<String>builder()
+                                .tagProvider(new StringTagProvider("NN"))
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .tokenizer(new WhitespaceTokenizer())
+                                .build(),
                         IllegalStateException.class,
                         "tagProvider.tags() must not be empty"
                 ),
                 new BuilderExceptionParameters(
                         "no_tokenizer_no_tagger",
-                        () -> Annotator.<String>builder().tagProvider(TAG_PROVIDER)
-                                .taggingInterface(new ScriptedTaggingInterface<>()).terminal(quietTerminal()).build(),
+                        () -> Annotator.<String>builder()
+                                .tagProvider(TAG_PROVIDER)
+                                .taggingInterface(new ScriptedTaggingInterface<>())
+                                .terminal(quietTerminal())
+                                .build(),
                         IllegalStateException.class,
                         "at least one of tokenizer or tagger must be set"
                 )
@@ -149,134 +164,129 @@ class AnnotatorTest {
                 Set.of(createFeature("embedded3"))
         );
         List<Set<Feature>> noFeatures = List.of(Set.of(), Set.of(), Set.of());
-        return Stream
-                .of(
-                        new FeatureWiringParameters(
-                                "no_feature_sources_baseline",
-                                builder -> builder.tokenizer(new WhitespaceTokenizer()),
-                                false,
-                                noFeatures,
-                                false,
-                                noFeatures
+        return Stream.of(
+                new FeatureWiringParameters(
+                        "no_feature_sources_baseline",
+                        builder -> builder.tokenizer(new WhitespaceTokenizer()),
+                        false,
+                        noFeatures,
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "tagger_alone_enables_verbose_fallback",
+                        builder -> builder.tagger(fixedTagger(lowercaseTokens, embeddedFeatures)),
+                        false,
+                        noFeatures,
+                        true,
+                        embeddedFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_runs_on_tagger_tokens",
+                        builder -> builder.featureExtractor(prefixExtractor("TOKEN_"))
+                                .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
+                        true,
+                        List.of(
+                                Set.of(createFeature("TOKEN_THE")),
+                                Set.of(createFeature("TOKEN_QUICK")),
+                                Set.of(createFeature("TOKEN_BROWN"))
                         ),
-                        new FeatureWiringParameters(
-                                "tagger_alone_enables_verbose_fallback",
-                                builder -> builder.tagger(fixedTagger(lowercaseTokens, embeddedFeatures)),
-                                false,
-                                noFeatures,
-                                true,
-                                embeddedFeatures
-                        ),
-                        new FeatureWiringParameters(
-                                "extractor_runs_on_tagger_tokens",
-                                builder -> builder.featureExtractor(prefixExtractor("TOKEN_"))
-                                        .tagger(fixedTagger(List.of("THE", "QUICK", "BROWN"), noFeatures)),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("TOKEN_THE")),
-                                        Set.of(createFeature("TOKEN_QUICK")),
-                                        Set.of(createFeature("TOKEN_BROWN"))
-                                ),
-                                true,
-                                noFeatures
-                        ),
-                        new FeatureWiringParameters(
-                                "extractor_runs_on_tokenizer_tokens",
-                                builder -> builder
-                                        .featureExtractor(
-                                                (sequence, position) -> Set
-                                                        .of(
-                                                                createFeature(
-                                                                        "LENGTH_" + sequence.get(position).token()
-                                                                                .length()
-                                                                )
-                                                        )
-                                        ).tokenizer(new WhitespaceTokenizer()),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("LENGTH_3")),
-                                        Set.of(createFeature("LENGTH_5")),
-                                        Set.of(createFeature("LENGTH_5"))
-                                ),
-                                false,
-                                noFeatures
-                        ),
-                        new FeatureWiringParameters(
-                                "extractor_sees_whole_sequence_and_positions",
-                                builder -> builder.featureExtractor(positionAndNextTokenExtractor())
-                                        .tokenizer(new WhitespaceTokenizer()),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("0:NEXT_quick")),
-                                        Set.of(createFeature("1:NEXT_brown")),
-                                        Set.of(createFeature("2:END"))
-                                ),
-                                false,
-                                noFeatures
-                        ),
-                        new FeatureWiringParameters(
-                                "verbose_extractor_populates_verbose_features",
-                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                        .tokenizer(new WhitespaceTokenizer())
-                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("KEY_the")),
-                                        Set.of(createFeature("KEY_quick")),
-                                        Set.of(createFeature("KEY_brown"))
-                                ),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("VERBOSE_the")),
-                                        Set.of(createFeature("VERBOSE_quick")),
-                                        Set.of(createFeature("VERBOSE_brown"))
+                        true,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_runs_on_tokenizer_tokens",
+                        builder -> builder
+                                .featureExtractor(
+                                        (sequence, position) -> Set
+                                                .of(createFeature("LENGTH_" + sequence.get(position).token().length()))
                                 )
+                                .tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(
+                                Set.of(createFeature("LENGTH_3")),
+                                Set.of(createFeature("LENGTH_5")),
+                                Set.of(createFeature("LENGTH_5"))
                         ),
-                        new FeatureWiringParameters(
-                                "verbose_extractor_overrides_tagger_fallback",
-                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                        .tagger(fixedTagger(lowercaseTokens, embeddedFeatures))
-                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("KEY_the")),
-                                        Set.of(createFeature("KEY_quick")),
-                                        Set.of(createFeature("KEY_brown"))
-                                ),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("VERBOSE_the")),
-                                        Set.of(createFeature("VERBOSE_quick")),
-                                        Set.of(createFeature("VERBOSE_brown"))
-                                )
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "extractor_sees_whole_sequence_and_positions",
+                        builder -> builder.featureExtractor(positionAndNextTokenExtractor())
+                                .tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(
+                                Set.of(createFeature("0:NEXT_quick")),
+                                Set.of(createFeature("1:NEXT_brown")),
+                                Set.of(createFeature("2:END"))
                         ),
-                        new FeatureWiringParameters(
-                                "verbose_extractor_without_key_extractor",
-                                builder -> builder.tokenizer(new WhitespaceTokenizer())
-                                        .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
-                                false,
-                                noFeatures,
-                                true,
-                                List.of(
-                                        Set.of(createFeature("VERBOSE_the")),
-                                        Set.of(createFeature("VERBOSE_quick")),
-                                        Set.of(createFeature("VERBOSE_brown"))
-                                )
+                        false,
+                        noFeatures
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_populates_verbose_features",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tokenizer(new WhitespaceTokenizer())
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        true,
+                        List.of(
+                                Set.of(createFeature("KEY_the")),
+                                Set.of(createFeature("KEY_quick")),
+                                Set.of(createFeature("KEY_brown"))
                         ),
-                        new FeatureWiringParameters(
-                                "verbose_unavailable_without_tagger_or_verbose_extractor",
-                                builder -> builder.featureExtractor(prefixExtractor("KEY_"))
-                                        .tokenizer(new WhitespaceTokenizer()),
-                                true,
-                                List.of(
-                                        Set.of(createFeature("KEY_the")),
-                                        Set.of(createFeature("KEY_quick")),
-                                        Set.of(createFeature("KEY_brown"))
-                                ),
-                                false,
-                                noFeatures
+                        true,
+                        List.of(
+                                Set.of(createFeature("VERBOSE_the")),
+                                Set.of(createFeature("VERBOSE_quick")),
+                                Set.of(createFeature("VERBOSE_brown"))
                         )
-                );
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_overrides_tagger_fallback",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tagger(fixedTagger(lowercaseTokens, embeddedFeatures))
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        true,
+                        List.of(
+                                Set.of(createFeature("KEY_the")),
+                                Set.of(createFeature("KEY_quick")),
+                                Set.of(createFeature("KEY_brown"))
+                        ),
+                        true,
+                        List.of(
+                                Set.of(createFeature("VERBOSE_the")),
+                                Set.of(createFeature("VERBOSE_quick")),
+                                Set.of(createFeature("VERBOSE_brown"))
+                        )
+                ),
+                new FeatureWiringParameters(
+                        "verbose_extractor_without_key_extractor",
+                        builder -> builder.tokenizer(new WhitespaceTokenizer())
+                                .verboseFeatureExtractor(prefixExtractor("VERBOSE_")),
+                        false,
+                        noFeatures,
+                        true,
+                        List.of(
+                                Set.of(createFeature("VERBOSE_the")),
+                                Set.of(createFeature("VERBOSE_quick")),
+                                Set.of(createFeature("VERBOSE_brown"))
+                        )
+                ),
+                new FeatureWiringParameters(
+                        "verbose_unavailable_without_tagger_or_verbose_extractor",
+                        builder -> builder.featureExtractor(prefixExtractor("KEY_"))
+                                .tokenizer(new WhitespaceTokenizer()),
+                        true,
+                        List.of(
+                                Set.of(createFeature("KEY_the")),
+                                Set.of(createFeature("KEY_quick")),
+                                Set.of(createFeature("KEY_brown"))
+                        ),
+                        false,
+                        noFeatures
+                )
+        );
     }
 
     static Stream<SessionParameters> session() {
@@ -426,9 +436,13 @@ class AnnotatorTest {
         try (Terminal terminal = quietTerminal()) {
             parameters.configure()
                     .apply(
-                            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+                            Annotator.<String>builder()
+                                    .tagProvider(TAG_PROVIDER)
+                                    .taggingInterface(tagging)
                                     .terminal(terminal)
-                    ).build().annotate(inputFile, outputFile);
+                    )
+                    .build()
+                    .annotate(inputFile, outputFile);
         }
 
         // ASSERT //
@@ -612,7 +626,10 @@ class AnnotatorTest {
 
         // ACT //
         try (Terminal terminal = quietTerminal()) {
-            var builder = Annotator.<String>builder().tagger(tagger).tagProvider(TAG_PROVIDER).taggingInterface(tagging)
+            var builder = Annotator.<String>builder()
+                    .tagger(tagger)
+                    .tagProvider(TAG_PROVIDER)
+                    .taggingInterface(tagging)
                     .terminal(terminal);
             if (withTokenizer) {
                 builder.tokenizer(new WhitespaceTokenizer());
@@ -648,8 +665,13 @@ class AnnotatorTest {
 
         // ACT //
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
-                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
+            Annotator.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .taggingInterface(tagging)
+                    .terminal(terminal)
+                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer())
+                    .build()
+                    .annotate(inputFile, outputFile);
             terminal.flush();
         }
 
@@ -700,8 +722,13 @@ class AnnotatorTest {
 
         // ACT //
         try (Terminal terminal = new DumbTerminal("test", "ansi", in, out, StandardCharsets.UTF_8)) {
-            Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
-                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer()).build().annotate(inputFile, outputFile);
+            Annotator.<String>builder()
+                    .tagProvider(TAG_PROVIDER)
+                    .taggingInterface(tagging)
+                    .terminal(terminal)
+                    .tokenizer(new AnnotatorTestSupport.PunctuationTokenizer())
+                    .build()
+                    .annotate(inputFile, outputFile);
             terminal.flush();
         }
 
@@ -732,8 +759,12 @@ class AnnotatorTest {
     }
 
     private static Annotator<String> annotatorWith(TaggingInterface<String> tagging, Terminal terminal) {
-        return Annotator.<String>builder().tagProvider(TAG_PROVIDER).taggingInterface(tagging).terminal(terminal)
-                .tokenizer(new WhitespaceTokenizer()).build();
+        return Annotator.<String>builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggingInterface(tagging)
+                .terminal(terminal)
+                .tokenizer(new WhitespaceTokenizer())
+                .build();
     }
 
     private static TaggingResult<String> exit() {

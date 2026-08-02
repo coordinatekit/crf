@@ -63,8 +63,10 @@ class ParameterDescriptorTest {
         return Stream.of(
                 new BuilderExceptionParameters(
                         "required_with_default",
-                        () -> ParameterDescriptor.builder("name", ParameterKind.STRING).required(true)
-                                .defaultValue("PREFIX").build(),
+                        () -> ParameterDescriptor.builder("name", ParameterKind.STRING)
+                                .required(true)
+                                .defaultValue("PREFIX")
+                                .build(),
                         IllegalStateException.class,
                         "parameter 'name' cannot be both required and have a default value"
                 ),
@@ -76,7 +78,8 @@ class ParameterDescriptorTest {
                 ),
                 new BuilderExceptionParameters(
                         "allowed_values_on_non_enumeration",
-                        () -> ParameterDescriptor.builder("name", ParameterKind.STRING).allowedValues(Set.of("a"))
+                        () -> ParameterDescriptor.builder("name", ParameterKind.STRING)
+                                .allowedValues(Set.of("a"))
                                 .build(),
                         IllegalStateException.class,
                         "allowed values apply only to enumeration parameters, but 'name' is STRING"
@@ -84,7 +87,9 @@ class ParameterDescriptorTest {
                 new BuilderExceptionParameters(
                         "enumeration_default_outside_allowed_values",
                         () -> ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
-                                .allowedValues(Set.of("fast", "slow")).defaultValue("medium").build(),
+                                .allowedValues(Set.of("fast", "slow"))
+                                .defaultValue("medium")
+                                .build(),
                         IllegalStateException.class,
                         "default value 'medium' of enumeration parameter 'mode' is not among the allowed values"
                                 + " [fast, slow]"
@@ -97,29 +102,38 @@ class ParameterDescriptorTest {
                 ),
                 new BuilderExceptionParameters(
                         "minimum_exceeds_maximum",
-                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(5)
-                                .maximumValue(1).build(),
+                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                                .minimumValue(5)
+                                .maximumValue(1)
+                                .build(),
                         IllegalStateException.class,
                         "minimum 5 of parameter 'length' exceeds its maximum 1"
                 ),
                 new BuilderExceptionParameters(
                         "default_below_minimum",
-                        () -> ParameterDescriptor.builder("before", ParameterKind.INTEGER).minimumValue(0)
-                                .defaultValue("-1").build(),
+                        () -> ParameterDescriptor.builder("before", ParameterKind.INTEGER)
+                                .minimumValue(0)
+                                .defaultValue("-1")
+                                .build(),
                         IllegalStateException.class,
                         "default value '-1' of parameter 'before' must be >= 0"
                 ),
                 new BuilderExceptionParameters(
                         "default_outside_both_bounds",
-                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(1)
-                                .maximumValue(3).defaultValue("5").build(),
+                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                                .minimumValue(1)
+                                .maximumValue(3)
+                                .defaultValue("5")
+                                .build(),
                         IllegalStateException.class,
                         "default value '5' of parameter 'length' must be between 1 and 3"
                 ),
                 new BuilderExceptionParameters(
                         "default_not_an_integer",
-                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(1)
-                                .defaultValue("many").build(),
+                        () -> ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                                .minimumValue(1)
+                                .defaultValue("many")
+                                .build(),
                         IllegalStateException.class,
                         "default value 'many' of integer parameter 'length' is not an integer"
                 )
@@ -139,10 +153,17 @@ class ParameterDescriptorTest {
     @Test
     void builder__retainsConfiguredValues() {
         // ARRANGE //
-        ParameterDescriptor bounded = ParameterDescriptor.builder("before", ParameterKind.INTEGER).minimumValue(0)
-                .maximumValue(10).defaultValue("2").description("lookback tokens").build();
+        ParameterDescriptor bounded = ParameterDescriptor.builder("before", ParameterKind.INTEGER)
+                .minimumValue(0)
+                .maximumValue(10)
+                .defaultValue("2")
+                .description("lookback tokens")
+                .build();
         ParameterDescriptor enumerated = ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
-                .allowedValues(Set.of("fast", "slow")).defaultValue("fast").description("the mode").build();
+                .allowedValues(Set.of("fast", "slow"))
+                .defaultValue("fast")
+                .description("the mode")
+                .build();
 
         // ASSERT //
         assertEquals(0, bounded.minimumValue());
@@ -166,7 +187,8 @@ class ParameterDescriptorTest {
         ParameterDescriptor base = ParameterDescriptor.builder("name", ParameterKind.STRING).build();
         ParameterDescriptor integerBase = ParameterDescriptor.builder("length", ParameterKind.INTEGER).build();
         ParameterDescriptor enumerationBase = ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
-                .allowedValues(Set.of("fast")).build();
+                .allowedValues(Set.of("fast"))
+                .build();
         return Stream.of(
                 new EqualsParameters(
                         "identical_fields",
@@ -220,7 +242,8 @@ class ParameterDescriptorTest {
                         "differs_by_allowedValues",
                         enumerationBase,
                         ParameterDescriptor.builder("mode", ParameterKind.ENUMERATION)
-                                .allowedValues(Set.of("fast", "slow")).build(),
+                                .allowedValues(Set.of("fast", "slow"))
+                                .build(),
                         false
                 )
         );
@@ -236,10 +259,18 @@ class ParameterDescriptorTest {
     @Test
     void equals__hashCodeConsistentForEqualInstances() {
         // ARRANGE //
-        ParameterDescriptor first = ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(0)
-                .maximumValue(10).defaultValue("5").description("desc").build();
-        ParameterDescriptor second = ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(0)
-                .maximumValue(10).defaultValue("5").description("desc").build();
+        ParameterDescriptor first = ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                .minimumValue(0)
+                .maximumValue(10)
+                .defaultValue("5")
+                .description("desc")
+                .build();
+        ParameterDescriptor second = ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                .minimumValue(0)
+                .maximumValue(10)
+                .defaultValue("5")
+                .description("desc")
+                .build();
 
         // ACT & ASSERT //
         assertEquals(first, second);
@@ -268,8 +299,12 @@ class ParameterDescriptorTest {
     @Test
     void toString__rendersAllFields() {
         // ARRANGE //
-        ParameterDescriptor descriptor = ParameterDescriptor.builder("length", ParameterKind.INTEGER).minimumValue(0)
-                .maximumValue(10).defaultValue("5").description("token length").build();
+        ParameterDescriptor descriptor = ParameterDescriptor.builder("length", ParameterKind.INTEGER)
+                .minimumValue(0)
+                .maximumValue(10)
+                .defaultValue("5")
+                .description("token length")
+                .build();
 
         // ACT //
         String actual = descriptor.toString();

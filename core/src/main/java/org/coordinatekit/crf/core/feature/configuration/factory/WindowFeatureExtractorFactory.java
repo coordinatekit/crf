@@ -41,9 +41,11 @@ public final class WindowFeatureExtractorFactory implements NestingFeatureExtrac
 
     @Override
     public FeatureExtractor create(FeatureExtractorParameters parameters, List<FeatureExtractor> children) {
-        return WindowFeatureExtractor.builder(children.getFirst()).windowBefore(parameters.getInteger("before"))
+        return WindowFeatureExtractor.builder(children.getFirst())
+                .windowBefore(parameters.getInteger("before"))
                 .windowAfter(parameters.getInteger("after"))
-                .includeCurrentToken(parameters.getBoolean("includeCurrentToken")).build();
+                .includeCurrentToken(parameters.getBoolean("includeCurrentToken"))
+                .build();
     }
 
     @Override
@@ -54,12 +56,20 @@ public final class WindowFeatureExtractorFactory implements NestingFeatureExtrac
     @Override
     public Set<ParameterDescriptor> parameters() {
         return Set.of(
-                ParameterDescriptor.builder("after", ParameterKind.INTEGER).defaultValue("0").minimumValue(0)
-                        .description("number of following tokens to stamp").build(),
-                ParameterDescriptor.builder("before", ParameterKind.INTEGER).defaultValue("0").minimumValue(0)
-                        .description("number of preceding tokens to stamp").build(),
-                ParameterDescriptor.builder("includeCurrentToken", ParameterKind.BOOLEAN).defaultValue("true")
-                        .description("whether to include the current token at offset 0").build()
+                ParameterDescriptor.builder("after", ParameterKind.INTEGER)
+                        .defaultValue("0")
+                        .minimumValue(0)
+                        .description("number of following tokens to stamp")
+                        .build(),
+                ParameterDescriptor.builder("before", ParameterKind.INTEGER)
+                        .defaultValue("0")
+                        .minimumValue(0)
+                        .description("number of preceding tokens to stamp")
+                        .build(),
+                ParameterDescriptor.builder("includeCurrentToken", ParameterKind.BOOLEAN)
+                        .defaultValue("true")
+                        .description("whether to include the current token at offset 0")
+                        .build()
         );
     }
 

@@ -33,8 +33,11 @@ class WindowFeatureExtractorTest {
             .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
     private static WindowFeatureExtractor extractor(int before, int after, boolean includeCurrent) {
-        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).windowBefore(before).windowAfter(after)
-                .includeCurrentToken(includeCurrent).build();
+        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR)
+                .windowBefore(before)
+                .windowAfter(after)
+                .includeCurrentToken(includeCurrent)
+                .build();
     }
 
     private static WindowFeatureExtractor defaultExtractor() {

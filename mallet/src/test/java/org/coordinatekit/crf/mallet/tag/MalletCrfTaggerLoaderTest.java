@@ -87,8 +87,10 @@ class MalletCrfTaggerLoaderTest {
     @Test
     void serviceLoader__discoversExactlyMalletLoader() {
         // ACT //
-        List<CrfTaggerLoader> loaders = ServiceLoader.load(CrfTaggerLoader.class).stream()
-                .map(ServiceLoader.Provider::get).toList();
+        List<CrfTaggerLoader> loaders = ServiceLoader.load(CrfTaggerLoader.class)
+                .stream()
+                .map(ServiceLoader.Provider::get)
+                .toList();
 
         // ASSERT //
         assertEquals(1, loaders.size(), "exactly one CrfTaggerLoader should be registered; was: " + loaders);

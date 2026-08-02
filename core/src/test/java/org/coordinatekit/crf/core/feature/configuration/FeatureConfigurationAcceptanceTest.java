@@ -52,15 +52,23 @@ class FeatureConfigurationAcceptanceTest {
                 token -> Set.of(createFeatureWithValue("LENGTH", "" + token.length()))
         );
         FeatureExtractor prefix = SubstringFeatureExtractor
-                .builder(substring -> createFeatureWithValue("PREFIX2", substring)).ending(false)
-                .includeIfLessThanLength(true).length(2).build();
+                .builder(substring -> createFeatureWithValue("PREFIX2", substring))
+                .ending(false)
+                .includeIfLessThanLength(true)
+                .length(2)
+                .build();
         FeatureExtractor lookup;
         try (InputStream states = Files.newInputStream(baseDirectory.resolve("states.xml"))) {
-            lookup = XPathFeatureExtractor.builder(states, "/states/state").caseSensitive(true)
-                    .presentFeature(createFeatureWithValue("STATE", "US")).build();
+            lookup = XPathFeatureExtractor.builder(states, "/states/state")
+                    .caseSensitive(true)
+                    .presentFeature(createFeatureWithValue("STATE", "US"))
+                    .build();
         }
         CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(length, prefix, lookup);
-        return WindowFeatureExtractor.builder(composite).windowBefore(3).windowAfter(3).includeCurrentToken(true)
+        return WindowFeatureExtractor.builder(composite)
+                .windowBefore(3)
+                .windowAfter(3)
+                .includeCurrentToken(true)
                 .build();
     }
 

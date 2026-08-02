@@ -66,7 +66,8 @@ public class InputSequence implements Sequence<PositionedToken> {
         }
 
         this.tokens = IntStream.range(0, tokens.size())
-                .<PositionedToken>mapToObj(index -> new SimplePositionedToken(index, tokens.get(index))).toList();
+                .<PositionedToken>mapToObj(index -> new SimplePositionedToken(index, tokens.get(index)))
+                .toList();
     }
 
     @Override

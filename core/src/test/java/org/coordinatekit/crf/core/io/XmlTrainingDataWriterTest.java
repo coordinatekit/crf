@@ -570,9 +570,10 @@ class XmlTrainingDataWriterTest {
 
         // ASSERT //
         String emitted = output.toString(StandardCharsets.UTF_8);
-        parameters.expectedFragments().forEach(
-                fragment -> assertTrue(emitted.contains(fragment), "Expected '" + fragment + "' in: " + emitted)
-        );
+        parameters.expectedFragments()
+                .forEach(
+                        fragment -> assertTrue(emitted.contains(fragment), "Expected '" + fragment + "' in: " + emitted)
+                );
     }
 
     private static XmlTrainingData<String> withRoot(String rootElementName) {
