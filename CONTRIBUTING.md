@@ -150,7 +150,8 @@ Reports are generated in `<module>/build/reports/jacoco/`.
 ### Code Style
 
 This project uses the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html), enforced via
-Spotless. Run `./gradlew spotlessApply` to automatically format your code.
+Spotless. The Eclipse formatter profile comes from `org.coordinatekit.foundation:conventions` on Maven Central, so
+the first build needs network access. Run `./gradlew spotlessApply` to automatically format your code.
 
 ### Null Safety
 

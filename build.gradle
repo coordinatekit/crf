@@ -50,6 +50,23 @@ def isPublishingToCentral = { gradle.taskGraph.allTasks.any { it.name == "publis
 // parent-project property lookup that Gradle 10 removes; the captured local avoids that fallback.
 def catalog = libs
 
+// The formatter profile ships as a resource in a jar that carries no code. Its own configuration keeps it
+// off every compile and runtime classpath.
+configurations {
+    conventions
+}
+
+dependencies {
+    conventions libs.coordinatekit.conventions
+}
+
+// Spotless reads the profile as text because it lives inside an archive; configFile takes a file on disk and
+// cannot address an archive entry. Hoisted out of the `subprojects {}` closure below so one resolution and
+// one unzip serve all four modules.
+def eclipseFormatterProfile = resources.text.fromArchiveEntry(
+        configurations.conventions.singleFile,
+        "org/coordinatekit/foundation/conventions/eclipse_java_coordinatekit.xml").asString()
+
 signing {
     String signingKey = findProperty("signingKey")
     String signingPassword = findProperty("signingPassword")
@@ -217,7 +234,7 @@ subprojects {
 
     spotless {
         java {
-            eclipse("4.21").configFile(rootProject.file(".infra/eclipse_java_coordinatekit.xml"))
+            eclipse("4.21").configXml(eclipseFormatterProfile)
             licenseHeaderFile rootProject.file(".infra/license_header.txt")
             target "src/**/*.java"
             trimTrailingWhitespace()
