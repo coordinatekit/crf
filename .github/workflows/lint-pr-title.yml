@@ -33,6 +33,7 @@ jobs:
             cli
             core
             mallet
+            verification
           requireScope: false
           subjectPattern: ^(?![A-Z]).+$
           subjectPatternError: |
