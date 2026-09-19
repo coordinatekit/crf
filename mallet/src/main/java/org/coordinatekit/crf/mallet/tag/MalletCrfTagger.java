@@ -60,7 +60,7 @@ import java.util.function.ToDoubleFunction;
  */
 @NullMarked
 public final class MalletCrfTagger<T extends Comparable<T>> implements CrfTagger<T> {
-    private static final ObjectInputFilter MODEL_DESERIALIZATION_FILTER = ObjectInputFilter.Config
+    static final ObjectInputFilter MODEL_DESERIALIZATION_FILTER = ObjectInputFilter.Config
             .createFilter("cc.mallet.**;gnu.trove.**;java.**;!*");
 
     private final FeatureExtractor featureExtractor;
