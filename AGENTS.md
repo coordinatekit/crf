@@ -13,7 +13,11 @@ This file provides guidance to agents when working with code in this repository.
 ./gradlew spotlessCheck            # Check code formatting
 ./gradlew spotlessApply            # Apply code formatting
 ./gradlew jacocoTestReport         # Generate code coverage reports
+./gradlew :verification:nativeCompile  # Build the GraalVM native image (needs a GraalVM JDK)
 ```
+
+`nativeCompile` needs a GraalVM JDK 21 on `JAVA_HOME` or `GRAALVM_HOME`. `./gradlew build` never reaches it
+and runs on any JDK 21+. The binary lands at `verification/build/native/nativeCompile/verification`.
 
 ## Code Style
 

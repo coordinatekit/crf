@@ -82,6 +82,11 @@ tasks.withType(Sign).configureEach {
     onlyIf isPublishingToCentral
 }
 
+// Modules that publish nowhere. verification is the native-image stand-in for a downstream, so it gets no
+// publishing plugins, no sources or Javadoc jars, and no place in the aggregate reports. Every exclusion
+// below derives from this list.
+def unpublishedProjectNames = ["verification"]
+
 subprojects {
     apply plugin: "com.diffplug.spotless"
     apply plugin: "jacoco"
@@ -91,17 +96,21 @@ subprojects {
     // Publishing plugins are applied per module: cli goes to GitHub Packages, the libraries to Maven
     // Central. Apply them before the java {} block below because the central-portal plugin registers its
     // own sourcesJar/javadocJar tasks and would collide with withSourcesJar()/withJavadocJar() otherwise.
-    // verification is the unpublished native-image stand-in for a downstream, so it gets neither.
+    // Unpublished modules get neither.
+    def isPublished = !(project.name in unpublishedProjectNames)
     if (project.name == "cli") {
         apply plugin: "maven-publish"
-    } else if (project.name != "verification") {
+    } else if (isPublished) {
         apply plugin: "net.thebugmc.gradle.sonatype-central-portal-publisher"
         apply plugin: "signing"
     }
 
-    java {
-        withJavadocJar()
-        withSourcesJar()
+    // The jars only feed the publications. The per-module javadoc task stays so doc comments are still linted.
+    if (isPublished) {
+        java {
+            withJavadocJar()
+            withSourcesJar()
+        }
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -126,7 +135,7 @@ subprojects {
     }
 
     // The libraries (core, mallet, annotator) publish to Maven Central, signed. cli is the runnable
-    // application that publishes to the private GitHub Packages registry. verification publishes nowhere.
+    // application that publishes to the private GitHub Packages registry.
     if (project.name == "cli") {
         publishing {
             repositories {
@@ -145,7 +154,7 @@ subprojects {
                 }
             }
         }
-    } else if (project.name != "verification") {
+    } else if (isPublished) {
         centralPortal {
             username = findProperty("centralPortalUsername")
             password = findProperty("centralPortalPassword")
@@ -268,24 +277,24 @@ subprojects {
     }
 }
 
-// The unpublished verification module stays out of the aggregate coverage and API documentation.
-def libraryProjects = subprojects.findAll { it.name != "verification" }
+// Unpublished modules stay out of the aggregate coverage and API documentation.
+def publishedProjects = subprojects.findAll { !(it.name in unpublishedProjectNames) }
 
 tasks.register('aggregateJacocoReport', JacocoReport) {
     description = "Generate aggregated JaCoCo coverage report for all modules"
     group = "verification"
 
-    dependsOn libraryProjects*.test
+    dependsOn publishedProjects*.test
 
-    executionData.from(libraryProjects.collect {
+    executionData.from(publishedProjects.collect {
         it.tasks.jacocoTestReport.executionData
     })
 
-    sourceDirectories.from(libraryProjects.collect {
+    sourceDirectories.from(publishedProjects.collect {
         it.sourceSets.main.allSource.srcDirs
     })
 
-    classDirectories.from(libraryProjects.collect {
+    classDirectories.from(publishedProjects.collect {
         it.sourceSets.main.output
     })
 
@@ -299,8 +308,8 @@ tasks.register('aggregateJavadoc', Javadoc) {
     description = "Generate aggregated Javadoc for all modules"
     group = "documentation"
 
-    source libraryProjects.collect { it.sourceSets.main.allJava }
-    classpath = files(libraryProjects.collect { it.sourceSets.main.compileClasspath })
+    source publishedProjects.collect { it.sourceSets.main.allJava }
+    classpath = files(publishedProjects.collect { it.sourceSets.main.compileClasspath })
 
     options {
         title = "CoordinateKit CRF ${project.version} API"
@@ -313,7 +322,7 @@ tasks.register('aggregateJavadoc', Javadoc) {
         docEncoding = "UTF-8"
         charSet = "UTF-8"
 
-        libraryProjects.each { subproject ->
+        publishedProjects.each { subproject ->
             def pkgPattern = "org.coordinatekit.crf.${subproject.name}*"
             //noinspection GroovyAssignabilityCheck, ForeignDelegate
             group("${subproject.name.capitalize()} Module", [pkgPattern])
