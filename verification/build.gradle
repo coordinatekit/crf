@@ -1,0 +1,18 @@
+plugins {
+    id "application"
+    alias libs.plugins.graalvm.native
+}
+
+application {
+    mainClass = "org.coordinatekit.crf.verification.VerificationLauncher"
+}
+
+// The root build applies java-library to every subproject, which makes the plugin default to a shared
+// library. This module needs an executable.
+graalvmNative {
+    binaries {
+        main {
+            sharedLibrary = false
+        }
+    }
+}

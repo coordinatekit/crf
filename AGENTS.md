@@ -198,6 +198,7 @@ This is a Conditional Random Fields (CRF) library for sequence labeling tasks, b
 - **mallet**: MALLET-based CRF trainer implementation
 - **annotator**: Parser-free `Configuration` and `Runner` types for the interactive `annotate` and `retokenize` flows
 - **cli**: The picocli command-line front end. Wires the `annotate` and `retokenize` subcommands under a root `crf` command and delegates to the `annotator` runners
+- **verification**: Unpublished. Plays a downstream application building the libraries into a GraalVM native image; CI builds and runs it
 
 ### Key Abstractions
 
