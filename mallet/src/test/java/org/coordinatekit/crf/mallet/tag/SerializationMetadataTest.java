@@ -15,21 +15,13 @@
  */
 package org.coordinatekit.crf.mallet.tag;
 
-import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cc.mallet.fst.CRF;
-import org.coordinatekit.crf.core.StringTagProvider;
-import org.coordinatekit.crf.core.feature.FeatureExtractor;
-import org.coordinatekit.crf.core.io.XmlTrainingData;
 import org.coordinatekit.crf.core.util.Serializables;
 import org.coordinatekit.crf.mallet.model.PartsOfSpeechModel;
-import org.coordinatekit.crf.mallet.train.MalletCrfTrainer;
-import org.coordinatekit.crf.mallet.train.MalletCrfTrainerConfiguration;
-import org.coordinatekit.crf.mallet.train.ModelOutputConfiguration;
-import org.coordinatekit.crf.mallet.train.WeightsType;
+import org.coordinatekit.crf.mallet.model.RecordedModels;
 import org.jspecify.annotations.NullMarked;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
@@ -44,17 +36,11 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Stream;
 
 /**
  * Guards the native image serialization configuration for the MALLET model graph.
@@ -74,33 +60,8 @@ import java.util.stream.Stream;
 @NullMarked
 class SerializationMetadataTest {
     private static final String CONFIGURATION_PATH_PROPERTY = "crf.serializationConfigPath";
-    private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> {
-        String token = sequence.get(position).token();
-        return Set.of(
-                createFeatureWithValue("LENGTH", String.valueOf(token.length())),
-                createFeatureWithValue("LOWER", token.toLowerCase(Locale.ROOT))
-        );
-    };
     private static final String REGENERATE_COMMAND = "./gradlew :mallet:test -PregenerateSerializationConfig";
     private static final String REGENERATE_PROPERTY = "crf.regenerateSerializationConfig";
-    private static final StringTagProvider TAG_PROVIDER = new StringTagProvider("0");
-    private static final String TRAINING_DATA_RESOURCE = "/org/coordinatekit/crf/mallet/test_addresses.xml";
-
-    /**
-     * A named trainer configuration whose model joins the recorded set.
-     *
-     * @param name a descriptive snake_case name for the case
-     * @param configuration the trainer configuration to train under
-     */
-    record RecordedCase(String name, MalletCrfTrainerConfiguration configuration) {}
-
-    private static MalletCrfTrainerConfiguration.Builder baseConfiguration() {
-        return MalletCrfTrainerConfiguration.builder()
-                .iterations(1)
-                .trainingFraction(1.0)
-                .conllOutputEnabled(false)
-                .modelOutputEnabled(false);
-    }
 
     private static SortedSet<String> committedClassNames(Path path) throws IOException {
         SortedSet<String> committed = new TreeSet<>();
@@ -119,36 +80,12 @@ class SerializationMetadataTest {
         return Path.of(path);
     }
 
-    private static SortedSet<String> recordClassNames(Path temporaryDirectory) throws IOException, URISyntaxException {
+    private static SortedSet<String> recordClassNames(Path temporaryDirectory) throws IOException {
         var recorder = new RecordingObjectInputFilter();
-        Path checkpointDirectory = temporaryDirectory.resolve("checkpoints");
-        Path trainingPath = Path.of(
-                Objects.requireNonNull(SerializationMetadataTest.class.getResource(TRAINING_DATA_RESOURCE)).toURI()
-        );
 
         Serializables.deserialize(CRF.class, PartsOfSpeechModel.INSTANCE.modelPath(), recorder);
-
-        for (RecordedCase recordedCase : recordedCases(checkpointDirectory)) {
-            Path modelPath = temporaryDirectory.resolve(recordedCase.name() + ".crf");
-            new MalletCrfTrainer<>(
-                    FEATURE_EXTRACTOR,
-                    TAG_PROVIDER,
-                    new XmlTrainingData<>(TAG_PROVIDER),
-                    recordedCase.configuration()
-            ).train(trainingPath, modelPath);
-            Serializables.deserialize(CRF.class, modelPath, recorder);
-        }
-
-        assertTrue(
-                Files.isDirectory(checkpointDirectory),
-                "The model_checkpoints case should create the checkpoint directory."
-        );
-        try (Stream<Path> checkpoints = Files.list(checkpointDirectory)) {
-            List<Path> files = checkpoints.sorted().toList();
-            assertFalse(files.isEmpty(), "The model_checkpoints case should write at least one checkpoint.");
-            for (Path file : files) {
-                Serializables.deserialize(CRF.class, file, recorder);
-            }
+        for (Path model : RecordedModels.trainAll(temporaryDirectory)) {
+            Serializables.deserialize(CRF.class, model, recorder);
         }
 
         SortedSet<String> recorded = recorder.recordedClassNames();
@@ -160,32 +97,9 @@ class SerializationMetadataTest {
         return recorded;
     }
 
-    private static List<RecordedCase> recordedCases(Path checkpointDirectory) {
-        return List.of(
-                new RecordedCase("defaults", baseConfiguration().build()),
-                new RecordedCase("dense_weights", baseConfiguration().weightsType(WeightsType.DENSE).build()),
-                new RecordedCase(
-                        "model_checkpoints",
-                        baseConfiguration().iterations(2)
-                                .modelOutputEnabled(true)
-                                .modelOutputConfiguration(
-                                        ModelOutputConfiguration.builder()
-                                                .outputDirectory(checkpointDirectory)
-                                                .iterationInterval(1)
-                                                .build()
-                                )
-                                .build()
-                ),
-                new RecordedCase("not_fully_connected", baseConfiguration().fullyConnected(false).build()),
-                new RecordedCase("some_dense_weights", baseConfiguration().weightsType(WeightsType.SOME_DENSE).build()),
-                new RecordedCase("sparse_weights", baseConfiguration().weightsType(WeightsType.SPARSE).build())
-        );
-    }
-
     @DisabledIfSystemProperty(named = REGENERATE_PROPERTY, matches = "true")
     @Test
-    void serializationConfig__coversRecordedClasses(@TempDir Path temporaryDirectory)
-            throws IOException, URISyntaxException {
+    void serializationConfig__coversRecordedClasses(@TempDir Path temporaryDirectory) throws IOException {
         // ARRANGE //
         SortedSet<String> recorded = recordClassNames(temporaryDirectory);
         SortedSet<String> committed = committedClassNames(configurationPath());
@@ -204,7 +118,7 @@ class SerializationMetadataTest {
 
     @EnabledIfSystemProperty(named = REGENERATE_PROPERTY, matches = "true")
     @Test
-    void serializationConfig__regenerates(@TempDir Path temporaryDirectory) throws IOException, URISyntaxException {
+    void serializationConfig__regenerates(@TempDir Path temporaryDirectory) throws IOException {
         // ARRANGE //
         SortedSet<String> recorded = recordClassNames(temporaryDirectory);
         JsonMapper mapper = JsonMapper.builder().build();

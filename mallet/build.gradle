@@ -20,3 +20,15 @@ tasks.named("test") {
         systemProperty("crf.regenerateSerializationConfig", "true")
     }
 }
+
+def nativeFixtureModelsDirectory = layout.buildDirectory.dir("native-fixture-models")
+
+tasks.register("generateNativeFixtureModels", JavaExec) {
+    group = "verification"
+    description = "Train the recorded models the verification native image loads."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "org.coordinatekit.crf.mallet.model.RecordedModels"
+    outputs.dir(nativeFixtureModelsDirectory)
+    doFirst { delete nativeFixtureModelsDirectory }
+    argumentProviders.add({ [nativeFixtureModelsDirectory.get().asFile.absolutePath] } as CommandLineArgumentProvider)
+}

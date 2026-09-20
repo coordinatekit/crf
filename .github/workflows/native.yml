@@ -31,8 +31,5 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build native image
-        run: ./gradlew :verification:nativeCompile
-
-      - name: Run native image
-        run: verification/build/native/nativeCompile/verification
+      - name: Verify native image
+        run: ./gradlew :verification:nativeRun

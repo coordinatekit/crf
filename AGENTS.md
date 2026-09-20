@@ -15,6 +15,7 @@ This file provides guidance to agents when working with code in this repository.
 ./gradlew jacocoTestReport         # Generate code coverage reports
 ./gradlew :mallet:test -PregenerateSerializationConfig  # Rewrite the native image serialization config
 ./gradlew :verification:nativeCompile  # Build the GraalVM native image (needs a GraalVM JDK)
+./gradlew :verification:nativeRun      # Build the image, load every recorded model through it (needs a GraalVM JDK)
 ```
 
 `nativeCompile` needs a GraalVM JDK 21 on `JAVA_HOME` or `GRAALVM_HOME`. `./gradlew build` never reaches it
@@ -205,6 +206,10 @@ for classes that are no longer loaded are tolerated.
 A trainer option that can change the serialized model graph needs a `RecordedCase` in `SerializationMetadataTest`.
 After adding one, or after bumping MALLET, run `./gradlew :mallet:test -PregenerateSerializationConfig` and review
 the diff of the JSON file.
+
+`./gradlew :verification:nativeRun` is the native check. It trains every `RecordedModels` case into
+`mallet/build/native-fixture-models` and has the image load each one, so a class the JVM guard misses but
+GraalVM needs fails there. A new `RecordedCase` joins the native run automatically.
 
 ## Architecture
 
