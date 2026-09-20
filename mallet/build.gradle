@@ -15,7 +15,8 @@ tasks.named("test") {
             file("src/main/resources/META-INF/native-image/org.coordinatekit.crf/mallet/serialization-config.json").absolutePath
     )
     // A changed system property is a changed task input, so a regeneration run is never up to date.
-    if (providers.gradleProperty("regenerateSerializationConfig").isPresent()) {
+    // A bare -P (empty value) enables it; an explicit false does not.
+    if (providers.gradleProperty("regenerateSerializationConfig").map { it.isEmpty() || it.toBoolean() }.getOrElse(false)) {
         systemProperty("crf.regenerateSerializationConfig", "true")
     }
 }
