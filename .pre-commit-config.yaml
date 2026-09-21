@@ -18,7 +18,7 @@ repos:
         args:
           - --strict
           - --scopes
-          - core,mallet
+          - annotator,cli,core,mallet,verification
           - feat
           - fix
           - docs
