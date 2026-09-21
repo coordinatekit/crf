@@ -64,6 +64,7 @@ public final class VerificationLauncher {
         if (arguments.length != 1) {
             throw new IllegalArgumentException("Expected exactly one argument, the model directory.");
         }
+        BundledSchemaChecks.run();
         CrfTaggerLoader loader = CrfServices.taggerLoader()
                 .orElseThrow(() -> new IllegalStateException("No CrfTaggerLoader on the image classpath."));
         List<Path> models = sortedModelsIn(Path.of(arguments[0]));

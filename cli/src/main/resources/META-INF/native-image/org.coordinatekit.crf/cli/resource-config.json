@@ -1,0 +1,12 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/cli/banner/crf-big.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/cli/banner/crf-small.txt\\E"
+      }
+    ]
+  }
+}

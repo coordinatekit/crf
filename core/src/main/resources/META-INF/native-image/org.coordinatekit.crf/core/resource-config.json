@@ -1,0 +1,12 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/core/io/training-data.xsd\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/core/feature/configuration/feature-configuration.xsd\\E"
+      }
+    ]
+  }
+}
