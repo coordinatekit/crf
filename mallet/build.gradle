@@ -4,5 +4,31 @@ dependencies {
         exclude group: "junit", module: "junit"
         exclude group: "org.jdom", module: "jdom"  // unused by MALLET; no patched release (GHSA-2363-cqg2-863c)
     }
+    testImplementation libs.jackson.databind
     testImplementation libs.logback.classic
+}
+
+tasks.named("test") {
+    // Point the serialization metadata test at the committed file, not a copy on the classpath.
+    systemProperty(
+            "crf.serializationConfigPath",
+            file("src/main/resources/META-INF/native-image/org.coordinatekit.crf/mallet/serialization-config.json").absolutePath
+    )
+    // A changed system property is a changed task input, so a regeneration run is never up to date.
+    // A bare -P (empty value) enables it; an explicit false does not.
+    if (providers.gradleProperty("regenerateSerializationConfig").map { it.isEmpty() || it.toBoolean() }.getOrElse(false)) {
+        systemProperty("crf.regenerateSerializationConfig", "true")
+    }
+}
+
+def nativeFixtureModelsDirectory = layout.buildDirectory.dir("native-fixture-models")
+
+tasks.register("generateNativeFixtureModels", JavaExec) {
+    group = "verification"
+    description = "Train the recorded models the verification native image loads."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "org.coordinatekit.crf.mallet.model.RecordedModels"
+    outputs.dir(nativeFixtureModelsDirectory)
+    doFirst { delete nativeFixtureModelsDirectory }
+    argumentProviders.add({ [nativeFixtureModelsDirectory.get().asFile.absolutePath] } as CommandLineArgumentProvider)
 }

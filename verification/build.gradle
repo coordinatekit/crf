@@ -3,6 +3,13 @@ plugins {
     alias libs.plugins.graalvm.native
 }
 
+dependencies {
+    implementation project(":core")
+    // Runtime only: the image must discover MalletCrfTaggerLoader through ServiceLoader the way a
+    // downstream does, and mallet is what carries serialization-config.json into the image.
+    runtimeOnly project(":mallet")
+}
+
 application {
     mainClass = "org.coordinatekit.crf.verification.VerificationLauncher"
 }
@@ -15,4 +22,12 @@ graalvmNative {
             sharedLibrary = false
         }
     }
+}
+
+// Run the image against every model the mallet module trains, so GraalVM has to accept each graph.
+def nativeFixtureModelsDirectory = project(":mallet").layout.buildDirectory.dir("native-fixture-models")
+
+tasks.named("nativeRun") {
+    dependsOn ":mallet:generateNativeFixtureModels"
+    runtimeArgs.add(nativeFixtureModelsDirectory.map { it.asFile.absolutePath })
 }

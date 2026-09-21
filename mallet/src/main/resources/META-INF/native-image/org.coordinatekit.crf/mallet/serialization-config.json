@@ -1,0 +1,102 @@
+{
+  "types": [
+    {
+      "name": "boolean[]"
+    },
+    {
+      "name": "byte[]"
+    },
+    {
+      "name": "cc.mallet.fst.CRF"
+    },
+    {
+      "name": "cc.mallet.fst.CRF$Factors"
+    },
+    {
+      "name": "cc.mallet.fst.CRF$State"
+    },
+    {
+      "name": "cc.mallet.fst.CRF$State[]"
+    },
+    {
+      "name": "cc.mallet.fst.MaxLatticeDefault$Factory"
+    },
+    {
+      "name": "cc.mallet.fst.MaxLatticeFactory"
+    },
+    {
+      "name": "cc.mallet.fst.SumLatticeDefault$Factory"
+    },
+    {
+      "name": "cc.mallet.fst.SumLatticeFactory"
+    },
+    {
+      "name": "cc.mallet.fst.Transducer"
+    },
+    {
+      "name": "cc.mallet.fst.Transducer$State"
+    },
+    {
+      "name": "cc.mallet.pipe.Noop"
+    },
+    {
+      "name": "cc.mallet.pipe.Pipe"
+    },
+    {
+      "name": "cc.mallet.types.Alphabet"
+    },
+    {
+      "name": "cc.mallet.types.FeatureSelection[]"
+    },
+    {
+      "name": "cc.mallet.types.IndexedSparseVector"
+    },
+    {
+      "name": "cc.mallet.types.Label"
+    },
+    {
+      "name": "cc.mallet.types.LabelAlphabet"
+    },
+    {
+      "name": "cc.mallet.types.SparseVector"
+    },
+    {
+      "name": "cc.mallet.types.SparseVector[]"
+    },
+    {
+      "name": "double[]"
+    },
+    {
+      "name": "int[]"
+    },
+    {
+      "name": "int[][]"
+    },
+    {
+      "name": "java.lang.Object[]"
+    },
+    {
+      "name": "java.lang.String"
+    },
+    {
+      "name": "java.lang.String[]"
+    },
+    {
+      "name": "java.rmi.dgc.VMID"
+    },
+    {
+      "name": "java.rmi.server.UID"
+    },
+    {
+      "name": "java.util.ArrayList"
+    },
+    {
+      "name": "java.util.HashMap"
+    },
+    {
+      "name": "java.util.Map$Entry[]"
+    }
+  ],
+  "lambdaCapturingTypes": [],
+  "proxies": []
+}
