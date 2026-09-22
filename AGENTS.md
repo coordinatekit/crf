@@ -211,12 +211,13 @@ the diff of the JSON file.
 `mallet/build/native-fixture-models` and has the image load each one, so a class the JVM guard misses but
 GraalVM needs fails there. A new `RecordedCase` joins the native run automatically.
 
-`cli` commits `resource-config.json` for its own `crf-big.txt` and `crf-small.txt` banner art. `picocli-codegen`
-generates the reflection and resource configuration for the commands at compile time into the jar, plus the
-`cli-brand` banner resources that library does not declare itself (named in `cli/build.gradle`). `core` commits
-`resource-config.json` for its two bundled XSDs; `BundledSchemaChecks` in `verification` exercises both in the
-native run. `annotator` owes nothing: it uses no reflection or classpath resources, and the `org.jline:jline`
-bundle jar carries metadata for its terminal providers.
+`cli` commits `resource-config.json` for all of its banner art: its own `crf-big.txt` and `crf-small.txt`, plus the
+`cli-brand` resources that library does not declare itself. `picocli-codegen` generates the reflection
+configuration for the commands at compile time into the jar. `ResourceMetadataTest` guards the committed
+resource file against a renamed or moved resource. `core` commits `resource-config.json` for its two bundled
+XSDs; `BundledSchemaChecks` in `verification` exercises both in the native run. `annotator` owes nothing: it
+uses no reflection or classpath resources, and the `org.jline:jline` bundle jar carries metadata for its
+terminal providers.
 
 ## Architecture
 

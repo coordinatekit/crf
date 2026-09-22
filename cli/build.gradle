@@ -19,31 +19,21 @@ dependencies {
     implementation libs.coordinatekit.cli.brand
 
     annotationProcessor libs.picocli.codegen
+
+    testImplementation libs.jackson.databind
 }
 
 // picocli reads the command classes reflectively, so a native image needs them registered.
-// picocli-codegen writes reflect-config.json, resource-config.json and proxy-config.json into the
-// class output, from where they land in the jar; they are build outputs and are not committed.
+// picocli-codegen writes reflect-config.json and proxy-config.json into the class output, from where
+// they land in the jar; they are build outputs and are not committed. Resource metadata is not
+// generated: the banner art is read through Class.getResourceAsStream, not declared as a picocli
+// resource bundle, so the processor cannot infer it, and it is committed by hand instead (see
+// src/main/resources/META-INF/native-image and ResourceMetadataTest).
 // -Aproject is relative to the processor's own META-INF/native-image/picocli-generated/ base, so the
 // files end up under picocli-generated/org.coordinatekit.crf/cli/. native-image searches every
 // subdirectory of META-INF/native-image, so that extra segment costs nothing.
 tasks.named("compileJava") {
-    options.compilerArgs += [
-            "-Aproject=org.coordinatekit.crf/cli",
-            // The banner art is read through Class.getResourceAsStream, not declared as a picocli
-            // resource bundle, so the processor cannot infer it. cli's own crf-* art is declared in the
-            // committed resource-config.json under src/main/resources/META-INF/native-image. The
-            // coordinatekit-* and mark entries belong to cli-brand, which ships no metadata of its own;
-            // initializing its Banner class reads all three, which `crf --help` does. Drop them when
-            // cli-brand carries its own.
-            // Patterns use [.] rather than \\. : picocli writes them into the JSON verbatim, and \.
-            // is not a valid JSON escape.
-            "-Aother.resource.patterns=" + [
-                    "org/coordinatekit/foundation/cli/brand/banner/coordinatekit-big[.]txt",
-                    "org/coordinatekit/foundation/cli/brand/banner/coordinatekit-small[.]txt",
-                    "org/coordinatekit/foundation/cli/brand/banner/mark[.]txt",
-            ].join(",")
-    ]
+    options.compilerArgs += ["-Aproject=org.coordinatekit.crf/cli"]
 }
 
 application {
