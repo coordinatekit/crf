@@ -20,6 +20,10 @@
  * This module is never published. It exists so CI can build and run an image the way a consumer of
  * the {@code crf} libraries would, and is the place where native image metadata gets verified.
  * {@link org.coordinatekit.crf.verification.VerificationLauncher} is its entry point.
+ *
+ * <p>
+ * It also embeds the {@code crf} command line from {@code cli}, so the command metadata is proven
+ * in the same image.
  */
 @NullMarked
 package org.coordinatekit.crf.verification;

@@ -18,6 +18,7 @@ package org.coordinatekit.crf.verification;
 import static org.coordinatekit.crf.core.feature.Feature.createFeatureWithValue;
 
 import org.coordinatekit.crf.core.StringTagProvider;
+import org.coordinatekit.crf.core.UncheckedCrfException;
 import org.coordinatekit.crf.core.feature.FeatureExtractor;
 import org.coordinatekit.crf.core.spi.CrfServices;
 import org.coordinatekit.crf.core.tag.CrfTagger;
@@ -35,11 +36,18 @@ import java.util.stream.Stream;
  * Entry point of the native image that stands in for a downstream application.
  *
  * <p>
- * The image loads every model in the directory named by its first argument through the
- * {@link org.coordinatekit.crf.core.tag.CrfTaggerLoader} discovered on its classpath, then tags one
- * sequence with each. A class missing from the {@code mallet} module's serialization metadata fails
- * here and nowhere else, so this run is the only check that GraalVM accepts what
- * {@code serialization-config.json} lists.
+ * The image runs one check per module that ships native image metadata, in this order:
+ * <ul>
+ * <li>{@link BundledSchemaChecks} validates a document against each XSD bundled in {@code core}.
+ * <li>{@link CliChecks} runs the {@code crf} command line from {@code cli}.
+ * <li>The launcher loads every model in the directory named by its first argument through the
+ * {@link CrfTaggerLoader} discovered on its classpath, then tags one sequence with each.
+ * </ul>
+ *
+ * <p>
+ * A class missing from the {@code mallet} module's serialization metadata fails here and nowhere
+ * else, so this run is the only check that GraalVM accepts what {@code serialization-config.json}
+ * lists. The same holds for {@code cli}'s reflection and resource metadata.
  */
 public final class VerificationLauncher {
     private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> {
@@ -53,17 +61,23 @@ public final class VerificationLauncher {
     private VerificationLauncher() {}
 
     /**
-     * Loads every model in a directory and tags one sequence with each, printing a line per model.
+     * Runs the schema and command-line checks, then loads every model in a directory and tags one
+     * sequence with each, printing a line per check and per model.
      *
      * @param arguments the command-line arguments; the only one is the model directory
-     * @throws IOException if a model cannot be read or deserialized
+     * @throws IOException if the schema check's temporary file cannot be written, or a model cannot be
+     *         read or deserialized
      * @throws IllegalArgumentException if the argument count is wrong
-     * @throws IllegalStateException if no loader is discovered or the directory holds no model
+     * @throws IllegalStateException if a {@code crf} invocation exits with a nonzero code, no loader is
+     *         discovered, or the directory holds no model
+     * @throws UncheckedCrfException if a bundled XSD is missing from the image or rejects its document
      */
     public static void main(String[] arguments) throws IOException {
         if (arguments.length != 1) {
             throw new IllegalArgumentException("Expected exactly one argument, the model directory.");
         }
+        BundledSchemaChecks.run();
+        CliChecks.run();
         CrfTaggerLoader loader = CrfServices.taggerLoader()
                 .orElseThrow(() -> new IllegalStateException("No CrfTaggerLoader on the image classpath."));
         List<Path> models = sortedModelsIn(Path.of(arguments[0]));

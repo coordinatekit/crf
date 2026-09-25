@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation project(":core")
+    implementation project(":cli")
     // Runtime only: the image must discover MalletCrfTaggerLoader through ServiceLoader the way a
     // downstream does, and mallet is what carries serialization-config.json into the image.
     runtimeOnly project(":mallet")

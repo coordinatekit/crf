@@ -40,6 +40,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 mallet = { module = "cc.mallet:mallet", version.ref = "mallet" }
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [plugins]

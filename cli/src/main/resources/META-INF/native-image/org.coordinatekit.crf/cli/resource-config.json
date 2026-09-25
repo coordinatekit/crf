@@ -1,0 +1,21 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/cli/banner/crf-big.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/crf/cli/banner/crf-small.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/foundation/cli/brand/banner/coordinatekit-big.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/foundation/cli/brand/banner/coordinatekit-small.txt\\E"
+      },
+      {
+        "pattern": "\\Qorg/coordinatekit/foundation/cli/brand/banner/mark.txt\\E"
+      }
+    ]
+  }
+}

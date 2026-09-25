@@ -15,7 +15,7 @@ This file provides guidance to agents when working with code in this repository.
 ./gradlew jacocoTestReport         # Generate code coverage reports
 ./gradlew :mallet:test -PregenerateSerializationConfig  # Rewrite the native image serialization config
 ./gradlew :verification:nativeCompile  # Build the GraalVM native image (needs a GraalVM JDK)
-./gradlew :verification:nativeRun      # Build the image, load every recorded model through it (needs a GraalVM JDK)
+./gradlew :verification:nativeRun      # Build the image, run the schema, cli, and model checks through it (needs a GraalVM JDK)
 ```
 
 `nativeCompile` needs a GraalVM JDK 21 on `JAVA_HOME` or `GRAALVM_HOME`. `./gradlew build` never reaches it
@@ -209,7 +209,17 @@ the diff of the JSON file.
 
 `./gradlew :verification:nativeRun` is the native check. It trains every `RecordedModels` case into
 `mallet/build/native-fixture-models` and has the image load each one, so a class the JVM guard misses but
-GraalVM needs fails there. A new `RecordedCase` joins the native run automatically.
+GraalVM needs fails there. A new `RecordedCase` joins the native run automatically. The run also validates `core`'s
+bundled XSDs through `BundledSchemaChecks`, and runs `crf --help`, `crf --version`, and each subcommand's `--help`
+through `CliChecks`.
+
+`cli` commits `resource-config.json` for all of its banner art: its own `crf-big.txt` and `crf-small.txt`, plus the
+`cli-brand` resources that library does not declare itself. `picocli-codegen` generates the reflection
+configuration for the commands at compile time into the jar. `ResourceMetadataTest` guards the committed
+resource file against a renamed or moved resource. In the native run, `CliChecks` in `verification` runs the
+commands. `core` commits `resource-config.json` for its two bundled XSDs; `BundledSchemaChecks` in `verification`
+exercises both in the native run. `annotator` owes nothing: it uses no reflection or classpath resources, and the
+`org.jline:jline` bundle jar carries metadata for its terminal providers.
 
 ## Architecture
 
@@ -221,7 +231,7 @@ This is a Conditional Random Fields (CRF) library for sequence labeling tasks, b
 - **mallet**: MALLET-based CRF trainer implementation
 - **annotator**: Parser-free `Configuration` and `Runner` types for the interactive `annotate` and `retokenize` flows
 - **cli**: The picocli command-line front end. Wires the `annotate` and `retokenize` subcommands under a root `crf` command and delegates to the `annotator` runners
-- **verification**: Unpublished. Plays a downstream application building the libraries into a GraalVM native image; CI builds and runs it
+- **verification**: Unpublished. Plays a downstream application building the libraries, and the `crf` command line, into a GraalVM native image; CI builds and runs it
 
 ### Key Abstractions
 
