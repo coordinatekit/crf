@@ -21,11 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UncheckedCrfExceptionTest {
     @Test
-    void constructor__noArgs() {
-        var exception = new UncheckedCrfException();
+    void constructor__cause() {
+        var cause = new RuntimeException("cause");
+        var exception = new UncheckedCrfException(cause);
 
-        assertNull(exception.getMessage());
-        assertNull(exception.getCause());
+        assertEquals("java.lang.RuntimeException: cause", exception.getMessage());
+        assertSame(cause, exception.getCause());
     }
 
     @Test
@@ -46,12 +47,11 @@ class UncheckedCrfExceptionTest {
     }
 
     @Test
-    void constructor__cause() {
-        var cause = new RuntimeException("cause");
-        var exception = new UncheckedCrfException(cause);
+    void constructor__noArgs() {
+        var exception = new UncheckedCrfException();
 
-        assertEquals("java.lang.RuntimeException: cause", exception.getMessage());
-        assertSame(cause, exception.getCause());
+        assertNull(exception.getMessage());
+        assertNull(exception.getCause());
     }
 
     @Test

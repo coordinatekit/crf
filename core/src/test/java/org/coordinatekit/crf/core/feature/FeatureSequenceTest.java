@@ -46,35 +46,6 @@ class FeatureSequenceTest {
             List<Set<Feature>> expectedFeatures
     ) {}
 
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters(
-                        "single_token",
-                        List.of("Hello"),
-                        List.of(Set.of(createFeature("f1"), createFeature("f2"))),
-                        List.of("Hello"),
-                        List.of(0),
-                        List.of(Set.of(createFeature("f1"), createFeature("f2")))
-                ),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of(
-                                Set.of(createFeature("f1")),
-                                Set.of(createFeature("f2"), createFeature("f3")),
-                                Set.of(createFeature("f4"))
-                        ),
-                        List.of("Hello", "world", "!"),
-                        List.of(0, 1, 2),
-                        List.of(
-                                Set.of(createFeature("f1")),
-                                Set.of(createFeature("f2"), createFeature("f3")),
-                                Set.of(createFeature("f4"))
-                        )
-                )
-        );
-    }
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -140,6 +111,35 @@ class FeatureSequenceTest {
         assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
         assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
         assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
+    }
+
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters(
+                        "single_token",
+                        List.of("Hello"),
+                        List.of(Set.of(createFeature("f1"), createFeature("f2"))),
+                        List.of("Hello"),
+                        List.of(0),
+                        List.of(Set.of(createFeature("f1"), createFeature("f2")))
+                ),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of(
+                                Set.of(createFeature("f1")),
+                                Set.of(createFeature("f2"), createFeature("f3")),
+                                Set.of(createFeature("f4"))
+                        ),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2),
+                        List.of(
+                                Set.of(createFeature("f1")),
+                                Set.of(createFeature("f2"), createFeature("f3")),
+                                Set.of(createFeature("f4"))
+                        )
+                )
+        );
     }
 
     @ParameterizedTest

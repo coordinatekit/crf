@@ -42,123 +42,6 @@ import java.util.stream.Stream;
  * {@link InvalidFactoryDeclarationException}.
  */
 class FeatureExtractorFactoryRegistryTest {
-    /** A synthetic leaf factory declaring a configurable type and emitting nothing. */
-    private record SyntheticFactory(String type) implements LeafFeatureExtractorFactory {
-        @Override
-        public FeatureExtractor create(FeatureExtractorParameters parameters) {
-            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
-        }
-
-        @Override
-        public String type() {
-            return type;
-        }
-    }
-
-    /** A second synthetic class so a duplicate type is a genuine two-class collision. */
-    private static final class ShadowFactory implements LeafFeatureExtractorFactory {
-        @Override
-        public FeatureExtractor create(FeatureExtractorParameters parameters) {
-            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
-        }
-
-        @Override
-        public String type() {
-            return "length";
-        }
-    }
-
-    /** A factory that implements only the root interface, neither leaf nor nesting. */
-    private static final class RootOnlyFactory implements FeatureExtractorFactory {
-        @Override
-        public String type() {
-            return "root-only";
-        }
-    }
-
-    /** A nesting factory whose declared bounds are otherwise valid, for a shared arity-bound base. */
-    private static class ValidNestingFactory implements NestingFeatureExtractorFactory {
-        @Override
-        public FeatureExtractor create(FeatureExtractorParameters parameters, List<FeatureExtractor> children) {
-            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
-        }
-
-        @Override
-        public int maximumChildren() {
-            return Integer.MAX_VALUE;
-        }
-
-        @Override
-        public String type() {
-            return "valid-nesting";
-        }
-    }
-
-    /** A nesting factory whose declared minimum children is negative. */
-    private static final class NegativeMinimumFactory extends ValidNestingFactory {
-        @Override
-        public int minimumChildren() {
-            return -1;
-        }
-
-        @Override
-        public String type() {
-            return "negative-minimum";
-        }
-    }
-
-    /** A nesting factory whose declared maximum children is below its minimum. */
-    private static final class MaximumBelowMinimumFactory extends ValidNestingFactory {
-        @Override
-        public int maximumChildren() {
-            return 2;
-        }
-
-        @Override
-        public int minimumChildren() {
-            return 3;
-        }
-
-        @Override
-        public String type() {
-            return "maximum-below-minimum";
-        }
-    }
-
-    /** A nesting factory whose descriptor incorrectly declares that it requires no children. */
-    private static final class NestingWithNoChildrenFactory extends ValidNestingFactory {
-        @Override
-        public int minimumChildren() {
-            return 0;
-        }
-
-        @Override
-        public String type() {
-            return "nesting-with-no-children";
-        }
-    }
-
-    /** A leaf factory declaring two parameters that share a name but differ in kind. */
-    private static final class DuplicateParameterFactory implements LeafFeatureExtractorFactory {
-        @Override
-        public FeatureExtractor create(FeatureExtractorParameters parameters) {
-            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
-        }
-
-        @Override
-        public Set<ParameterDescriptor> parameters() {
-            return Set.of(
-                    ParameterDescriptor.builder("name", ParameterKind.STRING).build(),
-                    ParameterDescriptor.builder("name", ParameterKind.INTEGER).build()
-            );
-        }
-
-        @Override
-        public String type() {
-            return "duplicate-parameter";
-        }
-    }
-
     /** A factory that implements both leaf and nesting, an ambiguous dispatch. */
     private static final class DualKindFactory implements LeafFeatureExtractorFactory, NestingFeatureExtractorFactory {
         @Override
@@ -185,6 +68,140 @@ class FeatureExtractorFactoryRegistryTest {
         public String type() {
             return "dual-kind";
         }
+    }
+
+    /** A leaf factory declaring two parameters that share a name but differ in kind. */
+    private static final class DuplicateParameterFactory implements LeafFeatureExtractorFactory {
+        @Override
+        public FeatureExtractor create(FeatureExtractorParameters parameters) {
+            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
+        }
+
+        @Override
+        public Set<ParameterDescriptor> parameters() {
+            return Set.of(
+                    ParameterDescriptor.builder("name", ParameterKind.STRING).build(),
+                    ParameterDescriptor.builder("name", ParameterKind.INTEGER).build()
+            );
+        }
+
+        @Override
+        public String type() {
+            return "duplicate-parameter";
+        }
+    }
+
+    /** A nesting factory whose declared maximum children is below its minimum. */
+    private static final class MaximumBelowMinimumFactory extends ValidNestingFactory {
+        @Override
+        public int maximumChildren() {
+            return 2;
+        }
+
+        @Override
+        public int minimumChildren() {
+            return 3;
+        }
+
+        @Override
+        public String type() {
+            return "maximum-below-minimum";
+        }
+    }
+
+    /** A nesting factory whose declared minimum children is negative. */
+    private static final class NegativeMinimumFactory extends ValidNestingFactory {
+        @Override
+        public int minimumChildren() {
+            return -1;
+        }
+
+        @Override
+        public String type() {
+            return "negative-minimum";
+        }
+    }
+
+    /** A nesting factory whose descriptor incorrectly declares that it requires no children. */
+    private static final class NestingWithNoChildrenFactory extends ValidNestingFactory {
+        @Override
+        public int minimumChildren() {
+            return 0;
+        }
+
+        @Override
+        public String type() {
+            return "nesting-with-no-children";
+        }
+    }
+
+    record OfInvalidDeclarationParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessageFragment
+    ) {}
+
+    /** A factory that implements only the root interface, neither leaf nor nesting. */
+    private static final class RootOnlyFactory implements FeatureExtractorFactory {
+        @Override
+        public String type() {
+            return "root-only";
+        }
+    }
+
+    /** A second synthetic class so a duplicate type is a genuine two-class collision. */
+    private static final class ShadowFactory implements LeafFeatureExtractorFactory {
+        @Override
+        public FeatureExtractor create(FeatureExtractorParameters parameters) {
+            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
+        }
+
+        @Override
+        public String type() {
+            return "length";
+        }
+    }
+
+    /** A synthetic leaf factory declaring a configurable type and emitting nothing. */
+    private record SyntheticFactory(String type) implements LeafFeatureExtractorFactory {
+        @Override
+        public FeatureExtractor create(FeatureExtractorParameters parameters) {
+            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
+        }
+
+        @Override
+        public String type() {
+            return type;
+        }
+    }
+
+    /** A nesting factory whose declared bounds are otherwise valid, for a shared arity-bound base. */
+    private static class ValidNestingFactory implements NestingFeatureExtractorFactory {
+        @Override
+        public FeatureExtractor create(FeatureExtractorParameters parameters, List<FeatureExtractor> children) {
+            return (Sequence<? extends PositionedToken> sequence, int position) -> Set.of();
+        }
+
+        @Override
+        public int maximumChildren() {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public String type() {
+            return "valid-nesting";
+        }
+    }
+
+    @Test
+    void find__unknownTypeIsEmpty() {
+        // ARRANGE //
+        FeatureExtractorFactoryRegistry registry = FeatureExtractorFactoryRegistry
+                .of(List.of(new SyntheticFactory("window")));
+
+        // ACT & ASSERT //
+        assertTrue(registry.find("missing").isEmpty());
     }
 
     @Test
@@ -220,13 +237,6 @@ class FeatureExtractorFactoryRegistryTest {
         assertSame(window, registry.find("window").orElseThrow());
         assertSame(length, registry.find("length").orElseThrow());
     }
-
-    record OfInvalidDeclarationParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessageFragment
-    ) {}
 
     static Stream<OfInvalidDeclarationParameters> of__invalidDeclaration() {
         return Stream.of(
@@ -299,15 +309,5 @@ class FeatureExtractorFactoryRegistryTest {
         // ASSERT //
         assertEquals("root-only", exception.type());
         assertEquals(RootOnlyFactory.class.getName(), exception.factoryClassName());
-    }
-
-    @Test
-    void find__unknownTypeIsEmpty() {
-        // ARRANGE //
-        FeatureExtractorFactoryRegistry registry = FeatureExtractorFactoryRegistry
-                .of(List.of(new SyntheticFactory("window")));
-
-        // ACT & ASSERT //
-        assertTrue(registry.find("missing").isEmpty());
     }
 }

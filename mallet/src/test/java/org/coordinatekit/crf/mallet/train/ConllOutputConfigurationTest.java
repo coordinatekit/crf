@@ -53,32 +53,6 @@ class ConllOutputConfigurationTest {
     }
 
     @Test
-    void builder_withRequiredFieldsOnly_usesDefaults() {
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder().build();
-
-        assertEquals(Paths.get(""), config.outputDirectory());
-        assertEquals("output_iter", config.filePrefix());
-        assertEquals(".conll", config.fileSuffix());
-        assertEquals(10, config.iterationInterval());
-    }
-
-    @Test
-    void builder_withAllCustomValues_returnsConfigWithCustomValues() {
-        Path customDirectory = Path.of("custom", "dir");
-        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
-                .outputDirectory(customDirectory)
-                .filePrefix("predictions")
-                .fileSuffix("tsv")
-                .iterationInterval(5)
-                .build();
-
-        assertEquals(customDirectory, config.outputDirectory());
-        assertEquals("predictions", config.filePrefix());
-        assertEquals("tsv", config.fileSuffix());
-        assertEquals(5, config.iterationInterval());
-    }
-
-    @Test
     void builder_canBeReused() {
         var builder = ConllOutputConfiguration.builder().filePrefix("test");
 
@@ -127,5 +101,31 @@ class ConllOutputConfigurationTest {
         ConllOutputConfiguration config = ConllOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR).build();
 
         assertEquals(TEST_OUTPUT_DIR, config.outputDirectory());
+    }
+
+    @Test
+    void builder_withAllCustomValues_returnsConfigWithCustomValues() {
+        Path customDirectory = Path.of("custom", "dir");
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder()
+                .outputDirectory(customDirectory)
+                .filePrefix("predictions")
+                .fileSuffix("tsv")
+                .iterationInterval(5)
+                .build();
+
+        assertEquals(customDirectory, config.outputDirectory());
+        assertEquals("predictions", config.filePrefix());
+        assertEquals("tsv", config.fileSuffix());
+        assertEquals(5, config.iterationInterval());
+    }
+
+    @Test
+    void builder_withRequiredFieldsOnly_usesDefaults() {
+        ConllOutputConfiguration config = ConllOutputConfiguration.builder().build();
+
+        assertEquals(Paths.get(""), config.outputDirectory());
+        assertEquals("output_iter", config.filePrefix());
+        assertEquals(".conll", config.fileSuffix());
+        assertEquals(10, config.iterationInterval());
     }
 }

@@ -37,6 +37,17 @@ class TrainingSegmentsTest {
             String expectedMessage
     ) {}
 
+    @Test
+    void excluded__hasNoTag() {
+        // ACT //
+        TrainingSegment<String> segment = excluded("  ");
+
+        // ASSERT //
+        assertEquals(SegmentKind.EXCLUDED, segment.kind());
+        assertEquals("  ", segment.text());
+        assertNull(segment.tag());
+    }
+
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> factory__exception() {
         return Stream.of(
@@ -59,17 +70,6 @@ class TrainingSegmentsTest {
                         "text must not be null"
                 )
         );
-    }
-
-    @Test
-    void excluded__hasNoTag() {
-        // ACT //
-        TrainingSegment<String> segment = excluded("  ");
-
-        // ASSERT //
-        assertEquals(SegmentKind.EXCLUDED, segment.kind());
-        assertEquals("  ", segment.text());
-        assertNull(segment.tag());
     }
 
     @MethodSource

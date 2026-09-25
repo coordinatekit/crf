@@ -35,29 +35,14 @@ import java.util.Objects;
  */
 @NullMarked
 final class TestCrfTaggerLoader implements CrfTaggerLoader {
-    private final @Nullable CrfTagger<?> tagger;
-    private final @Nullable Exception failure;
     private @Nullable FeatureExtractor capturedFeatureExtractor;
     private @Nullable FeatureFormat capturedFeatureFormat;
+    private final @Nullable Exception failure;
+    private final @Nullable CrfTagger<?> tagger;
 
     private TestCrfTaggerLoader(@Nullable CrfTagger<?> tagger, @Nullable Exception failure) {
         this.tagger = tagger;
         this.failure = failure;
-    }
-
-    /**
-     * A loader whose {@link #load} returns {@code tagger}, capturing the feature extractor it receives.
-     */
-    static TestCrfTaggerLoader returning(CrfTagger<?> tagger) {
-        return new TestCrfTaggerLoader(tagger, null);
-    }
-
-    /**
-     * A loader whose {@link #load} throws {@code failure} (an {@link IOException} or a runtime
-     * exception).
-     */
-    static TestCrfTaggerLoader throwing(Exception failure) {
-        return new TestCrfTaggerLoader(null, failure);
     }
 
     /** Returns the feature extractor passed to the most recent {@link #load} call, or {@code null}. */
@@ -95,5 +80,20 @@ final class TestCrfTaggerLoader implements CrfTaggerLoader {
     @Override
     public String name() {
         return "test";
+    }
+
+    /**
+     * A loader whose {@link #load} returns {@code tagger}, capturing the feature extractor it receives.
+     */
+    static TestCrfTaggerLoader returning(CrfTagger<?> tagger) {
+        return new TestCrfTaggerLoader(tagger, null);
+    }
+
+    /**
+     * A loader whose {@link #load} throws {@code failure} (an {@link IOException} or a runtime
+     * exception).
+     */
+    static TestCrfTaggerLoader throwing(Exception failure) {
+        return new TestCrfTaggerLoader(null, failure);
     }
 }

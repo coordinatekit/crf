@@ -35,8 +35,6 @@ import java.util.stream.Stream;
  * illegal-name rejection in {@code render}.
  */
 class DefaultFeatureFormatTest {
-    private final DefaultFeatureFormat format = new DefaultFeatureFormat();
-
     record ExceptionParameters(
             String name,
             Executable action,
@@ -47,6 +45,8 @@ class DefaultFeatureFormatTest {
     record MappingParameters(String name, Feature feature, String rendered) {}
 
     record ParseAsymmetricParameters(String name, String rendered, Feature expected) {}
+
+    private final DefaultFeatureFormat format = new DefaultFeatureFormat();
 
     static Stream<MappingParameters> mapping() {
         return Stream.of(

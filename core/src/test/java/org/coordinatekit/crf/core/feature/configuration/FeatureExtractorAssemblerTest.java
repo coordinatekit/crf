@@ -48,10 +48,14 @@ import java.util.stream.Stream;
  * replaces rather than accumulates the offset, so an outer window overwrites an inner one.
  */
 class FeatureExtractorAssemblerTest {
-    private static final URL BASE_LOCATION = ConfigurationTestSupport.pathUrl("/base");
-    private static final FeatureExtractorAssembler DISCOVERED_ASSEMBLER = new FeatureExtractorAssembler(
-            FeatureExtractorFactoryRegistry.load()
-    );
+    record ArityParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
+    record DepthCapParameters(String name, int depth) {}
 
     /** A synthetic leaf factory emitting a single fixed feature, decoupled from any real factory. */
     private record SyntheticLeafFactory(String type, String featureName) implements LeafFeatureExtractorFactory {
@@ -88,16 +92,10 @@ class FeatureExtractorAssemblerTest {
         }
     }
 
-    private static Set<String> render(FeatureExtractor extractor, List<String> tokens, int position) {
-        return ConfigurationTestSupport.renderFeatures(extractor, tokens, position);
-    }
-
-    record ArityParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
+    private static final URL BASE_LOCATION = ConfigurationTestSupport.pathUrl("/base");
+    private static final FeatureExtractorAssembler DISCOVERED_ASSEMBLER = new FeatureExtractorAssembler(
+            FeatureExtractorFactoryRegistry.load()
+    );
 
     static Stream<ArityParameters> arity() {
         return Stream.of(
@@ -162,8 +160,6 @@ class FeatureExtractorAssemblerTest {
         // ASSERT //
         assertEquals(Set.of("LENGTH=3"), render(extractor, List.of("abc"), 0));
     }
-
-    record DepthCapParameters(String name, int depth) {}
 
     static Stream<DepthCapParameters> assemble__depthCapExceeded() {
         return Stream.of(
@@ -448,5 +444,9 @@ class FeatureExtractorAssemblerTest {
             node = FeatureExtractorNodes.builder("composite").child(node).build();
         }
         return node;
+    }
+
+    private static Set<String> render(FeatureExtractor extractor, List<String> tokens, int position) {
+        return ConfigurationTestSupport.renderFeatures(extractor, tokens, position);
     }
 }

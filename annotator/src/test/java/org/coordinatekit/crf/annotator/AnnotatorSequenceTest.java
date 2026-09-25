@@ -50,6 +50,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 
 class AnnotatorSequenceTest {
+    record CanonicalOrderingParameters(String name, Map<TestTag, Double> inputScores, List<TestTag> expectedKeyOrder) {}
+
+    record DefensiveCopyParameters(
+            String name,
+            BiFunction<List<Set<Feature>>, List<Set<Feature>>, AnnotatorSequence<TestTag>> factory
+    ) {}
+
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
+    record ImmutabilityParameters(String name, Executable action) {}
+
     enum TestTag {
         ALPHA, BETA, GAMMA
     }
@@ -83,22 +99,6 @@ class AnnotatorSequenceTest {
             return tags;
         }
     }
-
-    record CanonicalOrderingParameters(String name, Map<TestTag, Double> inputScores, List<TestTag> expectedKeyOrder) {}
-
-    record DefensiveCopyParameters(
-            String name,
-            BiFunction<List<Set<Feature>>, List<Set<Feature>>, AnnotatorSequence<TestTag>> factory
-    ) {}
-
-    record ExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
-
-    record ImmutabilityParameters(String name, Executable action) {}
 
     record WithFeaturesParameters(
             String name,
@@ -301,6 +301,23 @@ class AnnotatorSequenceTest {
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
+    private static void assertToken(
+            AnnotatorToken<TestTag> token,
+            String expectedToken,
+            TestTag expectedTag,
+            Double expectedConfidence,
+            List<TestTag> expectedKeyOrder,
+            Double expectedTopScore
+    ) {
+        assertEquals(expectedToken, token.token());
+        assertEquals(Set.of(), token.features());
+        assertEquals(Set.of(), token.verboseFeatures());
+        assertEquals(expectedTag, token.initialTag());
+        assertEquals(expectedConfidence, token.initialConfidence());
+        assertEquals(expectedKeyOrder, List.copyOf(token.alternativeTagScores().keySet()));
+        assertEquals(expectedTopScore, token.alternativeTagScores().get(expectedTag));
+    }
+
     static Stream<CanonicalOrderingParameters> canonicalOrdering() {
         return Stream.of(
                 new CanonicalOrderingParameters(
@@ -358,6 +375,45 @@ class AnnotatorSequenceTest {
         annotatorToken.alternativeTagScores().values().forEach(Assertions::assertNull);
     }
 
+    private static Sequence<TaggedPositionedToken<TestTag>> emptyTaggedSequence() {
+        return new Sequence<>() {
+            @Override
+            public TaggedPositionedToken<TestTag> get(int position) {
+                throw new IndexOutOfBoundsException(position);
+            }
+
+            @Override
+            public Iterator<TaggedPositionedToken<TestTag>> iterator() {
+                return Collections.emptyIterator();
+            }
+
+            @Override
+            public int size() {
+                return 0;
+            }
+
+            @Override
+            public Stream<TaggedPositionedToken<TestTag>> stream() {
+                return Stream.empty();
+            }
+        };
+    }
+
+    private static AnnotatorSequence<TestTag> immutableFeaturedSequence() {
+        return annotatorSequence(
+                1,
+                1,
+                List.of("a"),
+                new TestTagProvider(TestTag.values()),
+                List.of(Set.of(createFeature("k1"))),
+                List.of(Set.of(createFeature("v1")))
+        );
+    }
+
+    private static AnnotatorSequence<TestTag> immutableSequence() {
+        return AnnotatorModels.annotatorSequence(1, 1, List.of("a"), new TestTagProvider(TestTag.values()));
+    }
+
     @Test
     void probabilityOf__carriedOnWithTaggerPathAndNullOtherwise() {
         // ARRANGE //
@@ -385,6 +441,10 @@ class AnnotatorSequenceTest {
         assertEquals(1.0, withScorer.probabilityOf(tags));
         Assertions.assertNull(withoutScorer.probabilityOf(tags));
         Assertions.assertNull(noTagger.probabilityOf(tags));
+    }
+
+    private static TaggedSequence<TestTag> singleTokenTaggedSequence() {
+        return new TaggedSequence<>(List.of("a"), List.of(Set.of()), List.of(Map.of(TestTag.ALPHA, 1.0)));
     }
 
     @Test
@@ -428,6 +488,14 @@ class AnnotatorSequenceTest {
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
+
+    private static TaggedSequence<TestTag> twoTokenTaggedSequence() {
+        return new TaggedSequence<>(
+                List.of("the", "fox"),
+                List.of(Set.of(createFeature("e1")), Set.of(createFeature("e2"))),
+                List.of(Map.of(TestTag.ALPHA, 1.0), Map.of(TestTag.BETA, 1.0))
+        );
     }
 
     static Stream<WithFeaturesParameters> withFeatures__populatesTokensAndAvailability() {
@@ -498,46 +566,6 @@ class AnnotatorSequenceTest {
         assertEquals(
                 parameters.expectedVerboseFeatures(),
                 sequence.tokens().stream().map(AnnotatorToken::verboseFeatures).toList()
-        );
-    }
-
-    @Test
-    void withTagger__copiesFromTaggedSequence() {
-        // ARRANGE //
-        List<String> tokens = List.of("the", "fox");
-        List<Set<Feature>> features = List
-                .of(Set.of(createFeature("f1")), Set.of(createFeature("f2"), createFeature("f3")));
-        Map<TestTag, Double> firstScores = scoreMap(TestTag.ALPHA, 0.7, TestTag.BETA, 0.2, TestTag.GAMMA, 0.1);
-        Map<TestTag, Double> secondScores = scoreMap(TestTag.BETA, 0.6, TestTag.GAMMA, 0.3, TestTag.ALPHA, 0.1);
-        TaggedSequence<TestTag> tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
-
-        // ACT //
-        AnnotatorSequence<TestTag> sequence = annotatorSequence(2, 5, tagged);
-
-        // ASSERT //
-        assertEquals(2, sequence.sequenceNumber());
-        assertEquals(5, sequence.totalSequences());
-        assertEquals(2, sequence.tokens().size());
-        assertEquals(
-                FeatureAvailability.NONE,
-                sequence.featureAvailability(),
-                "embedded tagger features must not enable the feature display"
-        );
-        assertToken(
-                sequence.tokens().getFirst(),
-                "the",
-                TestTag.ALPHA,
-                0.7,
-                List.of(TestTag.ALPHA, TestTag.BETA, TestTag.GAMMA),
-                0.7
-        );
-        assertToken(
-                sequence.tokens().get(1),
-                "fox",
-                TestTag.BETA,
-                0.6,
-                List.of(TestTag.BETA, TestTag.GAMMA, TestTag.ALPHA),
-                0.6
         );
     }
 
@@ -613,71 +641,43 @@ class AnnotatorSequenceTest {
         assertThrowsExactly(UnsupportedOperationException.class, parameters.action());
     }
 
-    private static void assertToken(
-            AnnotatorToken<TestTag> token,
-            String expectedToken,
-            TestTag expectedTag,
-            Double expectedConfidence,
-            List<TestTag> expectedKeyOrder,
-            Double expectedTopScore
-    ) {
-        assertEquals(expectedToken, token.token());
-        assertEquals(Set.of(), token.features());
-        assertEquals(Set.of(), token.verboseFeatures());
-        assertEquals(expectedTag, token.initialTag());
-        assertEquals(expectedConfidence, token.initialConfidence());
-        assertEquals(expectedKeyOrder, List.copyOf(token.alternativeTagScores().keySet()));
-        assertEquals(expectedTopScore, token.alternativeTagScores().get(expectedTag));
-    }
+    @Test
+    void withTagger__copiesFromTaggedSequence() {
+        // ARRANGE //
+        List<String> tokens = List.of("the", "fox");
+        List<Set<Feature>> features = List
+                .of(Set.of(createFeature("f1")), Set.of(createFeature("f2"), createFeature("f3")));
+        Map<TestTag, Double> firstScores = scoreMap(TestTag.ALPHA, 0.7, TestTag.BETA, 0.2, TestTag.GAMMA, 0.1);
+        Map<TestTag, Double> secondScores = scoreMap(TestTag.BETA, 0.6, TestTag.GAMMA, 0.3, TestTag.ALPHA, 0.1);
+        TaggedSequence<TestTag> tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
 
-    private static Sequence<TaggedPositionedToken<TestTag>> emptyTaggedSequence() {
-        return new Sequence<>() {
-            @Override
-            public TaggedPositionedToken<TestTag> get(int position) {
-                throw new IndexOutOfBoundsException(position);
-            }
+        // ACT //
+        AnnotatorSequence<TestTag> sequence = annotatorSequence(2, 5, tagged);
 
-            @Override
-            public Iterator<TaggedPositionedToken<TestTag>> iterator() {
-                return Collections.emptyIterator();
-            }
-
-            @Override
-            public int size() {
-                return 0;
-            }
-
-            @Override
-            public Stream<TaggedPositionedToken<TestTag>> stream() {
-                return Stream.empty();
-            }
-        };
-    }
-
-    private static AnnotatorSequence<TestTag> immutableFeaturedSequence() {
-        return annotatorSequence(
-                1,
-                1,
-                List.of("a"),
-                new TestTagProvider(TestTag.values()),
-                List.of(Set.of(createFeature("k1"))),
-                List.of(Set.of(createFeature("v1")))
+        // ASSERT //
+        assertEquals(2, sequence.sequenceNumber());
+        assertEquals(5, sequence.totalSequences());
+        assertEquals(2, sequence.tokens().size());
+        assertEquals(
+                FeatureAvailability.NONE,
+                sequence.featureAvailability(),
+                "embedded tagger features must not enable the feature display"
         );
-    }
-
-    private static AnnotatorSequence<TestTag> immutableSequence() {
-        return AnnotatorModels.annotatorSequence(1, 1, List.of("a"), new TestTagProvider(TestTag.values()));
-    }
-
-    private static TaggedSequence<TestTag> singleTokenTaggedSequence() {
-        return new TaggedSequence<>(List.of("a"), List.of(Set.of()), List.of(Map.of(TestTag.ALPHA, 1.0)));
-    }
-
-    private static TaggedSequence<TestTag> twoTokenTaggedSequence() {
-        return new TaggedSequence<>(
-                List.of("the", "fox"),
-                List.of(Set.of(createFeature("e1")), Set.of(createFeature("e2"))),
-                List.of(Map.of(TestTag.ALPHA, 1.0), Map.of(TestTag.BETA, 1.0))
+        assertToken(
+                sequence.tokens().getFirst(),
+                "the",
+                TestTag.ALPHA,
+                0.7,
+                List.of(TestTag.ALPHA, TestTag.BETA, TestTag.GAMMA),
+                0.7
+        );
+        assertToken(
+                sequence.tokens().get(1),
+                "fox",
+                TestTag.BETA,
+                0.6,
+                List.of(TestTag.BETA, TestTag.GAMMA, TestTag.ALPHA),
+                0.6
         );
     }
 }

@@ -37,18 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TaggedTokenizationTest {
-    private static TaggedSequence<String> taggedSequence(List<String> tokens) {
-        return new TaggedSequence<>(
-                tokens,
-                tokens.stream().map(t -> Set.of(createFeature("f_" + t))).toList(),
-                tokens.stream().map(t -> Map.of("TAG", 1.0)).toList()
-        );
-    }
-
-    private static Tokenization tokenization(Segment... segments) {
-        return new Tokenization(List.of(segments));
-    }
-
     record ExceptionParameters(
             String name,
             Class<? extends Throwable> expectedException,
@@ -175,5 +163,17 @@ class TaggedTokenizationTest {
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), throwable.getMessage());
+    }
+
+    private static TaggedSequence<String> taggedSequence(List<String> tokens) {
+        return new TaggedSequence<>(
+                tokens,
+                tokens.stream().map(t -> Set.of(createFeature("f_" + t))).toList(),
+                tokens.stream().map(t -> Map.of("TAG", 1.0)).toList()
+        );
+    }
+
+    private static Tokenization tokenization(Segment... segments) {
+        return new Tokenization(List.of(segments));
     }
 }

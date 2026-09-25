@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ModelOutputConfigurationTest {
-
     private static final Path TEST_OUTPUT_DIR = Path.of("test/output");
 
     static Stream<BuilderExceptionParameters> builder__exception() {
@@ -50,32 +49,6 @@ class ModelOutputConfigurationTest {
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
-    }
-
-    @Test
-    void builder_withRequiredFieldsOnly_usesDefaults() {
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder().build();
-
-        assertEquals(Paths.get(""), config.outputDirectory());
-        assertEquals("model_", config.filePrefix());
-        assertEquals(".ser", config.fileSuffix());
-        assertEquals(10, config.iterationInterval());
-    }
-
-    @Test
-    void builder_withAllCustomValues_returnsConfigWithCustomValues() {
-        Path customDirectory = Path.of("custom", "dir");
-        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
-                .outputDirectory(customDirectory)
-                .filePrefix("crf_model")
-                .fileSuffix("bin")
-                .iterationInterval(5)
-                .build();
-
-        assertEquals(customDirectory, config.outputDirectory());
-        assertEquals("crf_model", config.filePrefix());
-        assertEquals("bin", config.fileSuffix());
-        assertEquals(5, config.iterationInterval());
     }
 
     @Test
@@ -127,6 +100,32 @@ class ModelOutputConfigurationTest {
         ModelOutputConfiguration config = ModelOutputConfiguration.builder().outputDirectory(TEST_OUTPUT_DIR).build();
 
         assertEquals(TEST_OUTPUT_DIR, config.outputDirectory());
+    }
+
+    @Test
+    void builder_withAllCustomValues_returnsConfigWithCustomValues() {
+        Path customDirectory = Path.of("custom", "dir");
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder()
+                .outputDirectory(customDirectory)
+                .filePrefix("crf_model")
+                .fileSuffix("bin")
+                .iterationInterval(5)
+                .build();
+
+        assertEquals(customDirectory, config.outputDirectory());
+        assertEquals("crf_model", config.filePrefix());
+        assertEquals("bin", config.fileSuffix());
+        assertEquals(5, config.iterationInterval());
+    }
+
+    @Test
+    void builder_withRequiredFieldsOnly_usesDefaults() {
+        ModelOutputConfiguration config = ModelOutputConfiguration.builder().build();
+
+        assertEquals(Paths.get(""), config.outputDirectory());
+        assertEquals("model_", config.filePrefix());
+        assertEquals(".ser", config.fileSuffix());
+        assertEquals(10, config.iterationInterval());
     }
 
     @Test

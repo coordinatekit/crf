@@ -46,27 +46,6 @@ class TrainingSequenceTest {
             List<String> expectedTags
     ) {}
 
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters(
-                        "single_token",
-                        List.of("Hello"),
-                        List.of("GREETING"),
-                        List.of("Hello"),
-                        List.of(0),
-                        List.of("GREETING")
-                ),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of("GREETING", "NOUN", "PUNCT"),
-                        List.of("Hello", "world", "!"),
-                        List.of(0, 1, 2),
-                        List.of("GREETING", "NOUN", "PUNCT")
-                )
-        );
-    }
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -101,6 +80,34 @@ class TrainingSequenceTest {
         assertEquals(0, sequence.get(0).position());
         assertEquals("GREETING", sequence.get(0).tag());
         assertEquals("Hello", sequence.get(0).token());
+    }
+
+    @Test
+    void get__throwsOnInvalidIndex() {
+        var sequence = TrainingSequence.ofTokens(List.of("Hello"), List.of("NOUN"));
+
+        assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
+    }
+
+    @ParameterizedTest
+    @MethodSource("sequences")
+    void iterator(SequenceParameters parameters) {
+        var sequence = TrainingSequence.ofTokens(parameters.tokens(), parameters.tags());
+
+        var actualPositions = new ArrayList<Integer>();
+        var actualTags = new ArrayList<String>();
+        var actualTokens = new ArrayList<String>();
+
+        for (var token : sequence) {
+            actualPositions.add(token.position());
+            actualTags.add(token.tag());
+            actualTokens.add(token.token());
+        }
+
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
     }
 
     @Test
@@ -148,32 +155,25 @@ class TrainingSequenceTest {
         );
     }
 
-    @Test
-    void get__throwsOnInvalidIndex() {
-        var sequence = TrainingSequence.ofTokens(List.of("Hello"), List.of("NOUN"));
-
-        assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
-        assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
-    }
-
-    @ParameterizedTest
-    @MethodSource("sequences")
-    void iterator(SequenceParameters parameters) {
-        var sequence = TrainingSequence.ofTokens(parameters.tokens(), parameters.tags());
-
-        var actualPositions = new ArrayList<Integer>();
-        var actualTags = new ArrayList<String>();
-        var actualTokens = new ArrayList<String>();
-
-        for (var token : sequence) {
-            actualPositions.add(token.position());
-            actualTags.add(token.tag());
-            actualTokens.add(token.token());
-        }
-
-        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
-        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
-        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters(
+                        "single_token",
+                        List.of("Hello"),
+                        List.of("GREETING"),
+                        List.of("Hello"),
+                        List.of(0),
+                        List.of("GREETING")
+                ),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of("GREETING", "NOUN", "PUNCT"),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2),
+                        List.of("GREETING", "NOUN", "PUNCT")
+                )
+        );
     }
 
     @ParameterizedTest

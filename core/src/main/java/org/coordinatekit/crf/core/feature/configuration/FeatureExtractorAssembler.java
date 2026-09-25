@@ -62,6 +62,28 @@ final class FeatureExtractorAssembler {
     }
 
     /**
+     * Describes an arity violation in terms a downstream can show a user.
+     *
+     * @param minimum the minimum number of children the factory requires
+     * @param maximum the maximum number of children the factory accepts
+     * @param childCount the number of children the node actually had
+     * @return the human-readable description
+     */
+    private static String arityMessage(int minimum, int maximum, int childCount) {
+        String expected;
+        if (minimum == 0 && maximum == 0) {
+            expected = "no children";
+        } else if (minimum == maximum) {
+            expected = "exactly " + minimum + (minimum == 1 ? " child" : " children");
+        } else if (maximum == Integer.MAX_VALUE) {
+            expected = "at least " + minimum + (minimum == 1 ? " child" : " children");
+        } else {
+            expected = "between " + minimum + " and " + maximum + " children";
+        }
+        return "expected " + expected + " but got " + childCount;
+    }
+
+    /**
      * Assembles the tree rooted at {@code root} into a full/key pair of feature extractors.
      *
      * @param root the root node of the tree
@@ -174,28 +196,6 @@ final class FeatureExtractorAssembler {
             keyHolder[0] = extractor;
         }
         return extractor;
-    }
-
-    /**
-     * Describes an arity violation in terms a downstream can show a user.
-     *
-     * @param minimum the minimum number of children the factory requires
-     * @param maximum the maximum number of children the factory accepts
-     * @param childCount the number of children the node actually had
-     * @return the human-readable description
-     */
-    private static String arityMessage(int minimum, int maximum, int childCount) {
-        String expected;
-        if (minimum == 0 && maximum == 0) {
-            expected = "no children";
-        } else if (minimum == maximum) {
-            expected = "exactly " + minimum + (minimum == 1 ? " child" : " children");
-        } else if (maximum == Integer.MAX_VALUE) {
-            expected = "at least " + minimum + (minimum == 1 ? " child" : " children");
-        } else {
-            expected = "between " + minimum + " and " + maximum + " children";
-        }
-        return "expected " + expected + " but got " + childCount;
     }
 
     /**

@@ -37,6 +37,8 @@ import java.util.stream.Stream;
  * action-failure mapping, and the terminal lifecycle of the supplier-based entry.
  */
 class TerminalSupportTest {
+    record ActionFailureParameters(String name, Exception thrown, String expectedMessage) {}
+
     @Test
     void runInteractive__opensSuppliedTerminalAndRunsAction() {
         // ARRANGE //
@@ -157,6 +159,4 @@ class TerminalSupportTest {
         assertEquals(0, exitCode);
         assertEquals("", sink.toString(), "no diagnostics on success: " + sink);
     }
-
-    record ActionFailureParameters(String name, Exception thrown, String expectedMessage) {}
 }

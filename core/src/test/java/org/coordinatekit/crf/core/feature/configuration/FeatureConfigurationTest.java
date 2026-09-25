@@ -50,11 +50,6 @@ class FeatureConfigurationTest {
                 .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/keyed/features.xml");
     }
 
-    private static Path locatedErrorDirectory() {
-        return ConfigurationTestSupport
-                .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/located-error/features.xml");
-    }
-
     @Test
     void load__explicitBaseLocationOverridesDocumentLocation(@TempDir Path directory) throws IOException {
         // ARRANGE //
@@ -181,5 +176,10 @@ class FeatureConfigurationTest {
         String message = exception.getMessage();
         assertNotNull(message);
         assertTrue(message.contains("features.xml:"), "message should carry the source name; was: " + message);
+    }
+
+    private static Path locatedErrorDirectory() {
+        return ConfigurationTestSupport
+                .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/located-error/features.xml");
     }
 }

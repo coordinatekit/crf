@@ -39,12 +39,6 @@ import java.util.stream.Stream;
 class LookupFeatureExtractorFactoryTest {
     private static final URL BASE = resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
-    private static FeatureExtractorNodes.Builder lookup() {
-        return FeatureExtractorNodes.builder("lookup")
-                .parameter("dictionary", "states.xml")
-                .parameter("xpath", "/states/state");
-    }
-
     @Test
     void create__invalidXPathThrowsLocatedException() {
         // ARRANGE //
@@ -153,5 +147,11 @@ class LookupFeatureExtractorFactoryTest {
 
         // ASSERT //
         assertEquals(parameters.expected(), actual);
+    }
+
+    private static FeatureExtractorNodes.Builder lookup() {
+        return FeatureExtractorNodes.builder("lookup")
+                .parameter("dictionary", "states.xml")
+                .parameter("xpath", "/states/state");
     }
 }

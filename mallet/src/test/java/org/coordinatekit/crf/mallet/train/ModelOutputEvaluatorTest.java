@@ -48,6 +48,15 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModelOutputEvaluatorTest {
+    record EvaluateParameters(
+            String name,
+            ModelOutputConfiguration.Builder modelOutputConfigurationBuilder,
+            @Nullable Path outputDirectory,
+            boolean relativeOutputDirectory,
+            int iterations,
+            Set<Path> expectedFiles
+    ) {}
+
     private static final Path CURRENT_DIRECTORY = Paths.get("");
     private static final String FILE_PREFIX = "model_iter";
     private static final String FILE_SUFFIX = ".ser";
@@ -58,23 +67,80 @@ class ModelOutputEvaluatorTest {
     @TempDir
     Path temporaryDirectory;
 
-    @BeforeEach
-    void setUp() {
-        dataAlphabet = new Alphabet();
-        targetAlphabet = new LabelAlphabet();
-        targetAlphabet.lookupIndex("O", true);
-        targetAlphabet.lookupIndex("B-LOC", true);
-        targetAlphabet.lookupIndex("I-LOC", true);
+    private CRF createAndInitializeCrf(InstanceList trainingData) {
+        CRF crf = new CRF(trainingData.getPipe(), null);
+
+        String startName = crf.addOrderNStates(
+                trainingData,
+                new int[] {1},
+                null,
+                "O",
+                Pattern.compile("\\s"),
+                Pattern.compile(".*"),
+                true
+        );
+
+        for (int i = 0; i < crf.numStates(); i++) {
+            crf.getState(i).setInitialWeight(Transducer.IMPOSSIBLE_WEIGHT);
+        }
+        crf.getState(startName).setInitialWeight(0.0);
+
+        return crf;
     }
 
-    record EvaluateParameters(
-            String name,
-            ModelOutputConfiguration.Builder modelOutputConfigurationBuilder,
-            @Nullable Path outputDirectory,
-            boolean relativeOutputDirectory,
-            int iterations,
-            Set<Path> expectedFiles
-    ) {}
+    private Instance createInstance(String[][] features, String[] labels) {
+        FeatureVector[] featureVectors = new FeatureVector[features.length];
+        for (int i = 0; i < features.length; i++) {
+            int[] indices = new int[features[i].length];
+            for (int j = 0; j < features[i].length; j++) {
+                indices[j] = dataAlphabet.lookupIndex(features[i][j], true);
+            }
+            featureVectors[i] = new FeatureVector(dataAlphabet, indices);
+        }
+
+        int[] labelIndices = new int[labels.length];
+        for (int i = 0; i < labels.length; i++) {
+            labelIndices[i] = targetAlphabet.lookupIndex(labels[i], true);
+        }
+
+        return new Instance(
+                new FeatureVectorSequence(featureVectors),
+                new LabelSequence(targetAlphabet, labelIndices),
+                null,
+                null
+        );
+    }
+
+    private InstanceList createTrainingData() {
+        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
+
+        instances
+                .add(
+                        createInstance(
+                                new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
+                                                {"word=city", "cap=yes"}},
+                                new String[] {"B-LOC", "I-LOC", "I-LOC"}
+                        )
+                );
+
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
+                        new String[] {"O", "O", "O"}
+                )
+        );
+
+        instances
+                .add(
+                        createInstance(
+                                new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
+                                                {"word=today", "cap=no"}},
+                                new String[] {"O", "B-LOC", "O"}
+                        )
+                );
+
+        return instances;
+    }
 
     static Stream<EvaluateParameters> evaluate() {
         return Stream.of(
@@ -253,86 +319,20 @@ class ModelOutputEvaluatorTest {
         assertEquals("This evaluator does not support evaluating instance lists.", t.getMessage());
     }
 
-    private CRF createAndInitializeCrf(InstanceList trainingData) {
-        CRF crf = new CRF(trainingData.getPipe(), null);
-
-        String startName = crf.addOrderNStates(
-                trainingData,
-                new int[] {1},
-                null,
-                "O",
-                Pattern.compile("\\s"),
-                Pattern.compile(".*"),
-                true
-        );
-
-        for (int i = 0; i < crf.numStates(); i++) {
-            crf.getState(i).setInitialWeight(Transducer.IMPOSSIBLE_WEIGHT);
-        }
-        crf.getState(startName).setInitialWeight(0.0);
-
-        return crf;
-    }
-
-    private Instance createInstance(String[][] features, String[] labels) {
-        FeatureVector[] featureVectors = new FeatureVector[features.length];
-        for (int i = 0; i < features.length; i++) {
-            int[] indices = new int[features[i].length];
-            for (int j = 0; j < features[i].length; j++) {
-                indices[j] = dataAlphabet.lookupIndex(features[i][j], true);
-            }
-            featureVectors[i] = new FeatureVector(dataAlphabet, indices);
-        }
-
-        int[] labelIndices = new int[labels.length];
-        for (int i = 0; i < labels.length; i++) {
-            labelIndices[i] = targetAlphabet.lookupIndex(labels[i], true);
-        }
-
-        return new Instance(
-                new FeatureVectorSequence(featureVectors),
-                new LabelSequence(targetAlphabet, labelIndices),
-                null,
-                null
-        );
-    }
-
-    private InstanceList createTrainingData() {
-        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
-
-        instances
-                .add(
-                        createInstance(
-                                new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
-                                                {"word=city", "cap=yes"}},
-                                new String[] {"B-LOC", "I-LOC", "I-LOC"}
-                        )
-                );
-
-        instances.add(
-                createInstance(
-                        new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
-                        new String[] {"O", "O", "O"}
-                )
-        );
-
-        instances
-                .add(
-                        createInstance(
-                                new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
-                                                {"word=today", "cap=no"}},
-                                new String[] {"O", "B-LOC", "O"}
-                        )
-                );
-
-        return instances;
-    }
-
     private static SortedSet<Path> listDirectory(Path directory) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
             return paths.filter(Files::isRegularFile)
                     .map(directory::relativize)
                     .collect(Collectors.toCollection(TreeSet::new));
         }
+    }
+
+    @BeforeEach
+    void setUp() {
+        dataAlphabet = new Alphabet();
+        targetAlphabet = new LabelAlphabet();
+        targetAlphabet.lookupIndex("O", true);
+        targetAlphabet.lookupIndex("B-LOC", true);
+        targetAlphabet.lookupIndex("I-LOC", true);
     }
 }

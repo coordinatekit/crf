@@ -48,54 +48,6 @@ import java.util.function.Function;
  */
 @NullMarked
 public class PositionFeatureExtractor implements FeatureExtractor {
-    private final @Nullable Feature firstFeature;
-    private final @Nullable Feature lastFeature;
-    private final @Nullable Function<Integer, Feature> positionFromEndFeatureMapper;
-    private final @Nullable Function<Integer, Feature> positionFromStartFeatureMapper;
-
-    private PositionFeatureExtractor(Builder builder) {
-        this.firstFeature = builder.firstFeature;
-        this.lastFeature = builder.lastFeature;
-        this.positionFromEndFeatureMapper = builder.positionFromEndFeatureMapper;
-        this.positionFromStartFeatureMapper = builder.positionFromStartFeatureMapper;
-    }
-
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        if (firstFeature == null && lastFeature == null && positionFromEndFeatureMapper == null
-                && positionFromStartFeatureMapper == null) {
-            return Set.of();
-        }
-
-        Set<Feature> features = new HashSet<>();
-
-        if (position == 0 && firstFeature != null) {
-            features.add(firstFeature);
-        }
-
-        if (position == sequence.size() - 1 && lastFeature != null) {
-            features.add(lastFeature);
-        }
-
-        if (positionFromStartFeatureMapper != null) {
-            features.add(positionFromStartFeatureMapper.apply(position));
-        }
-
-        if (positionFromEndFeatureMapper != null) {
-            features.add(positionFromEndFeatureMapper.apply(sequence.size() - position - 1));
-        }
-
-        return features;
-    }
-
-    /**
-     * Creates a new builder for {@link PositionFeatureExtractor}.
-     *
-     * @return a new builder instance
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
 
     /**
      * Builder for {@link PositionFeatureExtractor}.
@@ -107,6 +59,15 @@ public class PositionFeatureExtractor implements FeatureExtractor {
         private @Nullable Function<Integer, Feature> positionFromStartFeatureMapper;
 
         private Builder() {}
+
+        /**
+         * Builds the feature extractor.
+         *
+         * @return a new {@link PositionFeatureExtractor} instance
+         */
+        public PositionFeatureExtractor build() {
+            return new PositionFeatureExtractor(this);
+        }
 
         /**
          * Sets the feature to emit for the first token in a sequence.
@@ -163,14 +124,54 @@ public class PositionFeatureExtractor implements FeatureExtractor {
             this.positionFromStartFeatureMapper = positionFromStartFeatureMapper;
             return this;
         }
+    }
 
-        /**
-         * Builds the feature extractor.
-         *
-         * @return a new {@link PositionFeatureExtractor} instance
-         */
-        public PositionFeatureExtractor build() {
-            return new PositionFeatureExtractor(this);
+    private final @Nullable Feature firstFeature;
+    private final @Nullable Feature lastFeature;
+    private final @Nullable Function<Integer, Feature> positionFromEndFeatureMapper;
+    private final @Nullable Function<Integer, Feature> positionFromStartFeatureMapper;
+
+    private PositionFeatureExtractor(Builder builder) {
+        this.firstFeature = builder.firstFeature;
+        this.lastFeature = builder.lastFeature;
+        this.positionFromEndFeatureMapper = builder.positionFromEndFeatureMapper;
+        this.positionFromStartFeatureMapper = builder.positionFromStartFeatureMapper;
+    }
+
+    /**
+     * Creates a new builder for {@link PositionFeatureExtractor}.
+     *
+     * @return a new builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        if (firstFeature == null && lastFeature == null && positionFromEndFeatureMapper == null
+                && positionFromStartFeatureMapper == null) {
+            return Set.of();
         }
+
+        Set<Feature> features = new HashSet<>();
+
+        if (position == 0 && firstFeature != null) {
+            features.add(firstFeature);
+        }
+
+        if (position == sequence.size() - 1 && lastFeature != null) {
+            features.add(lastFeature);
+        }
+
+        if (positionFromStartFeatureMapper != null) {
+            features.add(positionFromStartFeatureMapper.apply(position));
+        }
+
+        if (positionFromEndFeatureMapper != null) {
+            features.add(positionFromEndFeatureMapper.apply(sequence.size() - position - 1));
+        }
+
+        return features;
     }
 }

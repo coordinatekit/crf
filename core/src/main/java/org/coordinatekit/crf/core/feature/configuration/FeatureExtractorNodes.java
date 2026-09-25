@@ -29,18 +29,6 @@ import java.util.Optional;
  * through this, and it remains the ergonomic way to hand-build a tree in a test.
  */
 public final class FeatureExtractorNodes {
-    private FeatureExtractorNodes() {}
-
-    /**
-     * Creates a builder for a node of the given factory type.
-     *
-     * @param type the factory type
-     * @return a new builder
-     */
-    public static Builder builder(String type) {
-        return new Builder(type);
-    }
-
     /**
      * Builder for {@link FeatureExtractorNode}, ergonomic for hand-built trees and the parser alike.
      */
@@ -140,5 +128,17 @@ public final class FeatureExtractorNodes {
         public Optional<SourceLocation> sourceLocation() {
             return Optional.ofNullable(source);
         }
+    }
+
+    private FeatureExtractorNodes() {}
+
+    /**
+     * Creates a builder for a node of the given factory type.
+     *
+     * @param type the factory type
+     * @return a new builder
+     */
+    public static Builder builder(String type) {
+        return new Builder(type);
     }
 }

@@ -29,6 +29,14 @@ import java.util.Objects;
  * @see Segment
  */
 public final class Segments {
+
+    private record DefaultSegment(SegmentKind kind, String text) implements Segment {
+        private DefaultSegment {
+            Objects.requireNonNull(kind, "kind must not be null");
+            Objects.requireNonNull(text, "text must not be null");
+        }
+    }
+
     private Segments() {}
 
     /**
@@ -67,12 +75,5 @@ public final class Segments {
      */
     public static Segment token(String text) {
         return new DefaultSegment(SegmentKind.TOKEN, text);
-    }
-
-    private record DefaultSegment(SegmentKind kind, String text) implements Segment {
-        private DefaultSegment {
-            Objects.requireNonNull(kind, "kind must not be null");
-            Objects.requireNonNull(text, "text must not be null");
-        }
     }
 }

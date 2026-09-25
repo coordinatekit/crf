@@ -50,6 +50,14 @@ import java.util.stream.Stream;
  */
 @NullMarked
 public final class RecordedModels {
+    /**
+     * A named trainer configuration whose model joins the recorded set.
+     *
+     * @param name a descriptive snake_case name for the case
+     * @param configuration the trainer configuration to train under
+     */
+    private record RecordedCase(String name, MalletCrfTrainerConfiguration configuration) {}
+
     private static final FeatureExtractor FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
@@ -61,14 +69,6 @@ public final class RecordedModels {
     private static final String TRAINING_DATA_RESOURCE = "/org/coordinatekit/crf/mallet/test_addresses.xml";
 
     private RecordedModels() {}
-
-    /**
-     * A named trainer configuration whose model joins the recorded set.
-     *
-     * @param name a descriptive snake_case name for the case
-     * @param configuration the trainer configuration to train under
-     */
-    private record RecordedCase(String name, MalletCrfTrainerConfiguration configuration) {}
 
     private static MalletCrfTrainerConfiguration.Builder baseConfiguration() {
         return MalletCrfTrainerConfiguration.builder()

@@ -29,6 +29,13 @@ import java.util.List;
 
 /** Shared fixtures and helpers for the {@code core/align} unit tests. */
 final class AlignmentTestSupport {
+    record ExceptionCase(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
     private AlignmentTestSupport() {}
 
     static void assertThrowsWithMessage(ExceptionCase exceptionCase) {
@@ -43,11 +50,4 @@ final class AlignmentTestSupport {
     static TrainingSequence<String> sequenceOf(String... tokens) {
         return TrainingSequence.ofTokens(List.of(tokens), Collections.nCopies(tokens.length, "0"));
     }
-
-    record ExceptionCase(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
 }

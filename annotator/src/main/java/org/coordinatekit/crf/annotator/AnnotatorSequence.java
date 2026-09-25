@@ -52,13 +52,6 @@ public interface AnnotatorSequence<T extends Comparable<T>> {
     FeatureAvailability featureAvailability();
 
     /**
-     * Returns the 1-based position of this sequence within the overall annotation batch.
-     *
-     * @return the sequence number
-     */
-    int sequenceNumber();
-
-    /**
      * Returns the conditional probability the model assigns to the given tagging of this sequence, or
      * {@code null} when no model backs this sequence (the no-tagger path).
      *
@@ -78,6 +71,13 @@ public interface AnnotatorSequence<T extends Comparable<T>> {
      */
     @Nullable
     Double probabilityOf(List<T> tags);
+
+    /**
+     * Returns the 1-based position of this sequence within the overall annotation batch.
+     *
+     * @return the sequence number
+     */
+    int sequenceNumber();
 
     /**
      * Returns the per-token entries for the sequence.

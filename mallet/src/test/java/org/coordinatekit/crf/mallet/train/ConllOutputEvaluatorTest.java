@@ -45,29 +45,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConllOutputEvaluatorTest {
-    private enum TestSequenceFixture {
-        NONE, MULTIPLE, SINGLE_WITH_SPACES_IN_TOKENS
-    }
-
-    private static final String TEST_DESCRIPTION = "test";
-    private static final String FILE_PREFIX = "output";
-    private static final String FILE_SUFFIX = ".txt";
-
-    private Alphabet dataAlphabet;
-    private LabelAlphabet targetAlphabet;
-
-    @TempDir
-    Path temporaryDirectory;
-
-    @BeforeEach
-    void setUp() {
-        dataAlphabet = new Alphabet();
-        targetAlphabet = new LabelAlphabet();
-        targetAlphabet.lookupIndex("O", true);
-        targetAlphabet.lookupIndex("B-LOC", true);
-        targetAlphabet.lookupIndex("I-LOC", true);
-    }
-
     record EvaluateParameters(
             String name,
             ConllOutputConfiguration.Builder conllOutputConfigurationBuilder,
@@ -77,6 +54,143 @@ class ConllOutputEvaluatorTest {
             int iterations,
             Set<Path> expectedFiles
     ) {}
+
+    private enum TestSequenceFixture {
+        MULTIPLE, NONE, SINGLE_WITH_SPACES_IN_TOKENS
+    }
+
+    private static final String FILE_PREFIX = "output";
+    private static final String FILE_SUFFIX = ".txt";
+    private static final String TEST_DESCRIPTION = "test";
+
+    private Alphabet dataAlphabet;
+    private LabelAlphabet targetAlphabet;
+
+    @TempDir
+    Path temporaryDirectory;
+
+    private static CRF createAndInitializeCrf(InstanceList trainingData) {
+        CRF crf = new CRF(trainingData.getPipe(), null);
+
+        String startName = crf.addOrderNStates(
+                trainingData,
+                new int[] {1},
+                null,
+                "O",
+                Pattern.compile("\\s"),
+                Pattern.compile(".*"),
+                true
+        );
+
+        for (int i = 0; i < crf.numStates(); i++) {
+            crf.getState(i).setInitialWeight(Transducer.IMPOSSIBLE_WEIGHT);
+        }
+        crf.getState(startName).setInitialWeight(0.0);
+
+        return crf;
+    }
+
+    private Instance createInstance(String[][] features, String[] labels, String[] tokens) {
+        FeatureVector[] featureVectors = new FeatureVector[features.length];
+        for (int i = 0; i < features.length; i++) {
+            int[] indices = new int[features[i].length];
+            for (int j = 0; j < features[i].length; j++) {
+                indices[j] = dataAlphabet.lookupIndex(features[i][j], true);
+            }
+            featureVectors[i] = new FeatureVector(dataAlphabet, indices);
+        }
+
+        int[] labelIndices = new int[labels.length];
+        for (int i = 0; i < labels.length; i++) {
+            labelIndices[i] = targetAlphabet.lookupIndex(labels[i], true);
+        }
+
+        return new Instance(
+                new FeatureVectorSequence(featureVectors),
+                new LabelSequence(targetAlphabet, labelIndices),
+                null,
+                TrainingSequence.ofTokens(Arrays.asList(tokens), Arrays.asList(labels))
+        );
+    }
+
+    private InstanceList createMultiSequenceTestData() {
+        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
+
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=visit", "cap=no"}, {"word=paris", "cap=yes"}},
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"visit", "Paris"}
+                )
+        );
+
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=in", "cap=no"}, {"word=rome", "cap=yes"}},
+                        new String[] {"O", "B-LOC"},
+                        new String[] {"in", "Rome"}
+                )
+        );
+
+        return instances;
+    }
+
+    private InstanceList createTestData(TestSequenceFixture testSequences) {
+        return switch (testSequences) {
+            case NONE -> new InstanceList(dataAlphabet, targetAlphabet);
+            case MULTIPLE -> createMultiSequenceTestData();
+            case SINGLE_WITH_SPACES_IN_TOKENS -> createTestDataWithSpacesInTokens();
+        };
+    }
+
+    private InstanceList createTestDataWithSpacesInTokens() {
+        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
+
+        // Feature vectors don't contain spaces, so this tests that the output format is correct
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=new_york", "cap=yes"}},
+                        new String[] {"B-LOC"},
+                        new String[] {"New York"}
+                )
+        );
+
+        return instances;
+    }
+
+    private InstanceList createTrainingData() {
+        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
+
+        instances
+                .add(
+                        createInstance(
+                                new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
+                                                {"word=city", "cap=yes"}},
+                                new String[] {"B-LOC", "I-LOC", "I-LOC"},
+                                new String[] {"New", "York", "City"}
+                        )
+                );
+
+        instances.add(
+                createInstance(
+                        new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
+                        new String[] {"O", "O", "O"},
+                        new String[] {"the", "cat", "sat"}
+                )
+        );
+
+        instances
+                .add(
+                        createInstance(
+                                new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
+                                                {"word=today", "cap=no"}},
+                                new String[] {"O", "B-LOC", "O"},
+                                new String[] {"in", "London", "today"}
+                        )
+                );
+
+        return instances;
+    }
 
     static Stream<EvaluateParameters> evaluate() {
         return Stream.of(
@@ -257,135 +371,21 @@ class ConllOutputEvaluatorTest {
         }
     }
 
-    private static CRF createAndInitializeCrf(InstanceList trainingData) {
-        CRF crf = new CRF(trainingData.getPipe(), null);
-
-        String startName = crf.addOrderNStates(
-                trainingData,
-                new int[] {1},
-                null,
-                "O",
-                Pattern.compile("\\s"),
-                Pattern.compile(".*"),
-                true
-        );
-
-        for (int i = 0; i < crf.numStates(); i++) {
-            crf.getState(i).setInitialWeight(Transducer.IMPOSSIBLE_WEIGHT);
-        }
-        crf.getState(startName).setInitialWeight(0.0);
-
-        return crf;
-    }
-
-    private Instance createInstance(String[][] features, String[] labels, String[] tokens) {
-        FeatureVector[] featureVectors = new FeatureVector[features.length];
-        for (int i = 0; i < features.length; i++) {
-            int[] indices = new int[features[i].length];
-            for (int j = 0; j < features[i].length; j++) {
-                indices[j] = dataAlphabet.lookupIndex(features[i][j], true);
-            }
-            featureVectors[i] = new FeatureVector(dataAlphabet, indices);
-        }
-
-        int[] labelIndices = new int[labels.length];
-        for (int i = 0; i < labels.length; i++) {
-            labelIndices[i] = targetAlphabet.lookupIndex(labels[i], true);
-        }
-
-        return new Instance(
-                new FeatureVectorSequence(featureVectors),
-                new LabelSequence(targetAlphabet, labelIndices),
-                null,
-                TrainingSequence.ofTokens(Arrays.asList(tokens), Arrays.asList(labels))
-        );
-    }
-
-    private InstanceList createMultiSequenceTestData() {
-        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
-
-        instances.add(
-                createInstance(
-                        new String[][] {{"word=visit", "cap=no"}, {"word=paris", "cap=yes"}},
-                        new String[] {"O", "B-LOC"},
-                        new String[] {"visit", "Paris"}
-                )
-        );
-
-        instances.add(
-                createInstance(
-                        new String[][] {{"word=in", "cap=no"}, {"word=rome", "cap=yes"}},
-                        new String[] {"O", "B-LOC"},
-                        new String[] {"in", "Rome"}
-                )
-        );
-
-        return instances;
-    }
-
-    private InstanceList createTestData(TestSequenceFixture testSequences) {
-        return switch (testSequences) {
-            case NONE -> new InstanceList(dataAlphabet, targetAlphabet);
-            case MULTIPLE -> createMultiSequenceTestData();
-            case SINGLE_WITH_SPACES_IN_TOKENS -> createTestDataWithSpacesInTokens();
-        };
-    }
-
-    private InstanceList createTestDataWithSpacesInTokens() {
-        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
-
-        // Feature vectors don't contain spaces, so this tests that the output format is correct
-        instances.add(
-                createInstance(
-                        new String[][] {{"word=new_york", "cap=yes"}},
-                        new String[] {"B-LOC"},
-                        new String[] {"New York"}
-                )
-        );
-
-        return instances;
-    }
-
-    private InstanceList createTrainingData() {
-        InstanceList instances = new InstanceList(dataAlphabet, targetAlphabet);
-
-        instances
-                .add(
-                        createInstance(
-                                new String[][] {{"word=new", "cap=yes"}, {"word=york", "cap=yes"},
-                                                {"word=city", "cap=yes"}},
-                                new String[] {"B-LOC", "I-LOC", "I-LOC"},
-                                new String[] {"New", "York", "City"}
-                        )
-                );
-
-        instances.add(
-                createInstance(
-                        new String[][] {{"word=the", "cap=no"}, {"word=cat", "cap=no"}, {"word=sat", "cap=no"}},
-                        new String[] {"O", "O", "O"},
-                        new String[] {"the", "cat", "sat"}
-                )
-        );
-
-        instances
-                .add(
-                        createInstance(
-                                new String[][] {{"word=in", "cap=no"}, {"word=london", "cap=yes"},
-                                                {"word=today", "cap=no"}},
-                                new String[] {"O", "B-LOC", "O"},
-                                new String[] {"in", "London", "today"}
-                        )
-                );
-
-        return instances;
-    }
-
     private static SortedSet<Path> listDirectory(Path directory) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
             return paths.filter(Files::isRegularFile)
                     .map(directory::relativize)
                     .collect(Collectors.toCollection(TreeSet::new));
         }
+    }
+
+    @BeforeEach
+    void setUp() {
+        dataAlphabet = new Alphabet();
+        targetAlphabet = new LabelAlphabet();
+        targetAlphabet.lookupIndex("O", true);
+        targetAlphabet.lookupIndex("B-LOC", true);
+        targetAlphabet.lookupIndex("I-LOC", true);
     }
 
     private static void validateOutputFile(Path outputFile) throws IOException {

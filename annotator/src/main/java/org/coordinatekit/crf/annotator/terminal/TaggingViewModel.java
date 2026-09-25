@@ -39,11 +39,6 @@ record TaggingViewModel(
         @Nullable String totalLikelihoodText,
         String footerPrompt
 ) {
-    TaggingViewModel {
-        tokenRows = List.copyOf(tokenRows);
-        featureRows = featureRows == null ? null : List.copyOf(featureRows);
-    }
-
     /**
      * A feature row: the row number, the token, and its formatted feature list.
      *
@@ -64,4 +59,9 @@ record TaggingViewModel(
      * @param lowConfidence whether the row should be highlighted as low-confidence
      */
     record TokenRow(String number, String token, String tagText, String confidenceText, boolean lowConfidence) {}
+
+    TaggingViewModel {
+        tokenRows = List.copyOf(tokenRows);
+        featureRows = featureRows == null ? null : List.copyOf(featureRows);
+    }
 }

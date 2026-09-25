@@ -39,6 +39,43 @@ import java.util.Set;
  */
 record DefaultFeatureExtractorParameters(Set<ParameterDescriptor> parameters, Map<String, Object> values)
         implements FeatureExtractorParameters {
+    /**
+     * Verifies that {@code name} names a parameter declared with {@code expectedKind}.
+     *
+     * @param name the parameter name
+     * @param expectedKind the kind the accessor expects
+     * @throws IllegalStateException if {@code name} is not declared or was declared with a different
+     *         kind
+     */
+    private void checkDeclared(String name, ParameterKind expectedKind) {
+        ParameterDescriptor parameter = lookup(name);
+        if (parameter == null) {
+            throw new IllegalStateException("no parameter named '" + name + "' is declared");
+        }
+        if (parameter.kind() != expectedKind) {
+            throw new IllegalStateException(
+                    "parameter '" + name + "' is declared as " + parameter.kind() + ", not " + expectedKind
+            );
+        }
+    }
+
+    /**
+     * Returns the coerced value of {@code name}, present when the configuration or a default supplied
+     * one.
+     *
+     * @param name the parameter name
+     * @param expectedKind the kind the accessor expects
+     * @param type the Java type the kind coerces to
+     * @param <X> the coerced value type
+     * @return the value, or empty when absent
+     * @throws IllegalStateException if {@code name} is not declared or was declared with a different
+     *         kind
+     */
+    private <X> Optional<X> find(String name, ParameterKind expectedKind, Class<X> type) {
+        checkDeclared(name, expectedKind);
+        return Optional.ofNullable(values.get(name)).map(type::cast);
+    }
+
     @Override
     public Optional<Boolean> findBoolean(String name) {
         return find(name, ParameterKind.BOOLEAN, Boolean.class);
@@ -64,6 +101,28 @@ record DefaultFeatureExtractorParameters(Set<ParameterDescriptor> parameters, Ma
         return find(name, ParameterKind.STRING, String.class);
     }
 
+    /**
+     * Returns the coerced value of {@code name}, which must be present.
+     *
+     * @param name the parameter name
+     * @param expectedKind the kind the accessor expects
+     * @param type the Java type the kind coerces to
+     * @param <X> the coerced value type
+     * @return the value
+     * @throws IllegalStateException if {@code name} is not declared, was declared with a different
+     *         kind, or is an optional-no-default parameter that is absent
+     */
+    private <X> X get(String name, ParameterKind expectedKind, Class<X> type) {
+        checkDeclared(name, expectedKind);
+        Object value = values.get(name);
+        if (value == null) {
+            throw new IllegalStateException(
+                    "parameter '" + name + "' has no value; it is optional with no default, so use the find accessor"
+            );
+        }
+        return type.cast(value);
+    }
+
     @Override
     public boolean getBoolean(String name) {
         return get(name, ParameterKind.BOOLEAN, Boolean.class);
@@ -87,65 +146,6 @@ record DefaultFeatureExtractorParameters(Set<ParameterDescriptor> parameters, Ma
     @Override
     public String getString(String name) {
         return get(name, ParameterKind.STRING, String.class);
-    }
-
-    /**
-     * Returns the coerced value of {@code name}, present when the configuration or a default supplied
-     * one.
-     *
-     * @param name the parameter name
-     * @param expectedKind the kind the accessor expects
-     * @param type the Java type the kind coerces to
-     * @param <X> the coerced value type
-     * @return the value, or empty when absent
-     * @throws IllegalStateException if {@code name} is not declared or was declared with a different
-     *         kind
-     */
-    private <X> Optional<X> find(String name, ParameterKind expectedKind, Class<X> type) {
-        checkDeclared(name, expectedKind);
-        return Optional.ofNullable(values.get(name)).map(type::cast);
-    }
-
-    /**
-     * Returns the coerced value of {@code name}, which must be present.
-     *
-     * @param name the parameter name
-     * @param expectedKind the kind the accessor expects
-     * @param type the Java type the kind coerces to
-     * @param <X> the coerced value type
-     * @return the value
-     * @throws IllegalStateException if {@code name} is not declared, was declared with a different
-     *         kind, or is an optional-no-default parameter that is absent
-     */
-    private <X> X get(String name, ParameterKind expectedKind, Class<X> type) {
-        checkDeclared(name, expectedKind);
-        Object value = values.get(name);
-        if (value == null) {
-            throw new IllegalStateException(
-                    "parameter '" + name + "' has no value; it is optional with no default, so use the find accessor"
-            );
-        }
-        return type.cast(value);
-    }
-
-    /**
-     * Verifies that {@code name} names a parameter declared with {@code expectedKind}.
-     *
-     * @param name the parameter name
-     * @param expectedKind the kind the accessor expects
-     * @throws IllegalStateException if {@code name} is not declared or was declared with a different
-     *         kind
-     */
-    private void checkDeclared(String name, ParameterKind expectedKind) {
-        ParameterDescriptor parameter = lookup(name);
-        if (parameter == null) {
-            throw new IllegalStateException("no parameter named '" + name + "' is declared");
-        }
-        if (parameter.kind() != expectedKind) {
-            throw new IllegalStateException(
-                    "parameter '" + name + "' is declared as " + parameter.kind() + ", not " + expectedKind
-            );
-        }
     }
 
     /**

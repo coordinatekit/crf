@@ -46,6 +46,27 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MalletCrfTrainerTest {
+    record CreateCrfParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            TagProvider<String> tagProvider,
+            Map<String, Double> expectedStates,
+            Map<String, Set<String>> expectedTransitions
+    ) {}
+
+    record CreateCrfTrainerParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            boolean expectedUseSparseWeights,
+            boolean expectedUseSomeUnsupportedTrick
+    ) {}
+
+    record SplitTrainingDataParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            int expectedTrainingSize,
+            int expectedTestSize
+    ) {}
+
+    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {}
+
     private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
@@ -59,13 +80,6 @@ class MalletCrfTrainerTest {
             "0"
     );
     public static final String TRAINING_DATA_RESOURCE = "/org/coordinatekit/crf/mallet/test_addresses.xml";
-
-    record CreateCrfParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            TagProvider<String> tagProvider,
-            Map<String, Double> expectedStates,
-            Map<String, Set<String>> expectedTransitions
-    ) {}
 
     static Stream<CreateCrfParameters> createCrf() {
         return Stream.of(
@@ -201,12 +215,6 @@ class MalletCrfTrainerTest {
         }
     }
 
-    record CreateCrfTrainerParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            boolean expectedUseSparseWeights,
-            boolean expectedUseSomeUnsupportedTrick
-    ) {}
-
     static Stream<CreateCrfTrainerParameters> createCrfTrainer() {
         return Stream.of(
                 new CreateCrfTrainerParameters(null, true, true),
@@ -290,6 +298,10 @@ class MalletCrfTrainerTest {
                 .collect(Collectors.toCollection(() -> new InstanceList(dataAlphabet, targetAlphabet)));
     }
 
+    private static List<String> firstTokenSignature(InstanceList instances) {
+        return instances.stream().map(instance -> ((TrainingSequence<?>) instance.getSource()).get(0).token()).toList();
+    }
+
     private static Map<String, Set<String>> getCrfTransitions(CRF crf) {
         Map<String, Set<String>> transitions = new HashMap<>();
 
@@ -307,36 +319,53 @@ class MalletCrfTrainerTest {
         return transitions;
     }
 
-    private static List<String> firstTokenSignature(InstanceList instances) {
-        return instances.stream().map(instance -> ((TrainingSequence<?>) instance.getSource()).get(0).token()).toList();
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
+    @Test
+    void mapSequenceToInstance() {
+        List<String> sequence = List.of("5521", "W", "Center", "St,", "Milwaukee,", "WI", "53210");
+
+        SortedSet<String> expectedFeatures = new TreeSet<>();
+        expectedFeatures.addAll(sequence.stream().map(t -> "LENGTH=" + t.length()).toList());
+        expectedFeatures.addAll(sequence.stream().map(t -> "LOWER=" + t.toLowerCase(Locale.getDefault())).toList());
+
+        Alphabet dataAlphabet = new Alphabet();
+        LabelAlphabet targetAlphabet = new LabelAlphabet();
+
+        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER)
+                .read(
+                        Objects.requireNonNull(
+                                getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
+                        )
+                )
+                .toList();
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
+                SIMPLE_FEATURE_EXTRACTOR,
+                TAG_PROVIDER,
+                new XmlTrainingData<>(TAG_PROVIDER)
+        );
+        var actual = trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, trainingSequences.get(0));
+
+        assertIterableEquals(
+                expectedFeatures,
+                Arrays.stream((String[]) dataAlphabet.toArray(new String[0])).sorted().toList()
+        );
+        assertIterableEquals(
+                List.of("StreetNumber", "Unknown"),
+                Arrays.stream(targetAlphabet.toArray()).sorted().toList()
+        );
+
+        assertInstanceOf(FeatureVectorSequence.class, actual.getData());
+        assertEquals(sequence.size(), ((FeatureVectorSequence) actual.getData()).size());
+        assertEquals(2, ((FeatureVectorSequence) actual.getData()).get(0).numLocations());
+        assertTrue(((FeatureVectorSequence) actual.getData()).get(0).contains("LENGTH=4"));
+        assertTrue(((FeatureVectorSequence) actual.getData()).get(0).contains("LOWER=5521"));
+        assertInstanceOf(LabelSequence.class, actual.getTarget());
+        assertEquals("StreetNumber", ((LabelSequence) actual.getTarget()).getLabelAtPosition(0).getEntry());
     }
 
     private static Path resourcePath(String name) throws URISyntaxException {
         return Path.of(Objects.requireNonNull(MalletCrfTrainerTest.class.getResource(name)).toURI());
     }
-
-    private static TrainingTestSplit splitWithSeed(int randomSeed) throws IOException, URISyntaxException {
-        var configuration = MalletCrfTrainerConfiguration.builder()
-                .iterations(1)
-                .trainingFraction(0.6)
-                .randomSeed(randomSeed)
-                .conllOutputEnabled(false)
-                .modelOutputEnabled(false)
-                .build();
-        var trainer = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                configuration
-        );
-        return trainer.splitTrainingData(Collections.singleton(resourcePath(TRAINING_DATA_RESOURCE)));
-    }
-
-    record SplitTrainingDataParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            int expectedTrainingSize,
-            int expectedTestSize
-    ) {}
 
     static Stream<SplitTrainingDataParameters> splitTrainingData() {
         return Stream.of(
@@ -408,51 +437,22 @@ class MalletCrfTrainerTest {
         assertEquals(firstTokenSignature(firstSplit.test()), firstTokenSignature(secondSplit.test()));
     }
 
-    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
-    @Test
-    void mapSequenceToInstance() {
-        List<String> sequence = List.of("5521", "W", "Center", "St,", "Milwaukee,", "WI", "53210");
-
-        SortedSet<String> expectedFeatures = new TreeSet<>();
-        expectedFeatures.addAll(sequence.stream().map(t -> "LENGTH=" + t.length()).toList());
-        expectedFeatures.addAll(sequence.stream().map(t -> "LOWER=" + t.toLowerCase(Locale.getDefault())).toList());
-
-        Alphabet dataAlphabet = new Alphabet();
-        LabelAlphabet targetAlphabet = new LabelAlphabet();
-
-        List<TrainingSequence<String>> trainingSequences = new XmlTrainingData<>(TAG_PROVIDER)
-                .read(
-                        Objects.requireNonNull(
-                                getClass().getResourceAsStream("/org/coordinatekit/crf/mallet/test_addresses.xml")
-                        )
-                )
-                .toList();
-        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
+    private static TrainingTestSplit splitWithSeed(int randomSeed) throws IOException, URISyntaxException {
+        var configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(1)
+                .trainingFraction(0.6)
+                .randomSeed(randomSeed)
+                .conllOutputEnabled(false)
+                .modelOutputEnabled(false)
+                .build();
+        var trainer = new MalletCrfTrainer<>(
                 SIMPLE_FEATURE_EXTRACTOR,
                 TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER)
+                new XmlTrainingData<>(TAG_PROVIDER),
+                configuration
         );
-        var actual = trainer.mapSequenceToInstance(dataAlphabet, targetAlphabet, trainingSequences.get(0));
-
-        assertIterableEquals(
-                expectedFeatures,
-                Arrays.stream((String[]) dataAlphabet.toArray(new String[0])).sorted().toList()
-        );
-        assertIterableEquals(
-                List.of("StreetNumber", "Unknown"),
-                Arrays.stream(targetAlphabet.toArray()).sorted().toList()
-        );
-
-        assertInstanceOf(FeatureVectorSequence.class, actual.getData());
-        assertEquals(sequence.size(), ((FeatureVectorSequence) actual.getData()).size());
-        assertEquals(2, ((FeatureVectorSequence) actual.getData()).get(0).numLocations());
-        assertTrue(((FeatureVectorSequence) actual.getData()).get(0).contains("LENGTH=4"));
-        assertTrue(((FeatureVectorSequence) actual.getData()).get(0).contains("LOWER=5521"));
-        assertInstanceOf(LabelSequence.class, actual.getTarget());
-        assertEquals("StreetNumber", ((LabelSequence) actual.getTarget()).getLabelAtPosition(0).getEntry());
+        return trainer.splitTrainingData(Collections.singleton(resourcePath(TRAINING_DATA_RESOURCE)));
     }
-
-    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {}
 
     static Stream<TrainParameters> train() {
         return Stream.of(
@@ -526,6 +526,50 @@ class MalletCrfTrainerTest {
     }
 
     @Test
+    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException, URISyntaxException {
+        // ARRANGE
+        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
+        Path modelPath = temporaryDirectory.resolve("model.ser");
+
+        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder()
+                .iterations(5)
+                .trainingFraction(1.0)
+                .conllOutputEnabled(false)
+                .modelOutputEnabled(false)
+                .build();
+
+        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
+                SIMPLE_FEATURE_EXTRACTOR,
+                TAG_PROVIDER,
+                new XmlTrainingData<>(TAG_PROVIDER),
+                configuration
+        );
+
+        // ACT
+        trainer.train(trainingPath, modelPath);
+
+        // ASSERT
+        CRF deserializedCrf = Serializables.deserialize(CRF.class, modelPath);
+
+        // Verify alphabets are preserved
+        assertNotNull(deserializedCrf.getInputAlphabet(), "Input alphabet should not be null");
+        assertNotNull(deserializedCrf.getOutputAlphabet(), "Output alphabet should not be null");
+        assertTrue(deserializedCrf.getInputAlphabet().size() > 0, "Input alphabet should contain features");
+        assertTrue(deserializedCrf.getOutputAlphabet().size() > 0, "Output alphabet should contain labels");
+
+        // Verify all states have valid weights
+        for (int i = 0; i < deserializedCrf.numStates(); i++) {
+            Transducer.State state = deserializedCrf.getState(i);
+            assertNotNull(state, "State should not be null");
+            assertTrue(
+                    Double.isFinite(state.getInitialWeight())
+                            || state.getInitialWeight() == Transducer.IMPOSSIBLE_WEIGHT,
+                    "State initial weight should be finite or IMPOSSIBLE_WEIGHT"
+            );
+        }
+    }
+
+    @Test
     void train_withConllOutputEnabled_createsConllFiles(@TempDir Path temporaryDirectory)
             throws IOException, URISyntaxException {
         // ARRANGE
@@ -589,49 +633,5 @@ class MalletCrfTrainerTest {
         // ASSERT
         assertTrue(Files.exists(modelPath), "Model file should be created");
         assertTrue(Files.exists(modelOutputDir), "Model output directory should be created");
-    }
-
-    @Test
-    void train_producesDeserializableModel(@TempDir Path temporaryDirectory) throws IOException, URISyntaxException {
-        // ARRANGE
-        var trainingPath = resourcePath(TRAINING_DATA_RESOURCE);
-        Path modelPath = temporaryDirectory.resolve("model.ser");
-
-        MalletCrfTrainerConfiguration configuration = MalletCrfTrainerConfiguration.builder()
-                .iterations(5)
-                .trainingFraction(1.0)
-                .conllOutputEnabled(false)
-                .modelOutputEnabled(false)
-                .build();
-
-        MalletCrfTrainer<String> trainer = new MalletCrfTrainer<>(
-                SIMPLE_FEATURE_EXTRACTOR,
-                TAG_PROVIDER,
-                new XmlTrainingData<>(TAG_PROVIDER),
-                configuration
-        );
-
-        // ACT
-        trainer.train(trainingPath, modelPath);
-
-        // ASSERT
-        CRF deserializedCrf = Serializables.deserialize(CRF.class, modelPath);
-
-        // Verify alphabets are preserved
-        assertNotNull(deserializedCrf.getInputAlphabet(), "Input alphabet should not be null");
-        assertNotNull(deserializedCrf.getOutputAlphabet(), "Output alphabet should not be null");
-        assertTrue(deserializedCrf.getInputAlphabet().size() > 0, "Input alphabet should contain features");
-        assertTrue(deserializedCrf.getOutputAlphabet().size() > 0, "Output alphabet should contain labels");
-
-        // Verify all states have valid weights
-        for (int i = 0; i < deserializedCrf.numStates(); i++) {
-            Transducer.State state = deserializedCrf.getState(i);
-            assertNotNull(state, "State should not be null");
-            assertTrue(
-                    Double.isFinite(state.getInitialWeight())
-                            || state.getInitialWeight() == Transducer.IMPOSSIBLE_WEIGHT,
-                    "State initial weight should be finite or IMPOSSIBLE_WEIGHT"
-            );
-        }
     }
 }

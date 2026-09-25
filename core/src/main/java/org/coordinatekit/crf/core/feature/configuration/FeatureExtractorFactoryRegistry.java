@@ -42,6 +42,16 @@ public final class FeatureExtractorFactoryRegistry {
     }
 
     /**
+     * Returns the factory registered for {@code type}, or empty if none is.
+     *
+     * @param type the factory type
+     * @return the factory, or empty if none is registered for the type
+     */
+    public Optional<FeatureExtractorFactory> find(String type) {
+        return Optional.ofNullable(factoriesByType.get(type));
+    }
+
+    /**
      * Loads every registered {@link FeatureExtractorFactory} through {@link ServiceLoader} and indexes
      * them by type.
      *
@@ -136,15 +146,5 @@ public final class FeatureExtractorFactoryRegistry {
                 );
             }
         }
-    }
-
-    /**
-     * Returns the factory registered for {@code type}, or empty if none is.
-     *
-     * @param type the factory type
-     * @return the factory, or empty if none is registered for the type
-     */
-    public Optional<FeatureExtractorFactory> find(String type) {
-        return Optional.ofNullable(factoriesByType.get(type));
     }
 }

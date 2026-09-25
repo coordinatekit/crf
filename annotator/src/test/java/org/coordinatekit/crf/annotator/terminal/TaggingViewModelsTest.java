@@ -50,8 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TaggingViewModelsTest {
-    private static final List<String> TOKENS = List.of("The", "fox");
-
     record FeatureRowsParameters(String name, FeatureView effectiveView, List<String> expectedFeaturesText) {}
 
     record FooterPromptParameters(
@@ -69,26 +67,30 @@ class TaggingViewModelsTest {
             @Nullable String expectedText
     ) {}
 
-    @MethodSource
-    @ParameterizedTest
-    void footerPrompt(FooterPromptParameters parameters) {
+    private static final List<String> TOKENS = List.of("The", "fox");
+
+    @Test
+    void editScreen__listsCandidateTagsInCanonicalOrder() {
         // ARRANGE //
-        AnnotatorSequence<String> sequence = sequenceWith(parameters.availability());
+        AnnotatorSequence<String> sequence = AnnotatorModels
+                .annotatorSequence(1, 1, List.of("the", "fox"), TAG_PROVIDER);
 
         // ACT //
-        TaggingViewModel viewModel = sequenceViewModel(
-                sequence,
-                initialTagsOf(sequence),
-                parameters.effectiveView(),
-                TAG_PROVIDER,
-                new DefaultFeatureFormat(),
-                0.80,
-                null,
-                null
-        );
+        EditScreen<String> editScreen = editScreen(sequence, 0, TAG_PROVIDER);
 
         // ASSERT //
-        assertEquals(parameters.expectedPrompt(), viewModel.footerPrompt());
+        EditViewModel viewModel = editScreen.viewModel();
+        assertEquals("Sequence 1 of 1: the fox", viewModel.headerLine());
+        assertEquals("Token 1 of 2: the", viewModel.tokenLine());
+        assertEquals(
+                List.of(
+                        new EditViewModel.TagRow("1", "DT", "—"),
+                        new EditViewModel.TagRow("2", "NN", "—"),
+                        new EditViewModel.TagRow("3", "VB", "—")
+                ),
+                viewModel.tagRows()
+        );
+        assertEquals(List.of("DT", "NN", "VB"), editScreen.candidateTags());
     }
 
     static Stream<FooterPromptParameters> footerPrompt() {
@@ -146,12 +148,9 @@ class TaggingViewModelsTest {
 
     @MethodSource
     @ParameterizedTest
-    void sequenceViewModel__featureRows(FeatureRowsParameters parameters) {
+    void footerPrompt(FooterPromptParameters parameters) {
         // ARRANGE //
-        List<Set<Feature>> key = List
-                .of(Set.of(createFeature("CAP")), Set.of(createFeature("ANIMAL"), createFeature("LOWER")));
-        List<Set<Feature>> verbose = List.of(Set.of(createFeature("WINDOW")), Set.of(createFeature("ANIMAL")));
-        AnnotatorSequence<String> sequence = taggedSequence(key, verbose);
+        AnnotatorSequence<String> sequence = sequenceWith(parameters.availability());
 
         // ACT //
         TaggingViewModel viewModel = sequenceViewModel(
@@ -166,49 +165,7 @@ class TaggingViewModelsTest {
         );
 
         // ASSERT //
-        assertNotNull(viewModel.featureRows());
-        List<String> actual = viewModel.featureRows().stream().map(TaggingViewModel.FeatureRow::featuresText).toList();
-        assertEquals(parameters.expectedFeaturesText(), actual);
-    }
-
-    static Stream<FeatureRowsParameters> sequenceViewModel__featureRows() {
-        return Stream.of(
-                new FeatureRowsParameters(
-                        "key_view_shows_key_features",
-                        FeatureView.KEY,
-                        List.of("CAP", "ANIMAL, LOWER")
-                ),
-                new FeatureRowsParameters(
-                        "all_view_shows_key_and_verbose_union",
-                        FeatureView.ALL,
-                        List.of("CAP, WINDOW", "ANIMAL, LOWER")
-                )
-        );
-    }
-
-    @Test
-    void sequenceViewModel__formatsPlaceholdersForEmptyFeaturesAndAbsentConfidence() {
-        // ARRANGE //
-        AnnotatorSequence<String> sequence = AnnotatorModels
-                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of(createFeature("CAP")), Set.of()), null);
-
-        // ACT //
-        TaggingViewModel viewModel = sequenceViewModel(
-                sequence,
-                initialTagsOf(sequence),
-                FeatureView.KEY,
-                TAG_PROVIDER,
-                new DefaultFeatureFormat(),
-                0.80,
-                null,
-                null
-        );
-
-        // ASSERT //
-        assertEquals("—", viewModel.tokenRows().getFirst().confidenceText());
-        assertNotNull(viewModel.featureRows());
-        assertEquals("CAP", viewModel.featureRows().getFirst().featuresText());
-        assertEquals("—", viewModel.featureRows().get(1).featuresText());
+        assertEquals(parameters.expectedPrompt(), viewModel.footerPrompt());
     }
 
     @Test
@@ -240,6 +197,73 @@ class TaggingViewModelsTest {
         assertNull(viewModel.featureRows());
     }
 
+    static Stream<FeatureRowsParameters> sequenceViewModel__featureRows() {
+        return Stream.of(
+                new FeatureRowsParameters(
+                        "key_view_shows_key_features",
+                        FeatureView.KEY,
+                        List.of("CAP", "ANIMAL, LOWER")
+                ),
+                new FeatureRowsParameters(
+                        "all_view_shows_key_and_verbose_union",
+                        FeatureView.ALL,
+                        List.of("CAP, WINDOW", "ANIMAL, LOWER")
+                )
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void sequenceViewModel__featureRows(FeatureRowsParameters parameters) {
+        // ARRANGE //
+        List<Set<Feature>> key = List
+                .of(Set.of(createFeature("CAP")), Set.of(createFeature("ANIMAL"), createFeature("LOWER")));
+        List<Set<Feature>> verbose = List.of(Set.of(createFeature("WINDOW")), Set.of(createFeature("ANIMAL")));
+        AnnotatorSequence<String> sequence = taggedSequence(key, verbose);
+
+        // ACT //
+        TaggingViewModel viewModel = sequenceViewModel(
+                sequence,
+                initialTagsOf(sequence),
+                parameters.effectiveView(),
+                TAG_PROVIDER,
+                new DefaultFeatureFormat(),
+                0.80,
+                null,
+                null
+        );
+
+        // ASSERT //
+        assertNotNull(viewModel.featureRows());
+        List<String> actual = viewModel.featureRows().stream().map(TaggingViewModel.FeatureRow::featuresText).toList();
+        assertEquals(parameters.expectedFeaturesText(), actual);
+    }
+
+    @Test
+    void sequenceViewModel__formatsPlaceholdersForEmptyFeaturesAndAbsentConfidence() {
+        // ARRANGE //
+        AnnotatorSequence<String> sequence = AnnotatorModels
+                .annotatorSequence(1, 1, TOKENS, TAG_PROVIDER, List.of(Set.of(createFeature("CAP")), Set.of()), null);
+
+        // ACT //
+        TaggingViewModel viewModel = sequenceViewModel(
+                sequence,
+                initialTagsOf(sequence),
+                FeatureView.KEY,
+                TAG_PROVIDER,
+                new DefaultFeatureFormat(),
+                0.80,
+                null,
+                null
+        );
+
+        // ASSERT //
+        assertEquals("—", viewModel.tokenRows().getFirst().confidenceText());
+        assertNotNull(viewModel.featureRows());
+        assertEquals("CAP", viewModel.featureRows().getFirst().featuresText());
+        assertEquals("—", viewModel.featureRows().get(1).featuresText());
+    }
+
     @Test
     void sequenceViewModel__showsChosenTagConfidenceWithOriginalOnlyAfterEdit() {
         // ARRANGE //
@@ -265,28 +289,6 @@ class TaggingViewModelsTest {
         assertEquals("0.5000", viewModel.tokenRows().get(1).confidenceText());
     }
 
-    @MethodSource
-    @ParameterizedTest
-    void sequenceViewModel__totalLikelihoodText(TotalLikelihoodParameters parameters) {
-        // ARRANGE //
-        AnnotatorSequence<String> sequence = taggedSequence(null, null);
-
-        // ACT //
-        TaggingViewModel viewModel = sequenceViewModel(
-                sequence,
-                parameters.currentTags(),
-                FeatureView.NONE,
-                TAG_PROVIDER,
-                new DefaultFeatureFormat(),
-                0.80,
-                parameters.currentTotal(),
-                parameters.originalTotal()
-        );
-
-        // ASSERT //
-        assertEquals(parameters.expectedText(), viewModel.totalLikelihoodText());
-    }
-
     static Stream<TotalLikelihoodParameters> sequenceViewModel__totalLikelihoodText() {
         return Stream.of(
                 new TotalLikelihoodParameters(
@@ -307,28 +309,26 @@ class TaggingViewModelsTest {
         );
     }
 
-    @Test
-    void editScreen__listsCandidateTagsInCanonicalOrder() {
+    @MethodSource
+    @ParameterizedTest
+    void sequenceViewModel__totalLikelihoodText(TotalLikelihoodParameters parameters) {
         // ARRANGE //
-        AnnotatorSequence<String> sequence = AnnotatorModels
-                .annotatorSequence(1, 1, List.of("the", "fox"), TAG_PROVIDER);
+        AnnotatorSequence<String> sequence = taggedSequence(null, null);
 
         // ACT //
-        EditScreen<String> editScreen = editScreen(sequence, 0, TAG_PROVIDER);
+        TaggingViewModel viewModel = sequenceViewModel(
+                sequence,
+                parameters.currentTags(),
+                FeatureView.NONE,
+                TAG_PROVIDER,
+                new DefaultFeatureFormat(),
+                0.80,
+                parameters.currentTotal(),
+                parameters.originalTotal()
+        );
 
         // ASSERT //
-        EditViewModel viewModel = editScreen.viewModel();
-        assertEquals("Sequence 1 of 1: the fox", viewModel.headerLine());
-        assertEquals("Token 1 of 2: the", viewModel.tokenLine());
-        assertEquals(
-                List.of(
-                        new EditViewModel.TagRow("1", "DT", "—"),
-                        new EditViewModel.TagRow("2", "NN", "—"),
-                        new EditViewModel.TagRow("3", "VB", "—")
-                ),
-                viewModel.tagRows()
-        );
-        assertEquals(List.of("DT", "NN", "VB"), editScreen.candidateTags());
+        assertEquals(parameters.expectedText(), viewModel.totalLikelihoodText());
     }
 
     private static AnnotatorSequence<String> taggedSequence(

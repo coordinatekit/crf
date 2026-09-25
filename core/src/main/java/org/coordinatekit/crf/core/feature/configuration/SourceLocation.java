@@ -94,15 +94,6 @@ public final class SourceLocation {
     }
 
     /**
-     * Returns the URI of the source, for example {@code file:/path/to/features.xml}.
-     *
-     * @return the source URI
-     */
-    public URI uri() {
-        return source;
-    }
-
-    /**
      * Creates a source location.
      *
      * @param source the URI of the source
@@ -129,5 +120,14 @@ public final class SourceLocation {
     public String toString() {
         String rendered = display(source) + ":" + line;
         return column > 0 ? rendered + ":" + column : rendered;
+    }
+
+    /**
+     * Returns the URI of the source, for example {@code file:/path/to/features.xml}.
+     *
+     * @return the source URI
+     */
+    public URI uri() {
+        return source;
     }
 }

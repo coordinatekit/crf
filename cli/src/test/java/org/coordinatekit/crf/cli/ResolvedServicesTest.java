@@ -54,6 +54,10 @@ import java.util.stream.Stream;
  * {@link ResolvedServices#loadTagger}.
  */
 class ResolvedServicesTest {
+    record LoadFailureParameters(String name, Exception thrown) {}
+
+    record UnknownRewordParameters(String name, List<String> availableNames, String expectedMessage) {}
+
     private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("NN"), "NN");
     private static final CrfTagger<String> UNUSED_TAGGER = input -> {
         throw new UnsupportedOperationException("not used");
@@ -75,8 +79,6 @@ class ResolvedServicesTest {
         // ASSERT //
         assertMessageContains(exception, "failed to load", "does-not-exist.crf");
     }
-
-    record LoadFailureParameters(String name, Exception thrown) {}
 
     static Stream<LoadFailureParameters> loadTagger__loadFailuresWrappedAsStartupException() {
         return Stream.of(
@@ -305,8 +307,6 @@ class ResolvedServicesTest {
         // ASSERT //
         assertInstanceOf(MalletCrfTaggerLoader.class, resolvedServices.taggerLoader());
     }
-
-    record UnknownRewordParameters(String name, List<String> availableNames, String expectedMessage) {}
 
     static Stream<UnknownRewordParameters> resolve__unknownServiceRewordsToStartupGuidance() {
         return Stream.of(

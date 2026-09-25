@@ -30,6 +30,20 @@ import java.util.Objects;
  * @see TrainingSegment
  */
 public final class TrainingSegments {
+    private record DefaultTrainingSegment<T> (SegmentKind kind, @Nullable T tag, String text)
+            implements TrainingSegment<T> {
+        private DefaultTrainingSegment {
+            Objects.requireNonNull(kind, "kind must not be null");
+            Objects.requireNonNull(text, "text must not be null");
+            if (kind == SegmentKind.TOKEN && tag == null) {
+                throw new IllegalArgumentException("A token segment requires a non-null tag.");
+            }
+            if (kind == SegmentKind.EXCLUDED && tag != null) {
+                throw new IllegalArgumentException("An excluded segment must not carry a tag.");
+            }
+        }
+    }
+
     private TrainingSegments() {}
 
     /**
@@ -59,19 +73,5 @@ public final class TrainingSegments {
                 Objects.requireNonNull(tag, "tag must not be null"),
                 text
         );
-    }
-
-    private record DefaultTrainingSegment<T> (SegmentKind kind, @Nullable T tag, String text)
-            implements TrainingSegment<T> {
-        private DefaultTrainingSegment {
-            Objects.requireNonNull(kind, "kind must not be null");
-            Objects.requireNonNull(text, "text must not be null");
-            if (kind == SegmentKind.TOKEN && tag == null) {
-                throw new IllegalArgumentException("A token segment requires a non-null tag.");
-            }
-            if (kind == SegmentKind.EXCLUDED && tag != null) {
-                throw new IllegalArgumentException("An excluded segment must not carry a tag.");
-            }
-        }
     }
 }

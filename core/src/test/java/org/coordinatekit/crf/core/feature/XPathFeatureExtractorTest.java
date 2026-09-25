@@ -36,6 +36,23 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class XPathFeatureExtractorTest {
+    record ExtractAtParameters(
+            String name,
+            boolean caseSensitive,
+            @Nullable Feature notPresentFeature,
+            @Nullable Feature presentFeature,
+            List<String> tokens,
+            int position,
+            Set<Feature> expectedResult
+    ) {}
+
+    record GetXPathValuesParameters(
+            String name,
+            Supplier<InputStream> resource,
+            String xpath,
+            List<String> expectedResult
+    ) {}
+
     static final String EMPTY_TEXT_XML = """
             <root>
                 <item>   </item>
@@ -57,20 +74,6 @@ class XPathFeatureExtractorTest {
         assertNotNull(inputStream);
         return () -> inputStream;
     }
-
-    static Supplier<InputStream> stringResource(String string) {
-        return () -> new ByteArrayInputStream(string.getBytes(StandardCharsets.UTF_8));
-    }
-
-    record ExtractAtParameters(
-            String name,
-            boolean caseSensitive,
-            @Nullable Feature notPresentFeature,
-            @Nullable Feature presentFeature,
-            List<String> tokens,
-            int position,
-            Set<Feature> expectedResult
-    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
@@ -176,13 +179,6 @@ class XPathFeatureExtractorTest {
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);
     }
-
-    record GetXPathValuesParameters(
-            String name,
-            Supplier<InputStream> resource,
-            String xpath,
-            List<String> expectedResult
-    ) {}
 
     static Stream<GetXPathValuesParameters> getXPathValues() {
         return Stream.of(
@@ -329,5 +325,9 @@ class XPathFeatureExtractorTest {
 
         // ASSERT //
         assertIterableEquals(parameters.expectedResult(), actual);
+    }
+
+    static Supplier<InputStream> stringResource(String string) {
+        return () -> new ByteArrayInputStream(string.getBytes(StandardCharsets.UTF_8));
     }
 }

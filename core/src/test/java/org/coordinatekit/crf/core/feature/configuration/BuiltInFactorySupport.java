@@ -60,16 +60,6 @@ public final class BuiltInFactorySupport {
     }
 
     /**
-     * Returns the URL of the named classpath resource.
-     *
-     * @param absoluteResource the absolute classpath resource name
-     * @return the resource URL
-     */
-    public static URL resourceUrl(String absoluteResource) {
-        return ConfigurationTestSupport.resourceUrl(absoluteResource);
-    }
-
-    /**
      * Assembles {@code node} with the given base location and renders the features of {@code position}.
      *
      * @param baseLocation the document location that resource parameters resolve against
@@ -94,5 +84,15 @@ public final class BuiltInFactorySupport {
      */
     public static Set<String> render(FeatureExtractorNode node, List<String> tokens, int position) {
         return render(currentDirectoryUrl(), node, tokens, position);
+    }
+
+    /**
+     * Returns the URL of the named classpath resource.
+     *
+     * @param absoluteResource the absolute classpath resource name
+     * @return the resource URL
+     */
+    public static URL resourceUrl(String absoluteResource) {
+        return ConfigurationTestSupport.resourceUrl(absoluteResource);
     }
 }

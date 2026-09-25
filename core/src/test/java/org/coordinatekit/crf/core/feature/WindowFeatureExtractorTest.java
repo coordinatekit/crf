@@ -29,39 +29,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WindowFeatureExtractorTest {
-    private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
-            .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
-
-    private static WindowFeatureExtractor extractor(int before, int after, boolean includeCurrent) {
-        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR)
-                .windowBefore(before)
-                .windowAfter(after)
-                .includeCurrentToken(includeCurrent)
-                .build();
-    }
-
-    private static WindowFeatureExtractor defaultExtractor() {
-        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).build();
-    }
-
-    private static WindowFeatureExtractor multipleFeaturesExtractor() {
-        FeatureExtractor multiFeatureExtractor = (seq, pos) -> {
-            String token = seq.get(pos).token();
-            return Set.of(
-                    createFeatureWithValue("TOKEN", token),
-                    createFeatureWithValue("LENGTH", String.valueOf(token.length()))
-            );
-        };
-
-        return WindowFeatureExtractor.builder(multiFeatureExtractor).build();
-    }
-
     record BuilderExceptionParameters(
             String name,
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
     ) {}
+
+    record ExtractAtParameters(
+            String name,
+            WindowFeatureExtractor extractor,
+            List<String> tokens,
+            int position,
+            Set<Feature> expectedResult
+    ) {}
+
+    private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
+            .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
     static Stream<BuilderExceptionParameters> builder__exception() {
         return Stream.of(
@@ -90,13 +74,9 @@ class WindowFeatureExtractorTest {
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
-    record ExtractAtParameters(
-            String name,
-            WindowFeatureExtractor extractor,
-            List<String> tokens,
-            int position,
-            Set<Feature> expectedResult
-    ) {}
+    private static WindowFeatureExtractor defaultExtractor() {
+        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).build();
+    }
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
@@ -256,5 +236,25 @@ class WindowFeatureExtractorTest {
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);
+    }
+
+    private static WindowFeatureExtractor extractor(int before, int after, boolean includeCurrent) {
+        return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR)
+                .windowBefore(before)
+                .windowAfter(after)
+                .includeCurrentToken(includeCurrent)
+                .build();
+    }
+
+    private static WindowFeatureExtractor multipleFeaturesExtractor() {
+        FeatureExtractor multiFeatureExtractor = (seq, pos) -> {
+            String token = seq.get(pos).token();
+            return Set.of(
+                    createFeatureWithValue("TOKEN", token),
+                    createFeatureWithValue("LENGTH", String.valueOf(token.length()))
+            );
+        };
+
+        return WindowFeatureExtractor.builder(multiFeatureExtractor).build();
     }
 }

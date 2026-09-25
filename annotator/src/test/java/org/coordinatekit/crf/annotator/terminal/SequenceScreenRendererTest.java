@@ -29,8 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SequenceScreenRendererTest {
-    private static final String BOLD_YELLOW = AnnotatorTestSupport.boldYellowEscape();
-
     record FeatureSectionParameters(
             String name,
             @Nullable List<TaggingViewModel.FeatureRow> featureRows,
@@ -42,6 +40,8 @@ class SequenceScreenRendererTest {
             @Nullable String totalLikelihoodText,
             @Nullable String expectedText
     ) {}
+
+    private static final String BOLD_YELLOW = AnnotatorTestSupport.boldYellowEscape();
 
     static Stream<FeatureSectionParameters> appendTo__featureSectionVisibility() {
         return Stream.of(
@@ -120,6 +120,42 @@ class SequenceScreenRendererTest {
         );
     }
 
+    @Test
+    void appendTo__stylesLowConfidenceRowsOnly() {
+        // ARRANGE //
+        TaggingViewModel viewModel = new TaggingViewModel(
+                "Sequence 1 of 1: The fox",
+                List.of(
+                        new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false),
+                        new TaggingViewModel.TokenRow("2", "fox", "NN", "0.5000", true)
+                ),
+                null,
+                null,
+                "PROMPT"
+        );
+
+        // ACT //
+        String output = render(viewModel);
+
+        // ASSERT //
+        assertEquals(1, output.lines().filter(line -> line.contains(BOLD_YELLOW)).count());
+        assertTrue(
+                output.lines().anyMatch(line -> line.contains(BOLD_YELLOW) && line.contains("fox")),
+                "expected the low-confidence row to be styled"
+        );
+    }
+
+    static Stream<TotalLikelihoodParameters> appendTo__totalLikelihoodLine() {
+        return Stream.of(
+                new TotalLikelihoodParameters("omitted_when_null", null, null),
+                new TotalLikelihoodParameters(
+                        "rendered_when_present",
+                        "0.6210 (was 0.8804)",
+                        "Total likelihood: 0.6210 (was 0.8804)"
+                )
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
     void appendTo__totalLikelihoodLine(TotalLikelihoodParameters parameters) {
@@ -147,42 +183,6 @@ class SequenceScreenRendererTest {
                     "expected the total-likelihood text: " + parameters.expectedText()
             );
         }
-    }
-
-    static Stream<TotalLikelihoodParameters> appendTo__totalLikelihoodLine() {
-        return Stream.of(
-                new TotalLikelihoodParameters("omitted_when_null", null, null),
-                new TotalLikelihoodParameters(
-                        "rendered_when_present",
-                        "0.6210 (was 0.8804)",
-                        "Total likelihood: 0.6210 (was 0.8804)"
-                )
-        );
-    }
-
-    @Test
-    void appendTo__stylesLowConfidenceRowsOnly() {
-        // ARRANGE //
-        TaggingViewModel viewModel = new TaggingViewModel(
-                "Sequence 1 of 1: The fox",
-                List.of(
-                        new TaggingViewModel.TokenRow("1", "The", "DT", "0.9000", false),
-                        new TaggingViewModel.TokenRow("2", "fox", "NN", "0.5000", true)
-                ),
-                null,
-                null,
-                "PROMPT"
-        );
-
-        // ACT //
-        String output = render(viewModel);
-
-        // ASSERT //
-        assertEquals(1, output.lines().filter(line -> line.contains(BOLD_YELLOW)).count());
-        assertTrue(
-                output.lines().anyMatch(line -> line.contains(BOLD_YELLOW) && line.contains("fox")),
-                "expected the low-confidence row to be styled"
-        );
     }
 
     private static String render(TaggingViewModel viewModel) {

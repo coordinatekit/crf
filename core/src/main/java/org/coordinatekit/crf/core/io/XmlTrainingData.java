@@ -114,6 +114,378 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
         TrainingDataStreamer<T>, TrainingDataValidator, TrainingSchemaGenerator {
 
     /**
+     * Collects validation problems instead of aborting on the first one, so a single
+     * {@link #validate(InputStream)} call can report every error in a document.
+     *
+     * <p>
+     * Warnings are ignored because they do not render a document invalid. Recoverable errors are
+     * reported through {@link #error(SAXParseException)} as the validator continues; a fatal error is
+     * reported through {@link #fatalError(SAXParseException)} and then rethrown by the validator, which
+     * {@link #recordFatal(SAXException)} reconciles so it is not counted twice.
+     */
+    private static final class CollectingErrorHandler implements ErrorHandler {
+        private final List<String> errors = new ArrayList<>();
+
+        @Override
+        public void error(SAXParseException exception) {
+            errors.add(format(exception));
+        }
+
+        @Override
+        public void fatalError(SAXParseException exception) {
+            errors.add(format(exception));
+        }
+
+        /**
+         * Formats a parse exception with its location, when available.
+         *
+         * @param exception the parse exception to format
+         * @return a human-readable message, prefixed with line and column when the parser supplied them
+         */
+        private static String format(SAXParseException exception) {
+            String message = Objects.requireNonNullElse(exception.getMessage(), "unknown error");
+            int line = exception.getLineNumber();
+            if (line < 0) {
+                return message;
+            }
+            return "line " + line + ", column " + exception.getColumnNumber() + ": " + message;
+        }
+
+        /**
+         * Records a fatal exception thrown out of {@code validate}, unless one was already collected.
+         *
+         * <p>
+         * The validator calls {@link #fatalError(SAXParseException)} before rethrowing, so in the common
+         * case the problem is already recorded and this is a no-op. A non-parse {@link SAXException} that
+         * never reached the handler is recorded by its message.
+         *
+         * @param exception the exception thrown by the validator
+         */
+        void recordFatal(SAXException exception) {
+            if (errors.isEmpty()) {
+                errors.add(Objects.requireNonNullElse(exception.getMessage(), "unknown error"));
+            }
+        }
+
+        /**
+         * Throws an {@link UncheckedCrfException} aggregating every collected problem, if any.
+         *
+         * @throws UncheckedCrfException if one or more validation problems were collected
+         */
+        void throwIfInvalid() {
+            if (!errors.isEmpty()) {
+                throw new UncheckedCrfException("The training data document is invalid:\n" + String.join("\n", errors));
+            }
+        }
+
+        @Override
+        public void warning(SAXParseException exception) {
+            // Warnings do not render a document invalid and are intentionally ignored.
+        }
+    }
+
+    /**
+     * An iterator that lazily parses training sequences from an XML stream.
+     *
+     * <p>
+     * This iterator reads {@code <Sequence>} elements from the XML and converts each one into a
+     * {@link TrainingSequence}. {@code <crf:Excluded>} elements are captured as excluded segments;
+     * other elements in the CRF schema namespace are skipped during parsing.
+     *
+     * @param <T> the type of tag used in training sequences
+     */
+    private static class SequenceIterator<T extends Comparable<T>> implements Iterator<TrainingSequence<T>> {
+        private boolean finished = false;
+        private @Nullable TrainingSequence<T> next;
+        private final XMLStreamReader reader;
+        private final TagProvider<T> tagProvider;
+
+        /**
+         * Constructs a new sequence iterator.
+         *
+         * @param tagProvider the provider for decoding tag names
+         * @param reader the XML stream reader positioned at the start of the document
+         */
+        SequenceIterator(TagProvider<T> tagProvider, XMLStreamReader reader) {
+            this.reader = reader;
+            this.tagProvider = tagProvider;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (finished) {
+                return false;
+            }
+            if (next != null) {
+                return true;
+            }
+            next = readNextSequence();
+            return next != null;
+        }
+
+        @Override
+        public TrainingSequence<T> next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            TrainingSequence<T> result = Objects.requireNonNull(next);
+            next = null;
+            return result;
+        }
+
+        /**
+         * Parses a single sequence element and its child elements.
+         *
+         * <p>
+         * The reader should be positioned just after the opening {@code <Sequence>} tag. This method reads
+         * all child elements until the closing {@code </Sequence>} tag is reached, assembling segments in
+         * document order. {@code <crf:Excluded>} elements in the CRF schema namespace are captured verbatim
+         * as {@link SegmentKind#EXCLUDED} segments (preserving whitespace, never trimmed), but an empty
+         * (zero-length) excluded run is dropped; other CRF-namespace elements are skipped; non-CRF elements
+         * become trimmed token segments, dropped when empty. A token element that contains a nested child
+         * element is skipped and logged rather than aborting the parse.
+         *
+         * @return the parsed training sequence
+         * @throws XMLStreamException if an error occurs while reading
+         */
+        private TrainingSequence<T> parseSequence() throws XMLStreamException {
+            List<TrainingSegment<T>> segments = new ArrayList<>();
+            int depth = 1;
+
+            while (reader.hasNext() && depth > 0) {
+                int event = reader.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    if (CRF_SCHEMA_NAMESPACE_URI.equals(reader.getNamespaceURI())) {
+                        if (EXCLUDED_ELEMENT_NAME.equals(reader.getLocalName())) {
+                            String excludedText = readElementText();
+                            if (excludedText != null && !excludedText.isEmpty()) {
+                                segments.add(excluded(excludedText));
+                            }
+                        } else {
+                            skipElement();
+                        }
+                    } else {
+                        String localName = reader.getLocalName();
+                        String raw = readElementText();
+                        if (raw != null) {
+                            String token = raw.trim();
+                            if (!token.isEmpty()) {
+                                segments.add(token(tagProvider.decode(localName), token));
+                            }
+                        }
+                    }
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    depth--;
+                }
+            }
+
+            return TrainingSequence.ofSegments(segments);
+        }
+
+        /**
+         * Reads the verbatim text content of the current element.
+         *
+         * <p>
+         * The reader should be positioned on the element's start tag. This method accumulates
+         * {@code CHARACTERS} and {@code CDATA} content until the matching end element, never trimming. If a
+         * nested start element is encountered (which the schema forbids but a hand-authored document may
+         * contain), the element is skipped and ignored: this method consumes through the matching end
+         * element and returns {@code null} so the run is not captured.
+         *
+         * @return the verbatim text content, or {@code null} if the element contained a child element
+         * @throws XMLStreamException if an error occurs while reading
+         */
+        private @Nullable String readElementText() throws XMLStreamException {
+            StringBuilder text = new StringBuilder();
+            boolean hasChildElement = false;
+            int depth = 1;
+
+            while (reader.hasNext() && depth > 0) {
+                int event = reader.next();
+                switch (event) {
+                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> {
+                        if (!hasChildElement) {
+                            text.append(reader.getText());
+                        }
+                    }
+                    case XMLStreamConstants.START_ELEMENT -> {
+                        hasChildElement = true;
+                        depth++;
+                    }
+                    case XMLStreamConstants.END_ELEMENT -> depth--;
+                    default -> {
+                        // Ignore comments, processing instructions, and other event types.
+                    }
+                }
+            }
+
+            if (hasChildElement) {
+                logger.debug("Skipped an element run because it contained a nested child element.");
+                return null;
+            }
+            return text.toString();
+        }
+
+        /**
+         * Advances the reader to the next {@code <Sequence>} element and parses it.
+         *
+         * @return the next training sequence, or {@code null} if no more sequences exist
+         */
+        private @Nullable TrainingSequence<T> readNextSequence() {
+            try {
+                while (reader.hasNext()) {
+                    int event = reader.next();
+                    if (event == XMLStreamConstants.DTD) {
+                        throw new UncheckedCrfException(
+                                "Training data must not contain a DOCTYPE declaration; DTDs are disabled to "
+                                        + "prevent XXE and entity-expansion attacks."
+                        );
+                    }
+                    if (event == XMLStreamConstants.START_ELEMENT
+                            && SEQUENCE_ELEMENT_NAME.equals(reader.getLocalName())) {
+                        return parseSequence();
+                    }
+                }
+                finished = true;
+                return null;
+            } catch (XMLStreamException e) {
+                throw new UncheckedCrfException(e);
+            }
+        }
+
+        /**
+         * Skips the current element and all of its nested content.
+         *
+         * <p>
+         * The reader should be positioned on a start element. This method advances the reader past the
+         * matching end element, effectively skipping the entire element tree.
+         *
+         * @throws XMLStreamException if an error occurs while reading
+         */
+        private void skipElement() throws XMLStreamException {
+            int depth = 1;
+            while (reader.hasNext() && depth > 0) {
+                int event = reader.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    depth++;
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    depth--;
+                }
+            }
+        }
+    }
+
+    /**
+     * A {@link TrainingSequenceWriter} that writes training sequences to an {@link OutputStream}.
+     *
+     * <p>
+     * Sequence content is emitted through a {@link XMLStreamWriter} so escaping and element structure
+     * follow the standard XML rules. The root close tag is written as a raw byte fragment on
+     * {@link #close()} because StAX has no entry point for emitting a close tag for a parent that was
+     * never opened through the writer.
+     *
+     * <p>
+     * The output is a valid XML document only after {@link #close()} returns.
+     *
+     * @param <T> the type of tag used in the sequences
+     */
+    private static class StreamSequenceWriter<T extends Comparable<T>> implements TrainingSequenceWriter<T> {
+        private boolean closed;
+        private final byte[] closeTagBytes;
+        private final OutputStream output;
+        private final TagProvider<T> tagProvider;
+        private final XMLStreamWriter xmlWriter;
+
+        StreamSequenceWriter(TagProvider<T> tagProvider, OutputStream output, byte[] closeTagBytes) throws IOException {
+            this.closeTagBytes = closeTagBytes;
+            this.output = output;
+            this.tagProvider = tagProvider;
+            try {
+                this.xmlWriter = XMLOutputFactory.newInstance().createXMLStreamWriter(output, "UTF-8");
+                this.xmlWriter.setPrefix("crf", CRF_SCHEMA_NAMESPACE_URI);
+            } catch (XMLStreamException e) {
+                throw new IOException("Failed to initialize XML stream writer.", e);
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            try {
+                try {
+                    xmlWriter.flush();
+                    xmlWriter.close();
+                } catch (XMLStreamException e) {
+                    throw new IOException("Failed to close XML stream writer.", e);
+                }
+                output.write(closeTagBytes);
+                output.flush();
+            } finally {
+                output.close();
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            if (closed) {
+                throw new IOException("Cannot flush after close.");
+            }
+            try {
+                xmlWriter.flush();
+            } catch (XMLStreamException e) {
+                throw new IOException("Failed to flush XML stream writer.", e);
+            }
+            output.flush();
+        }
+
+        @Override
+        public void write(TrainingSequence<T> sequence) throws IOException {
+            if (closed) {
+                throw new IOException("Cannot write after close.");
+            }
+            // Validate the entire sequence before emitting any bytes: a tag that encodes to null is a
+            // TagProvider contract violation, and throwing here keeps a half-written <crf:Sequence>
+            // out of the stream. The resolved names are reused by the write pass below.
+            List<String> encodedTagNames = new ArrayList<>();
+            for (TrainingSegment<T> segment : sequence.segments()) {
+                if (segment.kind() != SegmentKind.EXCLUDED) {
+                    T tag = Objects.requireNonNull(segment.tag());
+                    String tagName = tagProvider.encode(tag);
+                    if (tagName == null) {
+                        throw new IllegalArgumentException(
+                                "Tag '" + tag + "' encodes to null and cannot be serialized."
+                        );
+                    }
+                    encodedTagNames.add(tagName);
+                }
+            }
+            try {
+                Iterator<String> tagNames = encodedTagNames.iterator();
+                xmlWriter.writeCharacters("    ");
+                xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, SEQUENCE_ELEMENT_NAME);
+                for (TrainingSegment<T> segment : sequence.segments()) {
+                    if (segment.kind() == SegmentKind.EXCLUDED) {
+                        xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, EXCLUDED_ELEMENT_NAME);
+                        xmlWriter.writeCharacters(segment.text());
+                        xmlWriter.writeEndElement();
+                    } else {
+                        xmlWriter.writeStartElement(tagNames.next());
+                        xmlWriter.writeCharacters(segment.text());
+                        xmlWriter.writeEndElement();
+                    }
+                }
+                xmlWriter.writeEndElement();
+                xmlWriter.writeCharacters("\n");
+            } catch (XMLStreamException e) {
+                throw new IOException("Failed to write training sequence.", e);
+            }
+        }
+    }
+
+    /**
      * The namespace URI for CRF structural elements.
      *
      * <p>
@@ -131,6 +503,8 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      */
     public static final String EXCLUDED_ELEMENT_NAME = "Excluded";
 
+    private static final Logger logger = LoggerFactory.getLogger(XmlTrainingData.class);
+
     /**
      * The local name of the element that contains a training sequence.
      *
@@ -146,8 +520,6 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
     private static final String STRUCTURAL_SCHEMA_RESOURCE = "training-data.xsd";
 
     private static final String XML_SCHEMA_NAMESPACE_URI = "http://www.w3.org/2001/XMLSchema";
-
-    private static final Logger logger = LoggerFactory.getLogger(XmlTrainingData.class);
 
     private final byte[] closeTagBytes;
     private final byte[] closeTagNeedle;
@@ -783,377 +1155,5 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
     public TrainingSequenceWriter<T> writer(OutputStream output) throws IOException {
         output.write(openDocumentBytes);
         return new StreamSequenceWriter<>(tagProvider, output, closeTagBytes);
-    }
-
-    /**
-     * Collects validation problems instead of aborting on the first one, so a single
-     * {@link #validate(InputStream)} call can report every error in a document.
-     *
-     * <p>
-     * Warnings are ignored because they do not render a document invalid. Recoverable errors are
-     * reported through {@link #error(SAXParseException)} as the validator continues; a fatal error is
-     * reported through {@link #fatalError(SAXParseException)} and then rethrown by the validator, which
-     * {@link #recordFatal(SAXException)} reconciles so it is not counted twice.
-     */
-    private static final class CollectingErrorHandler implements ErrorHandler {
-        private final List<String> errors = new ArrayList<>();
-
-        @Override
-        public void error(SAXParseException exception) {
-            errors.add(format(exception));
-        }
-
-        @Override
-        public void fatalError(SAXParseException exception) {
-            errors.add(format(exception));
-        }
-
-        /**
-         * Formats a parse exception with its location, when available.
-         *
-         * @param exception the parse exception to format
-         * @return a human-readable message, prefixed with line and column when the parser supplied them
-         */
-        private static String format(SAXParseException exception) {
-            String message = Objects.requireNonNullElse(exception.getMessage(), "unknown error");
-            int line = exception.getLineNumber();
-            if (line < 0) {
-                return message;
-            }
-            return "line " + line + ", column " + exception.getColumnNumber() + ": " + message;
-        }
-
-        /**
-         * Records a fatal exception thrown out of {@code validate}, unless one was already collected.
-         *
-         * <p>
-         * The validator calls {@link #fatalError(SAXParseException)} before rethrowing, so in the common
-         * case the problem is already recorded and this is a no-op. A non-parse {@link SAXException} that
-         * never reached the handler is recorded by its message.
-         *
-         * @param exception the exception thrown by the validator
-         */
-        void recordFatal(SAXException exception) {
-            if (errors.isEmpty()) {
-                errors.add(Objects.requireNonNullElse(exception.getMessage(), "unknown error"));
-            }
-        }
-
-        /**
-         * Throws an {@link UncheckedCrfException} aggregating every collected problem, if any.
-         *
-         * @throws UncheckedCrfException if one or more validation problems were collected
-         */
-        void throwIfInvalid() {
-            if (!errors.isEmpty()) {
-                throw new UncheckedCrfException("The training data document is invalid:\n" + String.join("\n", errors));
-            }
-        }
-
-        @Override
-        public void warning(SAXParseException exception) {
-            // Warnings do not render a document invalid and are intentionally ignored.
-        }
-    }
-
-    /**
-     * An iterator that lazily parses training sequences from an XML stream.
-     *
-     * <p>
-     * This iterator reads {@code <Sequence>} elements from the XML and converts each one into a
-     * {@link TrainingSequence}. {@code <crf:Excluded>} elements are captured as excluded segments;
-     * other elements in the CRF schema namespace are skipped during parsing.
-     *
-     * @param <T> the type of tag used in training sequences
-     */
-    private static class SequenceIterator<T extends Comparable<T>> implements Iterator<TrainingSequence<T>> {
-        private boolean finished = false;
-        private @Nullable TrainingSequence<T> next;
-        private final XMLStreamReader reader;
-        private final TagProvider<T> tagProvider;
-
-        /**
-         * Constructs a new sequence iterator.
-         *
-         * @param tagProvider the provider for decoding tag names
-         * @param reader the XML stream reader positioned at the start of the document
-         */
-        SequenceIterator(TagProvider<T> tagProvider, XMLStreamReader reader) {
-            this.reader = reader;
-            this.tagProvider = tagProvider;
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (finished) {
-                return false;
-            }
-            if (next != null) {
-                return true;
-            }
-            next = readNextSequence();
-            return next != null;
-        }
-
-        @Override
-        public TrainingSequence<T> next() {
-            if (!hasNext()) {
-                throw new NoSuchElementException();
-            }
-            TrainingSequence<T> result = Objects.requireNonNull(next);
-            next = null;
-            return result;
-        }
-
-        /**
-         * Parses a single sequence element and its child elements.
-         *
-         * <p>
-         * The reader should be positioned just after the opening {@code <Sequence>} tag. This method reads
-         * all child elements until the closing {@code </Sequence>} tag is reached, assembling segments in
-         * document order. {@code <crf:Excluded>} elements in the CRF schema namespace are captured verbatim
-         * as {@link SegmentKind#EXCLUDED} segments (preserving whitespace, never trimmed), but an empty
-         * (zero-length) excluded run is dropped; other CRF-namespace elements are skipped; non-CRF elements
-         * become trimmed token segments, dropped when empty. A token element that contains a nested child
-         * element is skipped and logged rather than aborting the parse.
-         *
-         * @return the parsed training sequence
-         * @throws XMLStreamException if an error occurs while reading
-         */
-        private TrainingSequence<T> parseSequence() throws XMLStreamException {
-            List<TrainingSegment<T>> segments = new ArrayList<>();
-            int depth = 1;
-
-            while (reader.hasNext() && depth > 0) {
-                int event = reader.next();
-                if (event == XMLStreamConstants.START_ELEMENT) {
-                    if (CRF_SCHEMA_NAMESPACE_URI.equals(reader.getNamespaceURI())) {
-                        if (EXCLUDED_ELEMENT_NAME.equals(reader.getLocalName())) {
-                            String excludedText = readElementText();
-                            if (excludedText != null && !excludedText.isEmpty()) {
-                                segments.add(excluded(excludedText));
-                            }
-                        } else {
-                            skipElement();
-                        }
-                    } else {
-                        String localName = reader.getLocalName();
-                        String raw = readElementText();
-                        if (raw != null) {
-                            String token = raw.trim();
-                            if (!token.isEmpty()) {
-                                segments.add(token(tagProvider.decode(localName), token));
-                            }
-                        }
-                    }
-                } else if (event == XMLStreamConstants.END_ELEMENT) {
-                    depth--;
-                }
-            }
-
-            return TrainingSequence.ofSegments(segments);
-        }
-
-        /**
-         * Reads the verbatim text content of the current element.
-         *
-         * <p>
-         * The reader should be positioned on the element's start tag. This method accumulates
-         * {@code CHARACTERS} and {@code CDATA} content until the matching end element, never trimming. If a
-         * nested start element is encountered (which the schema forbids but a hand-authored document may
-         * contain), the element is skipped and ignored: this method consumes through the matching end
-         * element and returns {@code null} so the run is not captured.
-         *
-         * @return the verbatim text content, or {@code null} if the element contained a child element
-         * @throws XMLStreamException if an error occurs while reading
-         */
-        private @Nullable String readElementText() throws XMLStreamException {
-            StringBuilder text = new StringBuilder();
-            boolean hasChildElement = false;
-            int depth = 1;
-
-            while (reader.hasNext() && depth > 0) {
-                int event = reader.next();
-                switch (event) {
-                    case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> {
-                        if (!hasChildElement) {
-                            text.append(reader.getText());
-                        }
-                    }
-                    case XMLStreamConstants.START_ELEMENT -> {
-                        hasChildElement = true;
-                        depth++;
-                    }
-                    case XMLStreamConstants.END_ELEMENT -> depth--;
-                    default -> {
-                        // Ignore comments, processing instructions, and other event types.
-                    }
-                }
-            }
-
-            if (hasChildElement) {
-                logger.debug("Skipped an element run because it contained a nested child element.");
-                return null;
-            }
-            return text.toString();
-        }
-
-        /**
-         * Advances the reader to the next {@code <Sequence>} element and parses it.
-         *
-         * @return the next training sequence, or {@code null} if no more sequences exist
-         */
-        private @Nullable TrainingSequence<T> readNextSequence() {
-            try {
-                while (reader.hasNext()) {
-                    int event = reader.next();
-                    if (event == XMLStreamConstants.DTD) {
-                        throw new UncheckedCrfException(
-                                "Training data must not contain a DOCTYPE declaration; DTDs are disabled to "
-                                        + "prevent XXE and entity-expansion attacks."
-                        );
-                    }
-                    if (event == XMLStreamConstants.START_ELEMENT
-                            && SEQUENCE_ELEMENT_NAME.equals(reader.getLocalName())) {
-                        return parseSequence();
-                    }
-                }
-                finished = true;
-                return null;
-            } catch (XMLStreamException e) {
-                throw new UncheckedCrfException(e);
-            }
-        }
-
-        /**
-         * Skips the current element and all of its nested content.
-         *
-         * <p>
-         * The reader should be positioned on a start element. This method advances the reader past the
-         * matching end element, effectively skipping the entire element tree.
-         *
-         * @throws XMLStreamException if an error occurs while reading
-         */
-        private void skipElement() throws XMLStreamException {
-            int depth = 1;
-            while (reader.hasNext() && depth > 0) {
-                int event = reader.next();
-                if (event == XMLStreamConstants.START_ELEMENT) {
-                    depth++;
-                } else if (event == XMLStreamConstants.END_ELEMENT) {
-                    depth--;
-                }
-            }
-        }
-    }
-
-    /**
-     * A {@link TrainingSequenceWriter} that writes training sequences to an {@link OutputStream}.
-     *
-     * <p>
-     * Sequence content is emitted through a {@link XMLStreamWriter} so escaping and element structure
-     * follow the standard XML rules. The root close tag is written as a raw byte fragment on
-     * {@link #close()} because StAX has no entry point for emitting a close tag for a parent that was
-     * never opened through the writer.
-     *
-     * <p>
-     * The output is a valid XML document only after {@link #close()} returns.
-     *
-     * @param <T> the type of tag used in the sequences
-     */
-    private static class StreamSequenceWriter<T extends Comparable<T>> implements TrainingSequenceWriter<T> {
-        private final byte[] closeTagBytes;
-        private boolean closed;
-        private final OutputStream output;
-        private final TagProvider<T> tagProvider;
-        private final XMLStreamWriter xmlWriter;
-
-        StreamSequenceWriter(TagProvider<T> tagProvider, OutputStream output, byte[] closeTagBytes) throws IOException {
-            this.closeTagBytes = closeTagBytes;
-            this.output = output;
-            this.tagProvider = tagProvider;
-            try {
-                this.xmlWriter = XMLOutputFactory.newInstance().createXMLStreamWriter(output, "UTF-8");
-                this.xmlWriter.setPrefix("crf", CRF_SCHEMA_NAMESPACE_URI);
-            } catch (XMLStreamException e) {
-                throw new IOException("Failed to initialize XML stream writer.", e);
-            }
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (closed) {
-                return;
-            }
-            closed = true;
-            try {
-                try {
-                    xmlWriter.flush();
-                    xmlWriter.close();
-                } catch (XMLStreamException e) {
-                    throw new IOException("Failed to close XML stream writer.", e);
-                }
-                output.write(closeTagBytes);
-                output.flush();
-            } finally {
-                output.close();
-            }
-        }
-
-        @Override
-        public void flush() throws IOException {
-            if (closed) {
-                throw new IOException("Cannot flush after close.");
-            }
-            try {
-                xmlWriter.flush();
-            } catch (XMLStreamException e) {
-                throw new IOException("Failed to flush XML stream writer.", e);
-            }
-            output.flush();
-        }
-
-        @Override
-        public void write(TrainingSequence<T> sequence) throws IOException {
-            if (closed) {
-                throw new IOException("Cannot write after close.");
-            }
-            // Validate the entire sequence before emitting any bytes: a tag that encodes to null is a
-            // TagProvider contract violation, and throwing here keeps a half-written <crf:Sequence>
-            // out of the stream. The resolved names are reused by the write pass below.
-            List<String> encodedTagNames = new ArrayList<>();
-            for (TrainingSegment<T> segment : sequence.segments()) {
-                if (segment.kind() != SegmentKind.EXCLUDED) {
-                    T tag = Objects.requireNonNull(segment.tag());
-                    String tagName = tagProvider.encode(tag);
-                    if (tagName == null) {
-                        throw new IllegalArgumentException(
-                                "Tag '" + tag + "' encodes to null and cannot be serialized."
-                        );
-                    }
-                    encodedTagNames.add(tagName);
-                }
-            }
-            try {
-                Iterator<String> tagNames = encodedTagNames.iterator();
-                xmlWriter.writeCharacters("    ");
-                xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, SEQUENCE_ELEMENT_NAME);
-                for (TrainingSegment<T> segment : sequence.segments()) {
-                    if (segment.kind() == SegmentKind.EXCLUDED) {
-                        xmlWriter.writeStartElement(CRF_SCHEMA_NAMESPACE_URI, EXCLUDED_ELEMENT_NAME);
-                        xmlWriter.writeCharacters(segment.text());
-                        xmlWriter.writeEndElement();
-                    } else {
-                        xmlWriter.writeStartElement(tagNames.next());
-                        xmlWriter.writeCharacters(segment.text());
-                        xmlWriter.writeEndElement();
-                    }
-                }
-                xmlWriter.writeEndElement();
-                xmlWriter.writeCharacters("\n");
-            } catch (XMLStreamException e) {
-                throw new IOException("Failed to write training sequence.", e);
-            }
-        }
     }
 }

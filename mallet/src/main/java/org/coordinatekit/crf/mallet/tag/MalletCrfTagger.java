@@ -121,35 +121,6 @@ public final class MalletCrfTagger<T extends Comparable<T>> implements CrfTagger
         return new FeatureVectorSequence(featureVectors);
     }
 
-    @Override
-    public TaggedTokenization<T> tag(String input) {
-        Tokenization tokenization = tokenizer.tokenize(input);
-        Sequence<FeaturePositionedToken> featureSequence = featureExtractor.extract(tokenization.sequence());
-        FeatureVectorSequence malletSequence = createMalletSequences(model, featureSequence);
-
-        var lattice = model.getSumLatticeFactory().newSumLattice(model, malletSequence);
-        double logPartition = lattice.getTotalWeight();
-
-        List<String> tokens = new ArrayList<>(featureSequence.size());
-        List<Set<Feature>> features = new ArrayList<>(featureSequence.size());
-        List<Map<T, Double>> tagScoresByToken = new ArrayList<>();
-        for (int i = 0; i < featureSequence.size(); i++) {
-            tokens.add(featureSequence.get(i).token());
-            features.add(featureSequence.get(i).features());
-            Map<T, Double> tagScores = new HashMap<>();
-            for (int j = 0; j < model.numStates(); j++) {
-                tagScores.put(tagProvider.decode(model.getState(j).getName()), Math.exp(lattice.getGammas()[i + 1][j]));
-            }
-            tagScoresByToken.add(tagScores);
-        }
-
-        return TaggedTokenizations.of(
-                new TaggedSequence<>(tokens, features, tagScoresByToken),
-                tokenization,
-                probabilityFunction(malletSequence, logPartition)
-        );
-    }
-
     /**
      * Builds a function for the exact conditional probability {@code P(tags | input)} of an arbitrary
      * tagging of {@code malletSequence}.
@@ -182,5 +153,34 @@ public final class MalletCrfTagger<T extends Comparable<T>> implements CrfTagger
                     .newSumLattice(model, malletSequence, new ArraySequence<>(labelNames));
             return Math.exp(constrained.getTotalWeight() - logPartition);
         };
+    }
+
+    @Override
+    public TaggedTokenization<T> tag(String input) {
+        Tokenization tokenization = tokenizer.tokenize(input);
+        Sequence<FeaturePositionedToken> featureSequence = featureExtractor.extract(tokenization.sequence());
+        FeatureVectorSequence malletSequence = createMalletSequences(model, featureSequence);
+
+        var lattice = model.getSumLatticeFactory().newSumLattice(model, malletSequence);
+        double logPartition = lattice.getTotalWeight();
+
+        List<String> tokens = new ArrayList<>(featureSequence.size());
+        List<Set<Feature>> features = new ArrayList<>(featureSequence.size());
+        List<Map<T, Double>> tagScoresByToken = new ArrayList<>();
+        for (int i = 0; i < featureSequence.size(); i++) {
+            tokens.add(featureSequence.get(i).token());
+            features.add(featureSequence.get(i).features());
+            Map<T, Double> tagScores = new HashMap<>();
+            for (int j = 0; j < model.numStates(); j++) {
+                tagScores.put(tagProvider.decode(model.getState(j).getName()), Math.exp(lattice.getGammas()[i + 1][j]));
+            }
+            tagScoresByToken.add(tagScores);
+        }
+
+        return TaggedTokenizations.of(
+                new TaggedSequence<>(tokens, features, tagScoresByToken),
+                tokenization,
+                probabilityFunction(malletSequence, logPartition)
+        );
     }
 }

@@ -72,6 +72,11 @@ public class MalletCrfTrainer<T extends Comparable<T>> implements CrfTrainer {
     private static final Logger logger = LoggerFactory.getLogger(MalletCrfTrainer.class);
 
     /**
+     * The configuration parameters controlling the training process.
+     */
+    protected final MalletCrfTrainerConfiguration configuration;
+
+    /**
      * The feature extractor for converting tokens to feature sets during training.
      */
     protected final FeatureExtractor featureExtractor;
@@ -90,11 +95,6 @@ public class MalletCrfTrainer<T extends Comparable<T>> implements CrfTrainer {
      * The sequencer for reading training data from files into training sequences.
      */
     protected final TrainingDataSequencer<T> trainingDataSequencer;
-
-    /**
-     * The configuration parameters controlling the training process.
-     */
-    protected final MalletCrfTrainerConfiguration configuration;
 
     /**
      * Creates a new trainer with the specified components and default configuration, defaulting the

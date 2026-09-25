@@ -59,8 +59,6 @@ import picocli.CommandLine.Spec;
 @Command(name = "annotate", mixinStandardHelpOptions = true, versionProvider = CrfVersionProvider.class, description = "Walk an input file line-by-line, tag each sequence via an interactive "
         + "prompt, and append accepted sequences to an XML training-data file.")
 final class AnnotatorCommand implements Callable<Integer> {
-    private final ResolvedServices.Builder servicesBuilder;
-
     @Option(names = "--feature-configuration", description = "Feature-configuration file (for example features.xml) "
             + "that declares the extractors to use. Optional; overrides any registered feature extractor.")
     @Nullable
@@ -79,6 +77,8 @@ final class AnnotatorCommand implements Callable<Integer> {
     @Option(names = {"-o", "--output"}, required = true, description = "XML output file; created or appended.")
     @Nullable
     Path output;
+
+    private final ResolvedServices.Builder servicesBuilder;
 
     @Spec
     @Nullable

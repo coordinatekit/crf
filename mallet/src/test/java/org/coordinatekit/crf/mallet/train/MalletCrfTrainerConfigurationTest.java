@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MalletCrfTrainerConfigurationTest {
-
     record BuilderExceptionParameters(
             String name,
             Executable action,
@@ -143,13 +142,6 @@ class MalletCrfTrainerConfigurationTest {
     }
 
     @Test
-    void builder_threads_acceptsPositive() {
-        MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().threads(1).build();
-
-        assertEquals(1, config.threads());
-    }
-
-    @Test
     void builder_randomSeed_acceptsAnyInteger() {
         MalletCrfTrainerConfiguration configNegative = MalletCrfTrainerConfiguration.builder().randomSeed(-100).build();
         MalletCrfTrainerConfiguration configZero = MalletCrfTrainerConfiguration.builder().randomSeed(0).build();
@@ -160,6 +152,13 @@ class MalletCrfTrainerConfigurationTest {
         assertEquals(-100, configNegative.randomSeed());
         assertEquals(0, configZero.randomSeed());
         assertEquals(Integer.MAX_VALUE, configPositive.randomSeed());
+    }
+
+    @Test
+    void builder_threads_acceptsPositive() {
+        MalletCrfTrainerConfiguration config = MalletCrfTrainerConfiguration.builder().threads(1).build();
+
+        assertEquals(1, config.threads());
     }
 
     @Test

@@ -101,6 +101,81 @@ import java.util.Objects;
  * {@link FeatureConfigurationParseException}.
  */
 public final class XmlFeatureConfigurationParser implements FeatureConfigurationParser {
+    /**
+     * A {@link ErrorHandler} that rejects a document at the first {@code error} or {@code fatalError}
+     * it is reported, translating it into a located {@link FeatureConfigurationParseException}, rather
+     * than collecting every problem in the document.
+     *
+     * <p>
+     * Unlike {@code XmlTrainingData}'s collect-all error handler, this parser's located-error contract
+     * calls for a single located rejection, not an aggregate report.
+     */
+    private static final class FailFastErrorHandler implements ErrorHandler {
+        private final URI source;
+
+        FailFastErrorHandler(URI source) {
+            this.source = source;
+        }
+
+        @Override
+        public void error(SAXParseException exception) {
+            throw toParseException(exception);
+        }
+
+        @Override
+        public void fatalError(SAXParseException exception) {
+            throw toParseException(exception);
+        }
+
+        private FeatureConfigurationParseException toParseException(SAXParseException exception) {
+            return new FeatureConfigurationParseException(
+                    SourceLocation.of(source, exception.getLineNumber(), exception.getColumnNumber()),
+                    Objects.requireNonNullElse(exception.getMessage(), "the document is invalid"),
+                    exception
+            );
+        }
+
+        @Override
+        public void warning(SAXParseException exception) {
+            // Warnings do not render a document invalid and are intentionally ignored.
+        }
+    }
+
+    /**
+     * Lazily compiles and caches the fixed {@code feature-configuration.xsd} schema.
+     *
+     * <p>
+     * The schema is fixed — unlike {@code XmlTrainingData}, there is no per-instance tag vocabulary to
+     * compile in alongside it — so a {@code static final} field initialized by the class-loading JVM
+     * guarantee (the initialization-on-demand holder idiom) is enough; there is no need for
+     * {@code XmlTrainingData}'s per-instance double-checked locking.
+     */
+    private static final class SchemaHolder {
+        private static final Schema SCHEMA = loadSchema();
+
+        private static Schema loadSchema() {
+            SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            try {
+                schemaFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+                schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+                schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            } catch (SAXException exception) {
+                throw new UncheckedCrfException(exception);
+            }
+            try (InputStream resource = XmlFeatureConfigurationParser.class.getResourceAsStream(SCHEMA_RESOURCE)) {
+                if (resource == null) {
+                    throw new UncheckedCrfException(
+                            "The feature-configuration schema resource '" + SCHEMA_RESOURCE
+                                    + "' was not found on the classpath."
+                    );
+                }
+                return schemaFactory.newSchema(new StreamSource(resource));
+            } catch (IOException | SAXException e) {
+                throw new UncheckedCrfException(e);
+            }
+        }
+    }
+
     private static final String KEY_ATTRIBUTE = "key";
 
     /**
@@ -444,81 +519,6 @@ public final class XmlFeatureConfigurationParser implements FeatureConfiguration
             );
         } catch (IOException exception) {
             throw new UncheckedIOException(exception);
-        }
-    }
-
-    /**
-     * A {@link ErrorHandler} that rejects a document at the first {@code error} or {@code fatalError}
-     * it is reported, translating it into a located {@link FeatureConfigurationParseException}, rather
-     * than collecting every problem in the document.
-     *
-     * <p>
-     * Unlike {@code XmlTrainingData}'s collect-all error handler, this parser's located-error contract
-     * calls for a single located rejection, not an aggregate report.
-     */
-    private static final class FailFastErrorHandler implements ErrorHandler {
-        private final URI source;
-
-        FailFastErrorHandler(URI source) {
-            this.source = source;
-        }
-
-        @Override
-        public void error(SAXParseException exception) {
-            throw toParseException(exception);
-        }
-
-        @Override
-        public void fatalError(SAXParseException exception) {
-            throw toParseException(exception);
-        }
-
-        private FeatureConfigurationParseException toParseException(SAXParseException exception) {
-            return new FeatureConfigurationParseException(
-                    SourceLocation.of(source, exception.getLineNumber(), exception.getColumnNumber()),
-                    Objects.requireNonNullElse(exception.getMessage(), "the document is invalid"),
-                    exception
-            );
-        }
-
-        @Override
-        public void warning(SAXParseException exception) {
-            // Warnings do not render a document invalid and are intentionally ignored.
-        }
-    }
-
-    /**
-     * Lazily compiles and caches the fixed {@code feature-configuration.xsd} schema.
-     *
-     * <p>
-     * The schema is fixed — unlike {@code XmlTrainingData}, there is no per-instance tag vocabulary to
-     * compile in alongside it — so a {@code static final} field initialized by the class-loading JVM
-     * guarantee (the initialization-on-demand holder idiom) is enough; there is no need for
-     * {@code XmlTrainingData}'s per-instance double-checked locking.
-     */
-    private static final class SchemaHolder {
-        private static final Schema SCHEMA = loadSchema();
-
-        private static Schema loadSchema() {
-            SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-            try {
-                schemaFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-                schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-                schemaFactory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-            } catch (SAXException exception) {
-                throw new UncheckedCrfException(exception);
-            }
-            try (InputStream resource = XmlFeatureConfigurationParser.class.getResourceAsStream(SCHEMA_RESOURCE)) {
-                if (resource == null) {
-                    throw new UncheckedCrfException(
-                            "The feature-configuration schema resource '" + SCHEMA_RESOURCE
-                                    + "' was not found on the classpath."
-                    );
-                }
-                return schemaFactory.newSchema(new StreamSource(resource));
-            } catch (IOException | SAXException e) {
-                throw new UncheckedCrfException(e);
-            }
         }
     }
 }

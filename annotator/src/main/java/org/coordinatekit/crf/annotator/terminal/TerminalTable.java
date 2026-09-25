@@ -44,8 +44,127 @@ import java.util.regex.Pattern;
  * built via {@link #builder()} and are immutable once built.
  */
 final class TerminalTable {
-    private final int[] columnWidths;
+    /**
+     * Builder for {@link TerminalTable}. Columns and rows may be added in any order; every row must
+     * carry exactly one cell per declared column, which is checked by {@link #build()}.
+     */
+    static final class Builder {
+        private final List<ColumnSpecification> columns = new ArrayList<>();
+        private final List<Row> rows = new ArrayList<>();
+        private final String separator = "  ";
+        private int terminalWidth = 0;
+
+        private Builder() {}
+
+        /**
+         * Builds the table, computing each column's width.
+         *
+         * @return a new {@link TerminalTable}
+         * @throws IllegalStateException if no columns were declared, if a wrapping column is not the last
+         *         column, or if a row's cell count does not match the column count
+         */
+        TerminalTable build() {
+            if (columns.isEmpty()) {
+                throw new IllegalStateException("at least one column must be declared");
+            }
+            for (int column = 0; column < columns.size() - 1; column++) {
+                if (columns.get(column).wrapSeparator() != null) {
+                    throw new IllegalStateException("a wrapping column must be the last column");
+                }
+            }
+            for (Row row : rows) {
+                if (row.cells().size() != columns.size()) {
+                    throw new IllegalStateException(
+                            "row has " + row.cells().size() + " cells but " + columns.size() + " columns were declared"
+                    );
+                }
+            }
+            return new TerminalTable(this);
+        }
+
+        /**
+         * Declares an uncapped column whose width grows to fit its widest cell.
+         *
+         * @param header the column header, must not be null
+         * @return this builder
+         */
+        Builder column(String header) {
+            return column(header, 0);
+        }
+
+        /**
+         * Declares a column whose data cells contribute at most {@code maximumWidth} cells to the column
+         * width and are truncated when they exceed it. A non-positive {@code maximumWidth} leaves the
+         * column uncapped.
+         *
+         * @param header the column header, must not be null
+         * @param maximumWidth the maximum data-cell width in cells, or non-positive for uncapped
+         * @return this builder
+         */
+        Builder column(String header, int maximumWidth) {
+            columns.add(
+                    new ColumnSpecification(
+                            Objects.requireNonNull(header, "header must not be null"),
+                            maximumWidth,
+                            null
+                    )
+            );
+            return this;
+        }
+
+        /**
+         * Adds a data row, styled with {@code style}.
+         *
+         * @param style the style applied to the row's cells
+         * @param cells the cell contents, one per column in column order
+         * @return this builder
+         */
+        Builder row(AttributedStyle style, String... cells) {
+            rows.add(new Row(Objects.requireNonNull(style, "style must not be null"), List.of(cells)));
+            return this;
+        }
+
+        /**
+         * Sets the terminal width, in cells, used to wrap {@link #wrappingColumn(String, String) wrapping
+         * columns}. A non-positive width disables wrapping, so wrapping cells render on a single line.
+         * Defaults to {@code 0}.
+         *
+         * @param terminalWidth the terminal width in cells
+         * @return this builder
+         */
+        Builder terminalWidth(int terminalWidth) {
+            this.terminalWidth = terminalWidth;
+            return this;
+        }
+
+        /**
+         * Declares an uncapped, wrapping last column. Its cell content is wrapped to the terminal width
+         * (see {@link #terminalWidth(int)}), breaking only on {@code separator} boundaries, with
+         * continuation lines indented to align under the column. A wrapping column must be the last column
+         * declared, which is checked by {@link #build()}.
+         *
+         * @param header the column header, must not be null
+         * @param separator the boundary on which the cell content may be wrapped, must not be null
+         * @return this builder
+         */
+        Builder wrappingColumn(String header, String separator) {
+            columns.add(
+                    new ColumnSpecification(
+                            Objects.requireNonNull(header, "header must not be null"),
+                            0,
+                            Objects.requireNonNull(separator, "separator must not be null")
+                    )
+            );
+            return this;
+        }
+    }
+
+    private record ColumnSpecification(String header, int maximumWidth, @Nullable String wrapSeparator) {}
+
+    private record Row(AttributedStyle style, List<String> cells) {}
+
     private final List<ColumnSpecification> columns;
+    private final int[] columnWidths;
     private final List<Row> rows;
     private final String separator;
     private final int separatorWidth;
@@ -325,124 +444,5 @@ final class TerminalTable {
         }
         lines.add(current.toString());
         return lines;
-    }
-
-    private record ColumnSpecification(String header, int maximumWidth, @Nullable String wrapSeparator) {}
-
-    private record Row(AttributedStyle style, List<String> cells) {}
-
-    /**
-     * Builder for {@link TerminalTable}. Columns and rows may be added in any order; every row must
-     * carry exactly one cell per declared column, which is checked by {@link #build()}.
-     */
-    static final class Builder {
-        private final List<ColumnSpecification> columns = new ArrayList<>();
-        private final List<Row> rows = new ArrayList<>();
-        private final String separator = "  ";
-        private int terminalWidth = 0;
-
-        private Builder() {}
-
-        /**
-         * Builds the table, computing each column's width.
-         *
-         * @return a new {@link TerminalTable}
-         * @throws IllegalStateException if no columns were declared, if a wrapping column is not the last
-         *         column, or if a row's cell count does not match the column count
-         */
-        TerminalTable build() {
-            if (columns.isEmpty()) {
-                throw new IllegalStateException("at least one column must be declared");
-            }
-            for (int column = 0; column < columns.size() - 1; column++) {
-                if (columns.get(column).wrapSeparator() != null) {
-                    throw new IllegalStateException("a wrapping column must be the last column");
-                }
-            }
-            for (Row row : rows) {
-                if (row.cells().size() != columns.size()) {
-                    throw new IllegalStateException(
-                            "row has " + row.cells().size() + " cells but " + columns.size() + " columns were declared"
-                    );
-                }
-            }
-            return new TerminalTable(this);
-        }
-
-        /**
-         * Declares an uncapped column whose width grows to fit its widest cell.
-         *
-         * @param header the column header, must not be null
-         * @return this builder
-         */
-        Builder column(String header) {
-            return column(header, 0);
-        }
-
-        /**
-         * Declares a column whose data cells contribute at most {@code maximumWidth} cells to the column
-         * width and are truncated when they exceed it. A non-positive {@code maximumWidth} leaves the
-         * column uncapped.
-         *
-         * @param header the column header, must not be null
-         * @param maximumWidth the maximum data-cell width in cells, or non-positive for uncapped
-         * @return this builder
-         */
-        Builder column(String header, int maximumWidth) {
-            columns.add(
-                    new ColumnSpecification(
-                            Objects.requireNonNull(header, "header must not be null"),
-                            maximumWidth,
-                            null
-                    )
-            );
-            return this;
-        }
-
-        /**
-         * Adds a data row, styled with {@code style}.
-         *
-         * @param style the style applied to the row's cells
-         * @param cells the cell contents, one per column in column order
-         * @return this builder
-         */
-        Builder row(AttributedStyle style, String... cells) {
-            rows.add(new Row(Objects.requireNonNull(style, "style must not be null"), List.of(cells)));
-            return this;
-        }
-
-        /**
-         * Sets the terminal width, in cells, used to wrap {@link #wrappingColumn(String, String) wrapping
-         * columns}. A non-positive width disables wrapping, so wrapping cells render on a single line.
-         * Defaults to {@code 0}.
-         *
-         * @param terminalWidth the terminal width in cells
-         * @return this builder
-         */
-        Builder terminalWidth(int terminalWidth) {
-            this.terminalWidth = terminalWidth;
-            return this;
-        }
-
-        /**
-         * Declares an uncapped, wrapping last column. Its cell content is wrapped to the terminal width
-         * (see {@link #terminalWidth(int)}), breaking only on {@code separator} boundaries, with
-         * continuation lines indented to align under the column. A wrapping column must be the last column
-         * declared, which is checked by {@link #build()}.
-         *
-         * @param header the column header, must not be null
-         * @param separator the boundary on which the cell content may be wrapped, must not be null
-         * @return this builder
-         */
-        Builder wrappingColumn(String header, String separator) {
-            columns.add(
-                    new ColumnSpecification(
-                            Objects.requireNonNull(header, "header must not be null"),
-                            0,
-                            Objects.requireNonNull(separator, "separator must not be null")
-                    )
-            );
-            return this;
-        }
     }
 }

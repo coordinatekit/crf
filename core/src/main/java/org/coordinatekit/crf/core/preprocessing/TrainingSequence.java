@@ -99,6 +99,16 @@ public class TrainingSequence<T> implements Sequence<TrainingPositionedToken<T>>
         this(tokenSegments(tokens, tags));
     }
 
+    @Override
+    public TrainingPositionedToken<T> get(int position) {
+        return tokens.get(position);
+    }
+
+    @Override
+    public Iterator<TrainingPositionedToken<T>> iterator() {
+        return tokens.iterator();
+    }
+
     /**
      * Creates a training sequence from an ordered list of segments.
      *
@@ -130,42 +140,6 @@ public class TrainingSequence<T> implements Sequence<TrainingPositionedToken<T>>
     }
 
     /**
-     * Builds token-only segments from parallel token and tag lists, validating their sizes.
-     *
-     * @param tokens the token strings
-     * @param tags the tags, one per token
-     * @param <T> the tag type
-     * @return token segments in order
-     * @throws IllegalArgumentException if the lists differ in size
-     */
-    private static <T> List<TrainingSegment<T>> tokenSegments(List<String> tokens, List<T> tags) {
-        if (tokens.size() != tags.size()) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "The number of tags must be equal to the number of tokens. (tokens: %d, tags: %d)",
-                            tokens.size(),
-                            tags.size()
-                    )
-            );
-        }
-        List<TrainingSegment<T>> segments = new ArrayList<>(tokens.size());
-        for (int index = 0; index < tokens.size(); index++) {
-            segments.add(token(tags.get(index), tokens.get(index)));
-        }
-        return segments;
-    }
-
-    @Override
-    public TrainingPositionedToken<T> get(int position) {
-        return tokens.get(position);
-    }
-
-    @Override
-    public Iterator<TrainingPositionedToken<T>> iterator() {
-        return tokens.iterator();
-    }
-
-    /**
      * Returns the ordered segments backing this sequence, including any excluded runs.
      *
      * @return an unmodifiable list of segments in document order
@@ -192,5 +166,31 @@ public class TrainingSequence<T> implements Sequence<TrainingPositionedToken<T>>
      */
     public String surface() {
         return Segments.surface(segments);
+    }
+
+    /**
+     * Builds token-only segments from parallel token and tag lists, validating their sizes.
+     *
+     * @param tokens the token strings
+     * @param tags the tags, one per token
+     * @param <T> the tag type
+     * @return token segments in order
+     * @throws IllegalArgumentException if the lists differ in size
+     */
+    private static <T> List<TrainingSegment<T>> tokenSegments(List<String> tokens, List<T> tags) {
+        if (tokens.size() != tags.size()) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "The number of tags must be equal to the number of tokens. (tokens: %d, tags: %d)",
+                            tokens.size(),
+                            tags.size()
+                    )
+            );
+        }
+        List<TrainingSegment<T>> segments = new ArrayList<>(tokens.size());
+        for (int index = 0; index < tokens.size(); index++) {
+            segments.add(token(tags.get(index), tokens.get(index)));
+        }
+        return segments;
     }
 }

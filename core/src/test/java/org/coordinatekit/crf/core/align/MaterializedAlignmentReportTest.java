@@ -36,6 +36,23 @@ import java.util.stream.Stream;
 class MaterializedAlignmentReportTest {
     private final AlignmentDetector<String> detector = defaultDetector();
 
+    @Test
+    void constructor__defensiveCopy() {
+        // ARRANGE //
+        SequenceAlignment<String> alignment = detector.align(0, sequenceOf("New York"));
+        List<SequenceAlignment<String>> mutable = new ArrayList<>(List.of(alignment));
+        MaterializedAlignmentReport<String> report = new MaterializedAlignmentReport<>(
+                Path.of("training.xml"),
+                mutable
+        );
+
+        // ACT //
+        mutable.clear();
+
+        // ASSERT //
+        assertEquals(1, report.sequences().count());
+    }
+
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> constructor__exception() {
         return Stream.of(
@@ -52,23 +69,6 @@ class MaterializedAlignmentReportTest {
                         "sequences must not be null"
                 )
         );
-    }
-
-    @Test
-    void constructor__defensiveCopy() {
-        // ARRANGE //
-        SequenceAlignment<String> alignment = detector.align(0, sequenceOf("New York"));
-        List<SequenceAlignment<String>> mutable = new ArrayList<>(List.of(alignment));
-        MaterializedAlignmentReport<String> report = new MaterializedAlignmentReport<>(
-                Path.of("training.xml"),
-                mutable
-        );
-
-        // ACT //
-        mutable.clear();
-
-        // ASSERT //
-        assertEquals(1, report.sequences().count());
     }
 
     @MethodSource

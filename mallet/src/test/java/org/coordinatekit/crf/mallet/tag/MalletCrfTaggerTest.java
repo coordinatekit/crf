@@ -43,17 +43,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MalletCrfTaggerTest {
+    static class DisallowedPayload implements Serializable {}
+
     private MalletCrfTagger<String> tagger;
 
-    @BeforeEach
-    void setup() throws IOException {
-        tagger = new MalletCrfTagger<>(
-                PartsOfSpeechModel.INSTANCE.featureExtractor(),
-                PartsOfSpeechModel.INSTANCE.featureFormat(),
-                PartsOfSpeechModel.INSTANCE.modelPath(),
-                PartsOfSpeechModel.INSTANCE.tagProvider(),
-                new WhitespaceTokenizer()
+    private static void assertTaggedToken(
+            TaggedPositionedToken<String> token,
+            int expectedPosition,
+            String expectedTag,
+            String expectedToken
+    ) {
+        assertEquals(expectedPosition, token.position());
+        assertEquals(expectedTag, token.tag());
+        assertEquals(expectedToken, token.token());
+        assertIterableEquals(
+                PartsOfSpeechModel.INSTANCE.validTags(),
+                token.tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
         );
+        assertTrue(token.tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
+        assertEquals(1.0, token.tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
     }
 
     @Test
@@ -80,22 +88,6 @@ class MalletCrfTaggerTest {
     }
 
     @Test
-    void constructorThrowsIOExceptionForNonExistentPath() {
-        Path nonExistentPath = Path.of("/non/existent/model.crf");
-
-        assertThrows(
-                IOException.class,
-                () -> new MalletCrfTagger<>(
-                        PartsOfSpeechModel.INSTANCE.featureExtractor(),
-                        PartsOfSpeechModel.INSTANCE.featureFormat(),
-                        nonExistentPath,
-                        PartsOfSpeechModel.INSTANCE.tagProvider(),
-                        new WhitespaceTokenizer()
-                )
-        );
-    }
-
-    @Test
     void constructorThrowsExceptionForCorruptModelFile() throws IOException {
         Path tempFile = Files.createTempFile("corrupt_model", ".crf");
         try {
@@ -117,6 +109,22 @@ class MalletCrfTaggerTest {
     }
 
     @Test
+    void constructorThrowsIOExceptionForNonExistentPath() {
+        Path nonExistentPath = Path.of("/non/existent/model.crf");
+
+        assertThrows(
+                IOException.class,
+                () -> new MalletCrfTagger<>(
+                        PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                        PartsOfSpeechModel.INSTANCE.featureFormat(),
+                        nonExistentPath,
+                        PartsOfSpeechModel.INSTANCE.tagProvider(),
+                        new WhitespaceTokenizer()
+                )
+        );
+    }
+
+    @Test
     void probabilityOf__bestTaggingIsProbableAndDominatesWorstTagging() {
         // ARRANGE //
         TaggedTokenization<String> tagged = tagger.tag("They quickly opened the door");
@@ -133,6 +141,17 @@ class MalletCrfTaggerTest {
         assertTrue(best > 0.0 && best <= 1.0, "the best tagging's probability must lie in (0, 1], got: " + best);
         assertTrue(worst >= 0.0 && worst <= 1.0, "the worst tagging's probability must lie in [0, 1], got: " + worst);
         assertTrue(worst < best, "an obviously-wrong tagging must score strictly lower than the best, got: " + worst);
+    }
+
+    @BeforeEach
+    void setup() throws IOException {
+        tagger = new MalletCrfTagger<>(
+                PartsOfSpeechModel.INSTANCE.featureExtractor(),
+                PartsOfSpeechModel.INSTANCE.featureFormat(),
+                PartsOfSpeechModel.INSTANCE.modelPath(),
+                PartsOfSpeechModel.INSTANCE.tagProvider(),
+                new WhitespaceTokenizer()
+        );
     }
 
     @Test
@@ -152,23 +171,6 @@ class MalletCrfTaggerTest {
         assertTaggedToken(actual.get(2), 2, "NOUN", "opened");
         assertTaggedToken(actual.get(3), 3, "VERB", "the");
         assertTaggedToken(actual.get(4), 4, "ADV", "door");
-    }
-
-    private static void assertTaggedToken(
-            TaggedPositionedToken<String> token,
-            int expectedPosition,
-            String expectedTag,
-            String expectedToken
-    ) {
-        assertEquals(expectedPosition, token.position());
-        assertEquals(expectedTag, token.tag());
-        assertEquals(expectedToken, token.token());
-        assertIterableEquals(
-                PartsOfSpeechModel.INSTANCE.validTags(),
-                token.tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
-        );
-        assertTrue(token.tagScores().stream().mapToDouble(TagScore::score).allMatch(s -> s >= 0 && s <= 1));
-        assertEquals(1.0, token.tagScores().stream().mapToDouble(TagScore::score).sum(), 0.001);
     }
 
     @Test
@@ -223,6 +225,4 @@ class MalletCrfTaggerTest {
                 actual.get(0).tagScores().stream().map(TagScore::tag).collect(Collectors.toCollection(TreeSet::new))
         );
     }
-
-    static class DisallowedPayload implements Serializable {}
 }

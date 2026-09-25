@@ -52,6 +52,15 @@ public class CompositeFeatureExtractor implements FeatureExtractor {
         this.extractors = List.copyOf(extractors);
     }
 
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        Set<Feature> features = new HashSet<>();
+        for (FeatureExtractor extractor : extractors) {
+            features.addAll(extractor.extractAt(sequence, position));
+        }
+        return Collections.unmodifiableSet(features);
+    }
+
     /**
      * Creates a new composite feature extractor from the specified extractors.
      *
@@ -60,14 +69,5 @@ public class CompositeFeatureExtractor implements FeatureExtractor {
      */
     public static CompositeFeatureExtractor of(FeatureExtractor... extractors) {
         return new CompositeFeatureExtractor(List.of(extractors));
-    }
-
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        Set<Feature> features = new HashSet<>();
-        for (FeatureExtractor extractor : extractors) {
-            features.addAll(extractor.extractAt(sequence, position));
-        }
-        return Collections.unmodifiableSet(features);
     }
 }

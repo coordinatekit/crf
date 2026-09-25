@@ -82,6 +82,11 @@ public class FeatureSequence implements Sequence<FeaturePositionedToken> {
     }
 
     @Override
+    public Iterator<FeaturePositionedToken> iterator() {
+        return tokens.iterator();
+    }
+
+    @Override
     public int size() {
         return tokens.size();
     }
@@ -89,10 +94,5 @@ public class FeatureSequence implements Sequence<FeaturePositionedToken> {
     @Override
     public Stream<FeaturePositionedToken> stream() {
         return tokens.stream();
-    }
-
-    @Override
-    public Iterator<FeaturePositionedToken> iterator() {
-        return tokens.iterator();
     }
 }

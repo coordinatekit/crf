@@ -36,6 +36,20 @@ import java.util.stream.Stream;
  * {@link ParameterDescriptor#toString()}.
  */
 class ParameterDescriptorTest {
+    record BuilderExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
+    record EqualsParameters(
+            String name,
+            ParameterDescriptor first,
+            ParameterDescriptor second,
+            boolean expectedEqual
+    ) {}
+
     @Test
     void builder__appliesDefaults() {
         // ACT //
@@ -51,13 +65,6 @@ class ParameterDescriptorTest {
         assertEquals(Integer.MIN_VALUE, descriptor.minimumValue());
         assertEquals(Integer.MAX_VALUE, descriptor.maximumValue());
     }
-
-    record BuilderExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
 
     static Stream<BuilderExceptionParameters> builder__exception() {
         return Stream.of(
@@ -175,13 +182,6 @@ class ParameterDescriptorTest {
         assertEquals("fast", enumerated.defaultValue());
         assertEquals("the mode", enumerated.description());
     }
-
-    record EqualsParameters(
-            String name,
-            ParameterDescriptor first,
-            ParameterDescriptor second,
-            boolean expectedEqual
-    ) {}
 
     static Stream<EqualsParameters> equals__comparesAllFields() {
         ParameterDescriptor base = ParameterDescriptor.builder("name", ParameterKind.STRING).build();
