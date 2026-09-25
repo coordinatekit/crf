@@ -46,6 +46,10 @@
       "moduleLicense": "Apache License, Version 2.0"
     },
     {
+      "moduleName": "org.coordinatekit.foundation:concordance",
+      "moduleLicense": "Apache License, Version 2.0"
+    },
+    {
       "moduleName": "org.jline:jline",
       "moduleLicense": "The 3-Clause BSD License"
     },

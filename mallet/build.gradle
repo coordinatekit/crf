@@ -1,5 +1,6 @@
 dependencies {
     api project(":core")
+    implementation libs.coordinatekit.concordance
     implementation(libs.mallet) {
         exclude group: "junit", module: "junit"
         exclude group: "org.jdom", module: "jdom"  // unused by MALLET; no patched release (GHSA-2363-cqg2-863c)

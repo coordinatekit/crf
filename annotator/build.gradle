@@ -1,5 +1,6 @@
 dependencies {
     api project(":core")
 
+    implementation libs.coordinatekit.concordance
     implementation libs.jline
 }

@@ -4,7 +4,7 @@ jspecify = "1.0.0"
 picocli = "4.7.7"
 
 # implementation — keep current
-coordinatekit-foundation = "0.1.0"
+coordinatekit-foundation = "0.2.0-SNAPSHOT"
 jline = "4.4.3"
 mallet = "2.0.8"
 slf4j = "2.0.19"
@@ -28,6 +28,7 @@ spotless = "8.10.2"
 
 [libraries]
 coordinatekit-cli-brand = { module = "org.coordinatekit.foundation:cli-brand", version.ref = "coordinatekit-foundation" }
+coordinatekit-concordance = { module = "org.coordinatekit.foundation:concordance", version.ref = "coordinatekit-foundation" }
 coordinatekit-conventions = { module = "org.coordinatekit.foundation:conventions", version.ref = "coordinatekit-foundation" }
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
@@ -44,6 +45,7 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "pico
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [plugins]
+coordinatekit-concordance = { id = "org.coordinatekit.foundation.concordance", version.ref = "coordinatekit-foundation" }
 dependency-license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "dependency-license-report" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 git-changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "git-changelog" }
