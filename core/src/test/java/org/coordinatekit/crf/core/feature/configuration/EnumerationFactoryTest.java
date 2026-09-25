@@ -65,11 +65,6 @@ class EnumerationFactoryTest {
             FeatureExtractorFactoryRegistry.of(List.of(new ModeFactory()))
     );
 
-    private static Set<String> render(FeatureExtractorNode node) {
-        FeatureExtractor extractor = ASSEMBLER.assemble(node, currentDirectoryUrl()).fullFeatureExtractor();
-        return renderFeatures(extractor, List.of("token"), 0);
-    }
-
     @Test
     void assemble__appliesEnumerationDefault() {
         // ACT & ASSERT //
@@ -98,5 +93,10 @@ class EnumerationFactoryTest {
                 "extractor 'mode' — parameter 'mode' expects one of [fast, slow] but got 'medium'",
                 exception.getMessage()
         );
+    }
+
+    private static Set<String> render(FeatureExtractorNode node) {
+        FeatureExtractor extractor = ASSEMBLER.assemble(node, currentDirectoryUrl()).fullFeatureExtractor();
+        return renderFeatures(extractor, List.of("token"), 0);
     }
 }

@@ -67,15 +67,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnnotatorTest {
-    private static final List<String> INPUT_LINES = List
-            .of("the quick brown", "fox jumps over", "the lazy dog", "a second sentence", "one more line");
-
-    private static final List<List<String>> INPUT_TOKENS = INPUT_LINES.stream()
-            .map(line -> List.of(line.split(" ")))
-            .toList();
-
-    private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
-
     record BuilderExceptionParameters(
             String name,
             Executable action,
@@ -92,6 +83,49 @@ class AnnotatorTest {
             List<Set<Feature>> expectedVerboseFeatures
     ) {}
 
+    private static final class FixedTagger implements CrfTagger<String> {
+        private final Map<String, Sequence<TaggedPositionedToken<String>>> responses;
+        private final Tokenizer tokenizer = new WhitespaceTokenizer();
+
+        FixedTagger(Map<String, Sequence<TaggedPositionedToken<String>>> responses) {
+            this.responses = responses;
+        }
+
+        @Override
+        public TaggedTokenization<String> tag(String input) {
+            Sequence<TaggedPositionedToken<String>> response = responses.get(input);
+            if (response == null) {
+                throw new AssertionError("FixedTagger has no scripted response for input: " + input);
+            }
+            return TaggedTokenizations.of(response, tokenizer.tokenize(input), tags -> 0.0);
+        }
+    }
+
+    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
+        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
+        final Deque<TaggingResult<T>> results = new ArrayDeque<>();
+
+        /** Throws after scripted results are exhausted, not on the next call. */
+        @Nullable
+        RuntimeException throwAfterScriptedResults;
+
+        @Override
+        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
+            presented.add(sequence);
+            if (!results.isEmpty()) {
+                return results.removeFirst();
+            }
+            RuntimeException toThrow = throwAfterScriptedResults;
+            if (toThrow != null) {
+                throwAfterScriptedResults = null;
+                throw toThrow;
+            }
+            throw new AssertionError(
+                    "ScriptedTaggingInterface exhausted: no scripted result for presentation " + presented.size()
+            );
+        }
+    }
+
     record SessionParameters(
             String name,
             List<TaggingResult<String>> script,
@@ -99,6 +133,77 @@ class AnnotatorTest {
             List<List<String>> expectedWrittenTokens,
             List<List<String>> expectedWrittenTags
     ) {}
+
+    private static final List<String> INPUT_LINES = List
+            .of("the quick brown", "fox jumps over", "the lazy dog", "a second sentence", "one more line");
+
+    private static final List<List<String>> INPUT_TOKENS = INPUT_LINES.stream()
+            .map(line -> List.of(line.split(" ")))
+            .toList();
+
+    private static final TagProvider<String> TAG_PROVIDER = new StringTagProvider(Set.of("DT", "NN", "VB"), "NN");
+
+    private static TaggingResult<String> accept(String... tags) {
+        return taggingResult(ACCEPT, List.of(tags));
+    }
+
+    @Test
+    void accept__preservesExcludedRunsLosslessly(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        String line = "Smith,  Jones .";
+        Path inputFile = writeInput(tempDirectory, List.of(line));
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("NN", "NN", "NN"));
+
+        // ACT //
+        try (Terminal terminal = quietTerminal()) {
+            annotatorWith(tagging, terminal).annotate(inputFile, outputFile);
+        }
+
+        // ASSERT //
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(1, written.size());
+        assertEquals(List.of("Smith,", "Jones", "."), tokensOf(written.getFirst()));
+        assertEquals(
+                line,
+                written.getFirst().surface(),
+                "the original surface, including awkward spacing, must round-trip exactly"
+        );
+    }
+
+    @Test
+    void accept__wrongTagCountRejected(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN")); // two tags for a three-token line
+
+        // ACT //
+        try (Terminal terminal = quietTerminal()) {
+            Annotator<String> annotator = annotatorWith(tagging, terminal);
+            IllegalArgumentException exception = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> annotator.annotate(inputFile, outputFile)
+            );
+
+            // ASSERT //
+            assertEquals(
+                    "Expected one tag per token segment: got 2 tags for 3 token segments.",
+                    exception.getMessage()
+            );
+        }
+    }
+
+    private static Annotator<String> annotatorWith(TaggingInterface<String> tagging, Terminal terminal) {
+        return Annotator.<String>builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggingInterface(tagging)
+                .terminal(terminal)
+                .tokenizer(new WhitespaceTokenizer())
+                .build();
+    }
 
     static Stream<BuilderExceptionParameters> builder__exception() {
         return Stream.of(
@@ -154,6 +259,47 @@ class AnnotatorTest {
                         "at least one of tokenizer or tagger must be set"
                 )
         );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void builder__exception(BuilderExceptionParameters parameters) {
+        // ACT //
+        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
+
+        // ASSERT //
+        assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
+
+    @Test
+    void crash__partialWrittenSequencesRereadable(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(tempDirectory, INPUT_LINES);
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+        tagging.throwAfterScriptedResults = new RuntimeException("simulated tagging interface crash");
+
+        // ACT //
+        try (Terminal terminal = quietTerminal()) {
+            Annotator<String> annotator = annotatorWith(tagging, terminal);
+            RuntimeException thrown = assertThrows(
+                    RuntimeException.class,
+                    () -> annotator.annotate(inputFile, outputFile)
+            );
+
+            // ASSERT //
+            assertEquals("simulated tagging interface crash", thrown.getMessage());
+        }
+
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(1, written.size());
+        assertEquals(List.of("the", "quick", "brown"), tokensOf(written.getFirst()));
+        assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.getFirst()));
+    }
+
+    private static TaggingResult<String> exit() {
+        return taggingResult(EXIT, List.of());
     }
 
     static Stream<FeatureWiringParameters> featureWiring() {
@@ -289,140 +435,6 @@ class AnnotatorTest {
         );
     }
 
-    static Stream<SessionParameters> session() {
-        return Stream.of(
-                new SessionParameters(
-                        "all_accepted",
-                        List.of(
-                                accept("DT", "NN", "NN"),
-                                accept("NN", "VB", "DT"),
-                                accept("DT", "NN", "NN"),
-                                accept("DT", "NN", "NN"),
-                                accept("DT", "NN", "NN")
-                        ),
-                        5,
-                        INPUT_TOKENS,
-                        List.of(
-                                List.of("DT", "NN", "NN"),
-                                List.of("NN", "VB", "DT"),
-                                List.of("DT", "NN", "NN"),
-                                List.of("DT", "NN", "NN"),
-                                List.of("DT", "NN", "NN")
-                        )
-                ),
-                new SessionParameters(
-                        "accept_skip_mixed",
-                        List.of(
-                                accept("DT", "NN", "NN"),
-                                skip(),
-                                accept("DT", "NN", "NN"),
-                                skip(),
-                                accept("NN", "VB", "NN")
-                        ),
-                        5,
-                        List.of(
-                                List.of("the", "quick", "brown"),
-                                List.of("the", "lazy", "dog"),
-                                List.of("one", "more", "line")
-                        ),
-                        List.of(List.of("DT", "NN", "NN"), List.of("DT", "NN", "NN"), List.of("NN", "VB", "NN"))
-                ),
-                new SessionParameters(
-                        "exit_truncates",
-                        List.of(accept("DT", "NN", "NN"), exit()),
-                        2,
-                        List.of(List.of("the", "quick", "brown")),
-                        List.of(List.of("DT", "NN", "NN"))
-                )
-        );
-    }
-
-    @Test
-    void accept__preservesExcludedRunsLosslessly(@TempDir Path tempDirectory) throws Exception {
-        // ARRANGE //
-        String line = "Smith,  Jones .";
-        Path inputFile = writeInput(tempDirectory, List.of(line));
-        Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
-        tagging.results.add(accept("NN", "NN", "NN"));
-
-        // ACT //
-        try (Terminal terminal = quietTerminal()) {
-            annotatorWith(tagging, terminal).annotate(inputFile, outputFile);
-        }
-
-        // ASSERT //
-        List<TrainingSequence<String>> written = readOutput(outputFile);
-        assertEquals(1, written.size());
-        assertEquals(List.of("Smith,", "Jones", "."), tokensOf(written.getFirst()));
-        assertEquals(
-                line,
-                written.getFirst().surface(),
-                "the original surface, including awkward spacing, must round-trip exactly"
-        );
-    }
-
-    @Test
-    void accept__wrongTagCountRejected(@TempDir Path tempDirectory) throws Exception {
-        // ARRANGE //
-        Path inputFile = writeInput(tempDirectory, List.of("the quick brown"));
-        Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
-        tagging.results.add(accept("DT", "NN")); // two tags for a three-token line
-
-        // ACT //
-        try (Terminal terminal = quietTerminal()) {
-            Annotator<String> annotator = annotatorWith(tagging, terminal);
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> annotator.annotate(inputFile, outputFile)
-            );
-
-            // ASSERT //
-            assertEquals(
-                    "Expected one tag per token segment: got 2 tags for 3 token segments.",
-                    exception.getMessage()
-            );
-        }
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void builder__exception(BuilderExceptionParameters parameters) {
-        // ACT //
-        Exception exception = assertThrows(parameters.expectedClass(), parameters.action());
-
-        // ASSERT //
-        assertEquals(parameters.expectedMessage(), exception.getMessage());
-    }
-
-    @Test
-    void crash__partialWrittenSequencesRereadable(@TempDir Path tempDirectory) throws Exception {
-        // ARRANGE //
-        Path inputFile = writeInput(tempDirectory, INPUT_LINES);
-        Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
-        tagging.results.add(accept("DT", "NN", "NN"));
-        tagging.throwAfterScriptedResults = new RuntimeException("simulated tagging interface crash");
-
-        // ACT //
-        try (Terminal terminal = quietTerminal()) {
-            Annotator<String> annotator = annotatorWith(tagging, terminal);
-            RuntimeException thrown = assertThrows(
-                    RuntimeException.class,
-                    () -> annotator.annotate(inputFile, outputFile)
-            );
-
-            // ASSERT //
-            assertEquals("simulated tagging interface crash", thrown.getMessage());
-        }
-
-        List<TrainingSequence<String>> written = readOutput(outputFile);
-        assertEquals(1, written.size());
-        assertEquals(List.of("the", "quick", "brown"), tokensOf(written.getFirst()));
-        assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.getFirst()));
-    }
-
     @MethodSource
     @ParameterizedTest
     void featureWiring(FeatureWiringParameters parameters, @TempDir Path tempDirectory) throws Exception {
@@ -461,6 +473,56 @@ class AnnotatorTest {
                 tagsOf(written.getFirst()),
                 "display features must not affect the written training data"
         );
+    }
+
+    private static FixedTagger fixedTagger(List<String> tokens, List<Set<Feature>> embeddedFeatures) {
+        List<Map<String, Double>> scores = new ArrayList<>();
+        for (int index = 0; index < tokens.size(); index++) {
+            scores.add(Map.of(index == 0 ? "DT" : "NN", 1.0));
+        }
+        return new FixedTagger(Map.of("the quick brown", new TaggedSequence<>(tokens, embeddedFeatures, scores)));
+    }
+
+    private static FeatureExtractor positionAndNextTokenExtractor() {
+        return (sequence, position) -> {
+            String next = position + 1 < sequence.size() ? "NEXT_" + sequence.get(position + 1).token() : "END";
+            return Set.of(createFeature(position + ":" + next));
+        };
+    }
+
+    private static FeatureExtractor prefixExtractor(String prefix) {
+        return (sequence, position) -> Set.of(createFeature(prefix + sequence.get(position).token()));
+    }
+
+    @SafeVarargs
+    private static void prepopulateOutput(Path outputFile, TrainingSequence<String>... sequences) throws IOException {
+        XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
+        try (var writer = xml.appendingWriter(outputFile)) {
+            for (TrainingSequence<String> sequence : sequences) {
+                writer.write(sequence);
+            }
+        }
+    }
+
+    private static ScriptedTaggingInterface<String> prepopulateTwoLinesAndScriptThreeAccepts(Path outputFile)
+            throws IOException {
+        prepopulateOutput(
+                outputFile,
+                TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN")),
+                TrainingSequence.ofTokens(List.of("fox", "jumps", "over"), List.of("NN", "VB", "DT"))
+        );
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
+        tagging.results.add(accept("DT", "NN", "NN"));
+        tagging.results.add(accept("DT", "NN", "NN"));
+        tagging.results.add(accept("DT", "NN", "NN"));
+        return tagging;
+    }
+
+    private static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {
+        XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
+        try (Stream<TrainingSequence<String>> stream = xml.read(outputFile)) {
+            return stream.toList();
+        }
     }
 
     @Test
@@ -555,6 +617,54 @@ class AnnotatorTest {
         assertEquals(List.of("NN", "VB", "DT"), tagsOf(written.get(1)));
     }
 
+    static Stream<SessionParameters> session() {
+        return Stream.of(
+                new SessionParameters(
+                        "all_accepted",
+                        List.of(
+                                accept("DT", "NN", "NN"),
+                                accept("NN", "VB", "DT"),
+                                accept("DT", "NN", "NN"),
+                                accept("DT", "NN", "NN"),
+                                accept("DT", "NN", "NN")
+                        ),
+                        5,
+                        INPUT_TOKENS,
+                        List.of(
+                                List.of("DT", "NN", "NN"),
+                                List.of("NN", "VB", "DT"),
+                                List.of("DT", "NN", "NN"),
+                                List.of("DT", "NN", "NN"),
+                                List.of("DT", "NN", "NN")
+                        )
+                ),
+                new SessionParameters(
+                        "accept_skip_mixed",
+                        List.of(
+                                accept("DT", "NN", "NN"),
+                                skip(),
+                                accept("DT", "NN", "NN"),
+                                skip(),
+                                accept("NN", "VB", "NN")
+                        ),
+                        5,
+                        List.of(
+                                List.of("the", "quick", "brown"),
+                                List.of("the", "lazy", "dog"),
+                                List.of("one", "more", "line")
+                        ),
+                        List.of(List.of("DT", "NN", "NN"), List.of("DT", "NN", "NN"), List.of("NN", "VB", "NN"))
+                ),
+                new SessionParameters(
+                        "exit_truncates",
+                        List.of(accept("DT", "NN", "NN"), exit()),
+                        2,
+                        List.of(List.of("the", "quick", "brown")),
+                        List.of(List.of("DT", "NN", "NN"))
+                )
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
     void session(SessionParameters parameters, @TempDir Path tempDirectory) throws Exception {
@@ -574,6 +684,10 @@ class AnnotatorTest {
         List<TrainingSequence<String>> written = readOutput(outputFile);
         assertEquals(parameters.expectedWrittenTokens(), written.stream().map(AnnotatorTest::tokensOf).toList());
         assertEquals(parameters.expectedWrittenTags(), written.stream().map(AnnotatorTest::tagsOf).toList());
+    }
+
+    private static TaggingResult<String> skip() {
+        return taggingResult(SKIP, List.of());
     }
 
     @Test
@@ -650,6 +764,31 @@ class AnnotatorTest {
         assertEquals(List.of("the", "quick", "brown"), tokensOf(written.getFirst()));
         assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.getFirst()));
         assertEquals("the quick brown", written.getFirst().surface(), "captured excluded runs reproduce the surface");
+    }
+
+    private static List<String> tagsOf(TrainingSequence<String> sequence) {
+        return sequence.stream().map(TrainingPositionedToken::tag).toList();
+    }
+
+    private static FixedTagger theQuickBrownTagger() {
+        return new FixedTagger(
+                Map.of(
+                        "the quick brown",
+                        new TaggedSequence<>(
+                                List.of("the", "quick", "brown"),
+                                List.of(Set.of(), Set.of(), Set.of()),
+                                List.of(Map.of("DT", 1.0), Map.of("NN", 1.0), Map.of("NN", 1.0))
+                        )
+                )
+        );
+    }
+
+    private static List<String> tokensOf(TrainingSequence<String> sequence) {
+        return sequence.stream().map(TrainingPositionedToken::token).toList();
+    }
+
+    private static <T extends Comparable<T>> List<String> tokensOf(AnnotatorSequence<T> sequence) {
+        return sequence.tokens().stream().map(AnnotatorToken::token).toList();
     }
 
     @Test
@@ -754,148 +893,9 @@ class AnnotatorTest {
         );
     }
 
-    private static TaggingResult<String> accept(String... tags) {
-        return taggingResult(ACCEPT, List.of(tags));
-    }
-
-    private static Annotator<String> annotatorWith(TaggingInterface<String> tagging, Terminal terminal) {
-        return Annotator.<String>builder()
-                .tagProvider(TAG_PROVIDER)
-                .taggingInterface(tagging)
-                .terminal(terminal)
-                .tokenizer(new WhitespaceTokenizer())
-                .build();
-    }
-
-    private static TaggingResult<String> exit() {
-        return taggingResult(EXIT, List.of());
-    }
-
-    private static FixedTagger fixedTagger(List<String> tokens, List<Set<Feature>> embeddedFeatures) {
-        List<Map<String, Double>> scores = new ArrayList<>();
-        for (int index = 0; index < tokens.size(); index++) {
-            scores.add(Map.of(index == 0 ? "DT" : "NN", 1.0));
-        }
-        return new FixedTagger(Map.of("the quick brown", new TaggedSequence<>(tokens, embeddedFeatures, scores)));
-    }
-
-    private static FeatureExtractor positionAndNextTokenExtractor() {
-        return (sequence, position) -> {
-            String next = position + 1 < sequence.size() ? "NEXT_" + sequence.get(position + 1).token() : "END";
-            return Set.of(createFeature(position + ":" + next));
-        };
-    }
-
-    private static FeatureExtractor prefixExtractor(String prefix) {
-        return (sequence, position) -> Set.of(createFeature(prefix + sequence.get(position).token()));
-    }
-
-    @SafeVarargs
-    private static void prepopulateOutput(Path outputFile, TrainingSequence<String>... sequences) throws IOException {
-        XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
-        try (var writer = xml.appendingWriter(outputFile)) {
-            for (TrainingSequence<String> sequence : sequences) {
-                writer.write(sequence);
-            }
-        }
-    }
-
-    private static ScriptedTaggingInterface<String> prepopulateTwoLinesAndScriptThreeAccepts(Path outputFile)
-            throws IOException {
-        prepopulateOutput(
-                outputFile,
-                TrainingSequence.ofTokens(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN")),
-                TrainingSequence.ofTokens(List.of("fox", "jumps", "over"), List.of("NN", "VB", "DT"))
-        );
-        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
-        tagging.results.add(accept("DT", "NN", "NN"));
-        tagging.results.add(accept("DT", "NN", "NN"));
-        tagging.results.add(accept("DT", "NN", "NN"));
-        return tagging;
-    }
-
-    private static List<TrainingSequence<String>> readOutput(Path outputFile) throws IOException {
-        XmlTrainingData<String> xml = new XmlTrainingData<>(TAG_PROVIDER);
-        try (Stream<TrainingSequence<String>> stream = xml.read(outputFile)) {
-            return stream.toList();
-        }
-    }
-
-    private static TaggingResult<String> skip() {
-        return taggingResult(SKIP, List.of());
-    }
-
-    private static List<String> tagsOf(TrainingSequence<String> sequence) {
-        return sequence.stream().map(TrainingPositionedToken::tag).toList();
-    }
-
-    private static FixedTagger theQuickBrownTagger() {
-        return new FixedTagger(
-                Map.of(
-                        "the quick brown",
-                        new TaggedSequence<>(
-                                List.of("the", "quick", "brown"),
-                                List.of(Set.of(), Set.of(), Set.of()),
-                                List.of(Map.of("DT", 1.0), Map.of("NN", 1.0), Map.of("NN", 1.0))
-                        )
-                )
-        );
-    }
-
-    private static List<String> tokensOf(TrainingSequence<String> sequence) {
-        return sequence.stream().map(TrainingPositionedToken::token).toList();
-    }
-
-    private static <T extends Comparable<T>> List<String> tokensOf(AnnotatorSequence<T> sequence) {
-        return sequence.tokens().stream().map(AnnotatorToken::token).toList();
-    }
-
     private static Path writeInput(Path tempDirectory, List<String> lines) throws IOException {
         Path inputFile = tempDirectory.resolve("input.txt");
         Files.writeString(inputFile, String.join("\n", lines) + "\n", StandardCharsets.UTF_8);
         return inputFile;
-    }
-
-    private static final class FixedTagger implements CrfTagger<String> {
-        private final Map<String, Sequence<TaggedPositionedToken<String>>> responses;
-        private final Tokenizer tokenizer = new WhitespaceTokenizer();
-
-        FixedTagger(Map<String, Sequence<TaggedPositionedToken<String>>> responses) {
-            this.responses = responses;
-        }
-
-        @Override
-        public TaggedTokenization<String> tag(String input) {
-            Sequence<TaggedPositionedToken<String>> response = responses.get(input);
-            if (response == null) {
-                throw new AssertionError("FixedTagger has no scripted response for input: " + input);
-            }
-            return TaggedTokenizations.of(response, tokenizer.tokenize(input), tags -> 0.0);
-        }
-    }
-
-    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
-        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
-        final Deque<TaggingResult<T>> results = new ArrayDeque<>();
-
-        /** Throws after scripted results are exhausted, not on the next call. */
-        @Nullable
-        RuntimeException throwAfterScriptedResults;
-
-        @Override
-        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
-            presented.add(sequence);
-            if (!results.isEmpty()) {
-                return results.removeFirst();
-            }
-            RuntimeException toThrow = throwAfterScriptedResults;
-            if (toThrow != null) {
-                throwAfterScriptedResults = null;
-                throw toThrow;
-            }
-            throw new AssertionError(
-                    "ScriptedTaggingInterface exhausted: no scripted result for presentation " + presented.size()
-            );
-        }
     }
 }

@@ -85,6 +85,38 @@ class AlignmentModelsTest {
         );
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void exactMatchStrategy__compare(CompareParameters parameters) {
+        // ACT //
+        TokenComparison comparison = exactMatchStrategy()
+                .compare(parameters.storedTokens(), parameters.retokenizedTokens());
+
+        // ASSERT //
+        assertEquals(parameters.expectedDifferences(), comparison.differences());
+        assertEquals(parameters.expectedDifferences().isEmpty(), comparison.aligned());
+    }
+
+    @Test
+    void sequenceAlignment__defensiveCopy() {
+        // ARRANGE //
+        List<String> retokenizedTokens = new ArrayList<>(List.of("Brown", "Fox"));
+
+        // ACT //
+        SequenceAlignment<String> sequence = sequenceAlignment(
+                0,
+                AlignmentStatus.ALIGNED,
+                sequenceOf("Brown", "Fox"),
+                retokenizedTokens,
+                tokenComparison(List.of()),
+                null
+        );
+        retokenizedTokens.add("extra");
+
+        // ASSERT //
+        assertEquals(List.of("Brown", "Fox"), sequence.retokenizedTokens());
+    }
+
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> sequenceAlignment__exception() {
         return Stream.of(
@@ -214,6 +246,43 @@ class AlignmentModelsTest {
         );
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void sequenceAlignment__exception(ExceptionCase parameters) {
+        assertThrowsWithMessage(parameters);
+    }
+
+    @Test
+    void tokenComparison__acceptsCoherentMultiRegion() {
+        // ARRANGE //
+        List<TokenDifference> differences = List.of(
+                tokenDifference(DifferenceKind.INSERTION, 1, 1, 1, 3),
+                tokenDifference(DifferenceKind.REPLACEMENT, 4, 6, 6, 7)
+        );
+
+        // ACT //
+        TokenComparison comparison = tokenComparison(differences);
+
+        // ASSERT //
+        assertEquals(differences, comparison.differences());
+        assertFalse(comparison.aligned());
+    }
+
+    @Test
+    void tokenComparison__defensiveCopy() {
+        // ARRANGE //
+        List<TokenDifference> differences = new ArrayList<>(
+                List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 1, 0, 2))
+        );
+
+        // ACT //
+        TokenComparison comparison = tokenComparison(differences);
+        differences.add(tokenDifference(DifferenceKind.INSERTION, 1, 1, 2, 3));
+
+        // ASSERT //
+        assertEquals(1, comparison.differences().size());
+    }
+
     static Stream<ExceptionCase> tokenComparison__exception() {
         return Stream.of(
                 new ExceptionCase(
@@ -245,6 +314,12 @@ class AlignmentModelsTest {
                         "matched gap before difference index 1 must have equal length on both sides, got: 2 != 4"
                 )
         );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void tokenComparison__exception(ExceptionCase parameters) {
+        assertThrowsWithMessage(parameters);
     }
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
@@ -299,81 +374,6 @@ class AlignmentModelsTest {
                         "REPLACEMENT requires non-empty stored and re-tokenized spans"
                 )
         );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void exactMatchStrategy__compare(CompareParameters parameters) {
-        // ACT //
-        TokenComparison comparison = exactMatchStrategy()
-                .compare(parameters.storedTokens(), parameters.retokenizedTokens());
-
-        // ASSERT //
-        assertEquals(parameters.expectedDifferences(), comparison.differences());
-        assertEquals(parameters.expectedDifferences().isEmpty(), comparison.aligned());
-    }
-
-    @Test
-    void sequenceAlignment__defensiveCopy() {
-        // ARRANGE //
-        List<String> retokenizedTokens = new ArrayList<>(List.of("Brown", "Fox"));
-
-        // ACT //
-        SequenceAlignment<String> sequence = sequenceAlignment(
-                0,
-                AlignmentStatus.ALIGNED,
-                sequenceOf("Brown", "Fox"),
-                retokenizedTokens,
-                tokenComparison(List.of()),
-                null
-        );
-        retokenizedTokens.add("extra");
-
-        // ASSERT //
-        assertEquals(List.of("Brown", "Fox"), sequence.retokenizedTokens());
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void sequenceAlignment__exception(ExceptionCase parameters) {
-        assertThrowsWithMessage(parameters);
-    }
-
-    @Test
-    void tokenComparison__acceptsCoherentMultiRegion() {
-        // ARRANGE //
-        List<TokenDifference> differences = List.of(
-                tokenDifference(DifferenceKind.INSERTION, 1, 1, 1, 3),
-                tokenDifference(DifferenceKind.REPLACEMENT, 4, 6, 6, 7)
-        );
-
-        // ACT //
-        TokenComparison comparison = tokenComparison(differences);
-
-        // ASSERT //
-        assertEquals(differences, comparison.differences());
-        assertFalse(comparison.aligned());
-    }
-
-    @Test
-    void tokenComparison__defensiveCopy() {
-        // ARRANGE //
-        List<TokenDifference> differences = new ArrayList<>(
-                List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 1, 0, 2))
-        );
-
-        // ACT //
-        TokenComparison comparison = tokenComparison(differences);
-        differences.add(tokenDifference(DifferenceKind.INSERTION, 1, 1, 2, 3));
-
-        // ASSERT //
-        assertEquals(1, comparison.differences().size());
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void tokenComparison__exception(ExceptionCase parameters) {
-        assertThrowsWithMessage(parameters);
     }
 
     @MethodSource

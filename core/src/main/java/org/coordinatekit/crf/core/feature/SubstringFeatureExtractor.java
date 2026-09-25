@@ -41,60 +41,26 @@ import java.util.function.Function;
  */
 @NullMarked
 public class SubstringFeatureExtractor implements FeatureExtractor {
-    private final boolean ending;
-    private final Function<String, Feature> featureMapper;
-    private final boolean includeIfLessThanLength;
-    private final int length;
-
-    private SubstringFeatureExtractor(Builder builder) {
-        this.ending = builder.ending;
-        this.featureMapper = builder.featureMapper;
-        this.includeIfLessThanLength = builder.includeIfLessThanLength;
-        this.length = builder.length;
-    }
-
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        String token = sequence.get(position).token();
-
-        if (!includeIfLessThanLength && token.length() < length) {
-            return Set.of();
-        }
-
-        String substring;
-
-        if (token.length() <= length) {
-            substring = token;
-        } else if (ending) {
-            substring = token.substring(token.length() - length);
-        } else {
-            substring = token.substring(0, length);
-        }
-
-        return Set.of(featureMapper.apply(substring));
-    }
-
-    /**
-     * Creates a new builder with the specified feature mapper function.
-     *
-     * @param featureMapper the function to map substrings to features
-     * @return a new builder instance
-     */
-    public static Builder builder(Function<String, Feature> featureMapper) {
-        return new Builder(featureMapper);
-    }
-
     /**
      * Builder for {@link SubstringFeatureExtractor}.
      */
     public static final class Builder {
-        private final Function<String, Feature> featureMapper;
         private boolean ending = false;
+        private final Function<String, Feature> featureMapper;
         private boolean includeIfLessThanLength = true;
         private int length = 2;
 
         private Builder(Function<String, Feature> featureMapper) {
             this.featureMapper = featureMapper;
+        }
+
+        /**
+         * Builds the feature extractor.
+         *
+         * @return a new {@link SubstringFeatureExtractor} instance
+         */
+        public SubstringFeatureExtractor build() {
+            return new SubstringFeatureExtractor(this);
         }
 
         /**
@@ -146,14 +112,48 @@ public class SubstringFeatureExtractor implements FeatureExtractor {
             this.length = length;
             return this;
         }
+    }
 
-        /**
-         * Builds the feature extractor.
-         *
-         * @return a new {@link SubstringFeatureExtractor} instance
-         */
-        public SubstringFeatureExtractor build() {
-            return new SubstringFeatureExtractor(this);
+    private final boolean ending;
+    private final Function<String, Feature> featureMapper;
+    private final boolean includeIfLessThanLength;
+    private final int length;
+
+    private SubstringFeatureExtractor(Builder builder) {
+        this.ending = builder.ending;
+        this.featureMapper = builder.featureMapper;
+        this.includeIfLessThanLength = builder.includeIfLessThanLength;
+        this.length = builder.length;
+    }
+
+    /**
+     * Creates a new builder with the specified feature mapper function.
+     *
+     * @param featureMapper the function to map substrings to features
+     * @return a new builder instance
+     */
+    public static Builder builder(Function<String, Feature> featureMapper) {
+        return new Builder(featureMapper);
+    }
+
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        String token = sequence.get(position).token();
+
+        if (!includeIfLessThanLength && token.length() < length) {
+            return Set.of();
         }
+
+        String substring;
+
+        if (token.length() <= length) {
+            substring = token;
+        } else if (ending) {
+            substring = token.substring(token.length() - length);
+        } else {
+            substring = token.substring(0, length);
+        }
+
+        return Set.of(featureMapper.apply(substring));
     }
 }

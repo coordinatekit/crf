@@ -42,6 +42,160 @@ import java.util.TreeSet;
  * Build one with {@link #builder(String, ParameterKind)}.
  */
 public final class ParameterDescriptor {
+    /**
+     * Builder for {@link ParameterDescriptor}.
+     */
+    public static final class Builder {
+        private Set<String> allowedValues = Set.of();
+        private @Nullable String defaultValue;
+        private String description = "";
+        private final ParameterKind kind;
+        private int maximumValue = Integer.MAX_VALUE;
+        private int minimumValue = Integer.MIN_VALUE;
+        private final String name;
+        private boolean required = false;
+
+        private Builder(String name, ParameterKind kind) {
+            this.name = Objects.requireNonNull(name, "name must not be null");
+            this.kind = Objects.requireNonNull(kind, "kind must not be null");
+        }
+
+        /**
+         * Sets the values an {@link ParameterKind#ENUMERATION} parameter admits.
+         *
+         * @param allowedValues the allowed values
+         * @return this builder
+         */
+        public Builder allowedValues(Set<String> allowedValues) {
+            this.allowedValues = Set.copyOf(allowedValues);
+            return this;
+        }
+
+        /**
+         * Builds the descriptor.
+         *
+         * @return a new {@link ParameterDescriptor}
+         * @throws IllegalStateException if the parameter is both required and default-bearing, if an
+         *         enumeration declares no allowed values, if a non-enumeration declares allowed values, if
+         *         an enumeration's default is not among its allowed values, if bounds are set on a
+         *         non-integer parameter, if the minimum exceeds the maximum, or if an integer default falls
+         *         outside the bounds
+         */
+        public ParameterDescriptor build() {
+            if (required && defaultValue != null) {
+                throw new IllegalStateException(
+                        "parameter '" + name + "' cannot be both required and have a default value"
+                );
+            }
+            if (kind == ParameterKind.ENUMERATION) {
+                if (allowedValues.isEmpty()) {
+                    throw new IllegalStateException(
+                            "enumeration parameter '" + name + "' must declare at least one allowed value"
+                    );
+                }
+                if (defaultValue != null && !allowedValues.contains(defaultValue)) {
+                    throw new IllegalStateException(
+                            "default value '" + defaultValue + "' of enumeration parameter '" + name
+                                    + "' is not among the allowed values " + new TreeSet<>(allowedValues)
+                    );
+                }
+            } else if (!allowedValues.isEmpty()) {
+                throw new IllegalStateException(
+                        "allowed values apply only to enumeration parameters, but '" + name + "' is " + kind
+                );
+            }
+            if (kind == ParameterKind.INTEGER) {
+                if (minimumValue > maximumValue) {
+                    throw new IllegalStateException(
+                            "minimum " + minimumValue + " of parameter '" + name + "' exceeds its maximum "
+                                    + maximumValue
+                    );
+                }
+                if (defaultValue != null) {
+                    int parsedDefault;
+                    try {
+                        parsedDefault = Integer.parseInt(defaultValue);
+                    } catch (NumberFormatException exception) {
+                        throw new IllegalStateException(
+                                "default value '" + defaultValue + "' of integer parameter '" + name
+                                        + "' is not an integer",
+                                exception
+                        );
+                    }
+                    if (parsedDefault < minimumValue || parsedDefault > maximumValue) {
+                        throw new IllegalStateException(
+                                "default value '" + defaultValue + "' of parameter '" + name + "' must be "
+                                        + ParameterValidation.rangeDescription(minimumValue, maximumValue)
+                        );
+                    }
+                }
+            } else if (minimumValue != Integer.MIN_VALUE || maximumValue != Integer.MAX_VALUE) {
+                throw new IllegalStateException(
+                        "bounds apply only to integer parameters, but '" + name + "' is " + kind
+                );
+            }
+            return new ParameterDescriptor(this);
+        }
+
+        /**
+         * Sets the default value applied when the parameter is absent, which also makes the parameter
+         * optional.
+         *
+         * @param defaultValue the default value
+         * @return this builder
+         */
+        public Builder defaultValue(@Nullable String defaultValue) {
+            this.defaultValue = defaultValue;
+            return this;
+        }
+
+        /**
+         * Sets a human-readable description of the parameter.
+         *
+         * @param description the description
+         * @return this builder
+         */
+        public Builder description(String description) {
+            this.description = Objects.requireNonNull(description, "description must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the largest value an {@link ParameterKind#INTEGER} parameter admits. Defaults to
+         * {@link Integer#MAX_VALUE}, meaning unbounded above.
+         *
+         * @param maximum the maximum value
+         * @return this builder
+         */
+        public Builder maximumValue(int maximum) {
+            this.maximumValue = maximum;
+            return this;
+        }
+
+        /**
+         * Sets the smallest value an {@link ParameterKind#INTEGER} parameter admits. Defaults to
+         * {@link Integer#MIN_VALUE}, meaning unbounded below.
+         *
+         * @param minimum the minimum value
+         * @return this builder
+         */
+        public Builder minimumValue(int minimum) {
+            this.minimumValue = minimum;
+            return this;
+        }
+
+        /**
+         * Sets whether the parameter must be present. Defaults to {@code false}.
+         *
+         * @param required {@code true} to require the parameter
+         * @return this builder
+         */
+        public Builder required(boolean required) {
+            this.required = required;
+            return this;
+        }
+    }
+
     private final Set<String> allowedValues;
     private final @Nullable String defaultValue;
     private final String description;
@@ -172,159 +326,5 @@ public final class ParameterDescriptor {
         return "ParameterDescriptor[name=" + name + ", kind=" + kind + ", allowedValues=" + allowedValues
                 + ", defaultValue=" + defaultValue + ", description=" + description + ", maximumValue=" + maximumValue
                 + ", minimumValue=" + minimumValue + ", required=" + required + "]";
-    }
-
-    /**
-     * Builder for {@link ParameterDescriptor}.
-     */
-    public static final class Builder {
-        private final ParameterKind kind;
-        private final String name;
-        private Set<String> allowedValues = Set.of();
-        private @Nullable String defaultValue;
-        private String description = "";
-        private int maximumValue = Integer.MAX_VALUE;
-        private int minimumValue = Integer.MIN_VALUE;
-        private boolean required = false;
-
-        private Builder(String name, ParameterKind kind) {
-            this.name = Objects.requireNonNull(name, "name must not be null");
-            this.kind = Objects.requireNonNull(kind, "kind must not be null");
-        }
-
-        /**
-         * Sets the values an {@link ParameterKind#ENUMERATION} parameter admits.
-         *
-         * @param allowedValues the allowed values
-         * @return this builder
-         */
-        public Builder allowedValues(Set<String> allowedValues) {
-            this.allowedValues = Set.copyOf(allowedValues);
-            return this;
-        }
-
-        /**
-         * Sets a human-readable description of the parameter.
-         *
-         * @param description the description
-         * @return this builder
-         */
-        public Builder description(String description) {
-            this.description = Objects.requireNonNull(description, "description must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the default value applied when the parameter is absent, which also makes the parameter
-         * optional.
-         *
-         * @param defaultValue the default value
-         * @return this builder
-         */
-        public Builder defaultValue(@Nullable String defaultValue) {
-            this.defaultValue = defaultValue;
-            return this;
-        }
-
-        /**
-         * Sets the largest value an {@link ParameterKind#INTEGER} parameter admits. Defaults to
-         * {@link Integer#MAX_VALUE}, meaning unbounded above.
-         *
-         * @param maximum the maximum value
-         * @return this builder
-         */
-        public Builder maximumValue(int maximum) {
-            this.maximumValue = maximum;
-            return this;
-        }
-
-        /**
-         * Sets the smallest value an {@link ParameterKind#INTEGER} parameter admits. Defaults to
-         * {@link Integer#MIN_VALUE}, meaning unbounded below.
-         *
-         * @param minimum the minimum value
-         * @return this builder
-         */
-        public Builder minimumValue(int minimum) {
-            this.minimumValue = minimum;
-            return this;
-        }
-
-        /**
-         * Sets whether the parameter must be present. Defaults to {@code false}.
-         *
-         * @param required {@code true} to require the parameter
-         * @return this builder
-         */
-        public Builder required(boolean required) {
-            this.required = required;
-            return this;
-        }
-
-        /**
-         * Builds the descriptor.
-         *
-         * @return a new {@link ParameterDescriptor}
-         * @throws IllegalStateException if the parameter is both required and default-bearing, if an
-         *         enumeration declares no allowed values, if a non-enumeration declares allowed values, if
-         *         an enumeration's default is not among its allowed values, if bounds are set on a
-         *         non-integer parameter, if the minimum exceeds the maximum, or if an integer default falls
-         *         outside the bounds
-         */
-        public ParameterDescriptor build() {
-            if (required && defaultValue != null) {
-                throw new IllegalStateException(
-                        "parameter '" + name + "' cannot be both required and have a default value"
-                );
-            }
-            if (kind == ParameterKind.ENUMERATION) {
-                if (allowedValues.isEmpty()) {
-                    throw new IllegalStateException(
-                            "enumeration parameter '" + name + "' must declare at least one allowed value"
-                    );
-                }
-                if (defaultValue != null && !allowedValues.contains(defaultValue)) {
-                    throw new IllegalStateException(
-                            "default value '" + defaultValue + "' of enumeration parameter '" + name
-                                    + "' is not among the allowed values " + new TreeSet<>(allowedValues)
-                    );
-                }
-            } else if (!allowedValues.isEmpty()) {
-                throw new IllegalStateException(
-                        "allowed values apply only to enumeration parameters, but '" + name + "' is " + kind
-                );
-            }
-            if (kind == ParameterKind.INTEGER) {
-                if (minimumValue > maximumValue) {
-                    throw new IllegalStateException(
-                            "minimum " + minimumValue + " of parameter '" + name + "' exceeds its maximum "
-                                    + maximumValue
-                    );
-                }
-                if (defaultValue != null) {
-                    int parsedDefault;
-                    try {
-                        parsedDefault = Integer.parseInt(defaultValue);
-                    } catch (NumberFormatException exception) {
-                        throw new IllegalStateException(
-                                "default value '" + defaultValue + "' of integer parameter '" + name
-                                        + "' is not an integer",
-                                exception
-                        );
-                    }
-                    if (parsedDefault < minimumValue || parsedDefault > maximumValue) {
-                        throw new IllegalStateException(
-                                "default value '" + defaultValue + "' of parameter '" + name + "' must be "
-                                        + ParameterValidation.rangeDescription(minimumValue, maximumValue)
-                        );
-                    }
-                }
-            } else if (minimumValue != Integer.MIN_VALUE || maximumValue != Integer.MAX_VALUE) {
-                throw new IllegalStateException(
-                        "bounds apply only to integer parameters, but '" + name + "' is " + kind
-                );
-            }
-            return new ParameterDescriptor(this);
-        }
     }
 }

@@ -49,74 +49,6 @@ import java.util.Objects;
  */
 @NullMarked
 public final class AnnotatorConfiguration {
-    /** The default highlighting threshold used when none is set on the {@link Builder}. */
-    public static final double DEFAULT_THRESHOLD = 0.80;
-
-    /**
-     * The {@link #DEFAULT_THRESHOLD} as a compile-time {@code String} for picocli's
-     * {@code @Option(defaultValue = ...)}, which requires a constant expression. Kept in agreement with
-     * {@link #DEFAULT_THRESHOLD} by {@code AnnotatorCommandTest.configuration__defaults}.
-     */
-    public static final String DEFAULT_THRESHOLD_TEXT = "0.80";
-
-    private final Path input;
-    private final @Nullable Path model;
-    private final Path output;
-    private final double threshold;
-
-    private AnnotatorConfiguration(Builder builder) {
-        this.input = Objects.requireNonNull(builder.input);
-        this.model = builder.model;
-        this.output = Objects.requireNonNull(builder.output);
-        this.threshold = builder.threshold;
-    }
-
-    /**
-     * Returns a new {@link Builder} instance for constructing a configuration.
-     *
-     * @return a new builder with default values
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns the path to the plain-text input file (UTF-8), one sequence per line.
-     *
-     * @return the input file path
-     */
-    public Path input() {
-        return input;
-    }
-
-    /**
-     * Returns the path to a serialized model, or {@code null} if none was supplied. The factory decides
-     * how to materialize a {@link org.coordinatekit.crf.core.tag.CrfTagger CrfTagger} from this path.
-     *
-     * @return the model path, or {@code null} if no model was supplied
-     */
-    public @Nullable Path model() {
-        return model;
-    }
-
-    /**
-     * Returns the path to the XML output file; created or appended.
-     *
-     * @return the output file path
-     */
-    public Path output() {
-        return output;
-    }
-
-    /**
-     * Returns the confidence threshold below which token rows are highlighted on the sequence screen.
-     *
-     * @return the threshold, in the closed interval {@code [0.0, 1.0]}
-     */
-    public double threshold() {
-        return threshold;
-    }
-
     /**
      * Builder for constructing {@link AnnotatorConfiguration} instances.
      *
@@ -196,5 +128,73 @@ public final class AnnotatorConfiguration {
             this.threshold = threshold;
             return this;
         }
+    }
+
+    /** The default highlighting threshold used when none is set on the {@link Builder}. */
+    public static final double DEFAULT_THRESHOLD = 0.80;
+
+    /**
+     * The {@link #DEFAULT_THRESHOLD} as a compile-time {@code String} for picocli's
+     * {@code @Option(defaultValue = ...)}, which requires a constant expression. Kept in agreement with
+     * {@link #DEFAULT_THRESHOLD} by {@code AnnotatorCommandTest.configuration__defaults}.
+     */
+    public static final String DEFAULT_THRESHOLD_TEXT = "0.80";
+
+    private final Path input;
+    private final @Nullable Path model;
+    private final Path output;
+    private final double threshold;
+
+    private AnnotatorConfiguration(Builder builder) {
+        this.input = Objects.requireNonNull(builder.input);
+        this.model = builder.model;
+        this.output = Objects.requireNonNull(builder.output);
+        this.threshold = builder.threshold;
+    }
+
+    /**
+     * Returns a new {@link Builder} instance for constructing a configuration.
+     *
+     * @return a new builder with default values
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Returns the path to the plain-text input file (UTF-8), one sequence per line.
+     *
+     * @return the input file path
+     */
+    public Path input() {
+        return input;
+    }
+
+    /**
+     * Returns the path to a serialized model, or {@code null} if none was supplied. The factory decides
+     * how to materialize a {@link org.coordinatekit.crf.core.tag.CrfTagger CrfTagger} from this path.
+     *
+     * @return the model path, or {@code null} if no model was supplied
+     */
+    public @Nullable Path model() {
+        return model;
+    }
+
+    /**
+     * Returns the path to the XML output file; created or appended.
+     *
+     * @return the output file path
+     */
+    public Path output() {
+        return output;
+    }
+
+    /**
+     * Returns the confidence threshold below which token rows are highlighted on the sequence screen.
+     *
+     * @return the threshold, in the closed interval {@code [0.0, 1.0]}
+     */
+    public double threshold() {
+        return threshold;
     }
 }

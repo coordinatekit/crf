@@ -167,6 +167,40 @@ class AlignmentDetectorTest {
                 );
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void align(AlignParameters parameters) {
+        // ARRANGE //
+        AlignmentDetector<String> activeDetector = parameters.rejecting() ? rejectingDetector() : detector;
+
+        // ACT //
+        SequenceAlignment<String> alignment = activeDetector.align(parameters.sequenceIndex(), parameters.sequence());
+
+        // ASSERT //
+        assertEquals(parameters.sequenceIndex(), alignment.sequenceIndex());
+        assertEquals(parameters.expectedStatus(), alignment.status());
+        assertEquals(parameters.expectedStatus() == AlignmentStatus.ALIGNED, alignment.isAligned());
+        assertEquals(parameters.expectedStoredTokens(), alignment.storedTokens());
+        assertEquals(parameters.expectedRetokenizedTokens(), alignment.retokenizedTokens());
+
+        TokenComparison comparison = alignment.comparison();
+        if (parameters.expectedStatus() == AlignmentStatus.UNTOKENIZABLE) {
+            assertNull(comparison);
+        } else {
+            assertNotNull(comparison);
+            assertEquals(parameters.expectedStatus() == AlignmentStatus.ALIGNED, comparison.aligned());
+        }
+
+        String failureReason = alignment.failureReason();
+        String expectedFailureReasonContains = parameters.expectedFailureReasonContains();
+        if (expectedFailureReasonContains == null) {
+            assertNull(failureReason);
+        } else {
+            assertNotNull(failureReason);
+            assertTrue(failureReason.contains(expectedFailureReasonContains));
+        }
+    }
+
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionCase> constructor__exception() {
         return Stream.of(
@@ -205,77 +239,6 @@ class AlignmentDetectorTest {
                         "trainingDataFile must not be null"
                 )
         );
-    }
-
-    static Stream<DetectParameters> sequences() {
-        return Stream.of(
-                new DetectParameters(
-                        "aligned",
-                        ALIGNED_XML,
-                        AlignmentStatus.ALIGNED,
-                        List.of("Brown", "Fox"),
-                        List.of("Brown", "Fox"),
-                        List.of()
-                ),
-                new DetectParameters(
-                        "merge",
-                        MERGE_XML,
-                        AlignmentStatus.MISALIGNED,
-                        List.of("Salt", "Lake"),
-                        List.of("SaltLake"),
-                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 2, 0, 1))
-                ),
-                new DetectParameters(
-                        "split",
-                        SPLIT_XML,
-                        AlignmentStatus.MISALIGNED,
-                        List.of("New York"),
-                        List.of("New", "York"),
-                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 1, 0, 2))
-                ),
-                new DetectParameters(
-                        "trailingDivergence",
-                        TRAILING_DIVERGENCE_XML,
-                        AlignmentStatus.MISALIGNED,
-                        List.of("Alpha", "Beta Gamma", "Delta"),
-                        List.of("Alpha", "Beta", "Gamma", "Delta"),
-                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 1, 3, 1, 4))
-                )
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void align(AlignParameters parameters) {
-        // ARRANGE //
-        AlignmentDetector<String> activeDetector = parameters.rejecting() ? rejectingDetector() : detector;
-
-        // ACT //
-        SequenceAlignment<String> alignment = activeDetector.align(parameters.sequenceIndex(), parameters.sequence());
-
-        // ASSERT //
-        assertEquals(parameters.sequenceIndex(), alignment.sequenceIndex());
-        assertEquals(parameters.expectedStatus(), alignment.status());
-        assertEquals(parameters.expectedStatus() == AlignmentStatus.ALIGNED, alignment.isAligned());
-        assertEquals(parameters.expectedStoredTokens(), alignment.storedTokens());
-        assertEquals(parameters.expectedRetokenizedTokens(), alignment.retokenizedTokens());
-
-        TokenComparison comparison = alignment.comparison();
-        if (parameters.expectedStatus() == AlignmentStatus.UNTOKENIZABLE) {
-            assertNull(comparison);
-        } else {
-            assertNotNull(comparison);
-            assertEquals(parameters.expectedStatus() == AlignmentStatus.ALIGNED, comparison.aligned());
-        }
-
-        String failureReason = alignment.failureReason();
-        String expectedFailureReasonContains = parameters.expectedFailureReasonContains();
-        if (expectedFailureReasonContains == null) {
-            assertNull(failureReason);
-        } else {
-            assertNotNull(failureReason);
-            assertTrue(failureReason.contains(expectedFailureReasonContains));
-        }
     }
 
     @MethodSource
@@ -398,6 +361,50 @@ class AlignmentDetectorTest {
         assertEquals(0, detector.detectStreaming(file).summary().total());
     }
 
+    private static AlignmentDetector<String> rejectingDetector() {
+        Tokenizer rejecting = input -> {
+            throw new InvalidInputException(input, "blank");
+        };
+        return new AlignmentDetector<>(rejecting, new XmlTrainingData<>(new StringTagProvider("0")));
+    }
+
+    static Stream<DetectParameters> sequences() {
+        return Stream.of(
+                new DetectParameters(
+                        "aligned",
+                        ALIGNED_XML,
+                        AlignmentStatus.ALIGNED,
+                        List.of("Brown", "Fox"),
+                        List.of("Brown", "Fox"),
+                        List.of()
+                ),
+                new DetectParameters(
+                        "merge",
+                        MERGE_XML,
+                        AlignmentStatus.MISALIGNED,
+                        List.of("Salt", "Lake"),
+                        List.of("SaltLake"),
+                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 2, 0, 1))
+                ),
+                new DetectParameters(
+                        "split",
+                        SPLIT_XML,
+                        AlignmentStatus.MISALIGNED,
+                        List.of("New York"),
+                        List.of("New", "York"),
+                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 0, 1, 0, 2))
+                ),
+                new DetectParameters(
+                        "trailingDivergence",
+                        TRAILING_DIVERGENCE_XML,
+                        AlignmentStatus.MISALIGNED,
+                        List.of("Alpha", "Beta Gamma", "Delta"),
+                        List.of("Alpha", "Beta", "Gamma", "Delta"),
+                        List.of(tokenDifference(DifferenceKind.REPLACEMENT, 1, 3, 1, 4))
+                )
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
     void sequences(DetectParameters parameters) throws IOException {
@@ -431,13 +438,6 @@ class AlignmentDetectorTest {
 
         // ACT & ASSERT //
         assertThrows(IOException.class, report::sequences);
-    }
-
-    private static AlignmentDetector<String> rejectingDetector() {
-        Tokenizer rejecting = input -> {
-            throw new InvalidInputException(input, "blank");
-        };
-        return new AlignmentDetector<>(rejecting, new XmlTrainingData<>(new StringTagProvider("0")));
     }
 
     private Path write(String name, String xml) throws IOException {

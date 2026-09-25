@@ -34,60 +34,6 @@ class TaggingSessionTest {
             FeatureView expected
     ) {}
 
-    static Stream<EffectiveViewParameters> effectiveFeatureView() {
-        return Stream.of(
-                new EffectiveViewParameters(
-                        "key_view_with_key_only",
-                        FeatureView.KEY,
-                        FeatureAvailability.KEY_ONLY,
-                        FeatureView.KEY
-                ),
-                new EffectiveViewParameters(
-                        "key_view_with_both",
-                        FeatureView.KEY,
-                        FeatureAvailability.BOTH,
-                        FeatureView.KEY
-                ),
-                new EffectiveViewParameters(
-                        "key_view_with_none",
-                        FeatureView.KEY,
-                        FeatureAvailability.NONE,
-                        FeatureView.NONE
-                ),
-                new EffectiveViewParameters(
-                        "key_view_with_verbose_only",
-                        FeatureView.KEY,
-                        FeatureAvailability.VERBOSE_ONLY,
-                        FeatureView.NONE
-                ),
-                new EffectiveViewParameters(
-                        "all_view_with_verbose_only",
-                        FeatureView.ALL,
-                        FeatureAvailability.VERBOSE_ONLY,
-                        FeatureView.ALL
-                ),
-                new EffectiveViewParameters(
-                        "all_view_with_both",
-                        FeatureView.ALL,
-                        FeatureAvailability.BOTH,
-                        FeatureView.ALL
-                ),
-                new EffectiveViewParameters(
-                        "all_view_with_key_only",
-                        FeatureView.ALL,
-                        FeatureAvailability.KEY_ONLY,
-                        FeatureView.KEY
-                ),
-                new EffectiveViewParameters(
-                        "all_view_with_none",
-                        FeatureView.ALL,
-                        FeatureAvailability.NONE,
-                        FeatureView.NONE
-                ),
-                new EffectiveViewParameters("none_view", FeatureView.NONE, FeatureAvailability.BOTH, FeatureView.NONE)
-        );
-    }
-
     @Test
     void apply__toggleAllFeaturesIgnoredWhenVerboseUnavailable() {
         // ARRANGE //
@@ -171,6 +117,60 @@ class TaggingSessionTest {
         assertEquals(List.of("NN", "NN"), session.currentTags());
     }
 
+    static Stream<EffectiveViewParameters> effectiveFeatureView() {
+        return Stream.of(
+                new EffectiveViewParameters(
+                        "key_view_with_key_only",
+                        FeatureView.KEY,
+                        FeatureAvailability.KEY_ONLY,
+                        FeatureView.KEY
+                ),
+                new EffectiveViewParameters(
+                        "key_view_with_both",
+                        FeatureView.KEY,
+                        FeatureAvailability.BOTH,
+                        FeatureView.KEY
+                ),
+                new EffectiveViewParameters(
+                        "key_view_with_none",
+                        FeatureView.KEY,
+                        FeatureAvailability.NONE,
+                        FeatureView.NONE
+                ),
+                new EffectiveViewParameters(
+                        "key_view_with_verbose_only",
+                        FeatureView.KEY,
+                        FeatureAvailability.VERBOSE_ONLY,
+                        FeatureView.NONE
+                ),
+                new EffectiveViewParameters(
+                        "all_view_with_verbose_only",
+                        FeatureView.ALL,
+                        FeatureAvailability.VERBOSE_ONLY,
+                        FeatureView.ALL
+                ),
+                new EffectiveViewParameters(
+                        "all_view_with_both",
+                        FeatureView.ALL,
+                        FeatureAvailability.BOTH,
+                        FeatureView.ALL
+                ),
+                new EffectiveViewParameters(
+                        "all_view_with_key_only",
+                        FeatureView.ALL,
+                        FeatureAvailability.KEY_ONLY,
+                        FeatureView.KEY
+                ),
+                new EffectiveViewParameters(
+                        "all_view_with_none",
+                        FeatureView.ALL,
+                        FeatureAvailability.NONE,
+                        FeatureView.NONE
+                ),
+                new EffectiveViewParameters("none_view", FeatureView.NONE, FeatureAvailability.BOTH, FeatureView.NONE)
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
     void effectiveFeatureView(EffectiveViewParameters parameters) {
@@ -238,5 +238,4 @@ class TaggingSessionTest {
         // ASSERT //
         assertEquals(List.of("NN", "NN"), session.currentTags());
     }
-
 }

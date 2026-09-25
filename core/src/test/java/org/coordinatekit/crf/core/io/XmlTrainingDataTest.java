@@ -55,6 +55,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XmlTrainingDataTest {
+    record GenerateSchemaParameters(StringTagProvider tagProvider, @Nullable String targetNamespace, String expected) {}
+
+    record ReadRejectsParameters(String name, String xml, String expectedMessageSubstring) {}
+
+    record ReadSegmentsParameters(
+            String name,
+            String xml,
+            List<SegmentKind> expectedKinds,
+            List<String> expectedTexts,
+            String expectedSurface
+    ) {}
+
     private static final XmlTrainingData<String> DATA = new XmlTrainingData<>(new StringTagProvider("0"));
 
     // language=XML
@@ -70,6 +82,21 @@ class XmlTrainingDataTest {
                 <xs:element name="Adjective" type="TagType"/>
                 <xs:element name="Noun" type="TagType"/>
                 <xs:element name="Verb" type="TagType"/>
+            </xs:schema>
+            """;
+    // A schema generated with no target namespace: TagType and the tag elements are declared in no
+    // namespace, so the bare tag elements the writer emits by default validate against it.
+    // language=XML
+    private static final String GENERATE_SCHEMA__NO_NAMESPACE__NOUN = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+                <xs:complexType name="TagType" mixed="true">
+                    <xs:simpleContent>
+                        <xs:extension base="xs:string"/>
+                    </xs:simpleContent>
+                </xs:complexType>
+
+                <xs:element name="Noun" type="TagType"/>
             </xs:schema>
             """;
     // language=XML
@@ -113,27 +140,19 @@ class XmlTrainingDataTest {
                 <xs:element name="Verb" type="TagType"/>
             </xs:schema>
             """;
-    // A schema generated with no target namespace: TagType and the tag elements are declared in no
-    // namespace, so the bare tag elements the writer emits by default validate against it.
+    // A classic "billion laughs" document: nested internal entity definitions inside a DOCTYPE.
+    // With DTDs disabled the parser must reject it (via the DOCTYPE guard) rather than expand.
     // language=XML
-    private static final String GENERATE_SCHEMA__NO_NAMESPACE__NOUN = """
+    private static final String READ__BILLION_LAUGHS = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-                <xs:complexType name="TagType" mixed="true">
-                    <xs:simpleContent>
-                        <xs:extension base="xs:string"/>
-                    </xs:simpleContent>
-                </xs:complexType>
-
-                <xs:element name="Noun" type="TagType"/>
-            </xs:schema>
-            """;
-    // language=XML
-    private static final String READ__MULTIPLE_RECORDS_XML = """
-            <Collection>
-                <Sequence><Adjective>Brown</Adjective> <Noun>Fox</Noun>!</Sequence>
-                <Sequence><Adjective>Lazy</Adjective> <Adjective>Sleeping</Adjective> <Noun>Dog</Noun>!</Sequence>
-            </Collection>
+            <!DOCTYPE crf:Collection [
+                <!ENTITY lol "lol">
+                <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">
+                <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;">
+            ]>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
+                <crf:Sequence><Noun>&lol3;</Noun></crf:Sequence>
+            </crf:Collection>
             """;
     // language=XML
     private static final String READ__MULTIPLE_RECORDS_SCHEMA_XML = """
@@ -155,17 +174,18 @@ class XmlTrainingDataTest {
             </crf:Collection>
             """;
     // language=XML
-    private static final String READ__NO_RECORDS_XML = "<Collection />";
+    private static final String READ__MULTIPLE_RECORDS_XML = """
+            <Collection>
+                <Sequence><Adjective>Brown</Adjective> <Noun>Fox</Noun>!</Sequence>
+                <Sequence><Adjective>Lazy</Adjective> <Adjective>Sleeping</Adjective> <Noun>Dog</Noun>!</Sequence>
+            </Collection>
+            """;
     // language=XML
     private static final String READ__NO_RECORDS_SCHEMA_XML = """
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" />
             """;
     // language=XML
-    private static final String READ__SINGLE_RECORD_XML = """
-            <Collection>
-                <Sequence><Adjective>Brown</Adjective> <Noun>Fox</Noun>!</Sequence>
-            </Collection>
-            """;
+    private static final String READ__NO_RECORDS_XML = "<Collection />";
     // language=XML
     private static final String READ__SINGLE_RECORD_SCHEMA_XML = """
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
@@ -177,19 +197,11 @@ class XmlTrainingDataTest {
                 </crf:Sequence>
             </crf:Collection>
             """;
-    // A classic "billion laughs" document: nested internal entity definitions inside a DOCTYPE.
-    // With DTDs disabled the parser must reject it (via the DOCTYPE guard) rather than expand.
     // language=XML
-    private static final String READ__BILLION_LAUGHS = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE crf:Collection [
-                <!ENTITY lol "lol">
-                <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">
-                <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;">
-            ]>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <crf:Sequence><Noun>&lol3;</Noun></crf:Sequence>
-            </crf:Collection>
+    private static final String READ__SINGLE_RECORD_XML = """
+            <Collection>
+                <Sequence><Adjective>Brown</Adjective> <Noun>Fox</Noun>!</Sequence>
+            </Collection>
             """;
     // An undeclared general entity with no DOCTYPE: with DTDs/external entities disabled it must
     // fail as undeclared rather than expand or resolve (probes the SUPPORT_DTD=false posture
@@ -198,22 +210,6 @@ class XmlTrainingDataTest {
     private static final String READ__UNDECLARED_ENTITY = """
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
                 <crf:Sequence><Noun>&xxe;</Noun></crf:Sequence>
-            </crf:Collection>
-            """;
-
-    // A hand-authored document may contain an empty <crf:Excluded></crf:Excluded>, which the XSD does
-    // not require. A zero-length excluded run carries no characters and is dropped on read.
-    @SuppressWarnings("CheckTagEmptyBody")
-    // language=XML
-    private static final String SINGLE_RECORD_SCHEMA_XML__EMPTY_EXCLUDED = """
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <crf:Sequence>
-                    <Adjective>Brown</Adjective>
-                    <crf:Excluded></crf:Excluded>
-                    <crf:Excluded> </crf:Excluded>
-                    <Noun>Fox</Noun>
-                    <crf:Excluded>!</crf:Excluded>
-                </crf:Sequence>
             </crf:Collection>
             """;
 
@@ -228,6 +224,22 @@ class XmlTrainingDataTest {
                         <Adverb>Quick</Adverb>
                     </crf:Excluded>
                     <Adjective>Brown</Adjective>
+                    <crf:Excluded> </crf:Excluded>
+                    <Noun>Fox</Noun>
+                    <crf:Excluded>!</crf:Excluded>
+                </crf:Sequence>
+            </crf:Collection>
+            """;
+
+    // A hand-authored document may contain an empty <crf:Excluded></crf:Excluded>, which the XSD does
+    // not require. A zero-length excluded run carries no characters and is dropped on read.
+    @SuppressWarnings("CheckTagEmptyBody")
+    // language=XML
+    private static final String SINGLE_RECORD_SCHEMA_XML__EMPTY_EXCLUDED = """
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
+                <crf:Sequence>
+                    <Adjective>Brown</Adjective>
+                    <crf:Excluded></crf:Excluded>
                     <crf:Excluded> </crf:Excluded>
                     <Noun>Fox</Noun>
                     <crf:Excluded>!</crf:Excluded>
@@ -271,8 +283,6 @@ class XmlTrainingDataTest {
         // ASSERT //
         assertArrayEquals(builderOutput.toByteArray(), deprecatedOutput.toByteArray());
     }
-
-    record GenerateSchemaParameters(StringTagProvider tagProvider, @Nullable String targetNamespace, String expected) {}
 
     static Stream<GenerateSchemaParameters> generateSchema() {
         return Stream.of(
@@ -362,14 +372,6 @@ class XmlTrainingDataTest {
         }
     }
 
-    record ReadSegmentsParameters(
-            String name,
-            String xml,
-            List<SegmentKind> expectedKinds,
-            List<String> expectedTexts,
-            String expectedSurface
-    ) {}
-
     static Stream<ReadSegmentsParameters> read__capturesSegments() {
         List<SegmentKind> brownFoxKinds = List
                 .of(SegmentKind.TOKEN, SegmentKind.EXCLUDED, SegmentKind.TOKEN, SegmentKind.EXCLUDED);
@@ -424,8 +426,6 @@ class XmlTrainingDataTest {
             assertEquals(parameters.expectedTexts(), sequence.segments().stream().map(TrainingSegment::text).toList());
         }
     }
-
-    record ReadRejectsParameters(String name, String xml, String expectedMessageSubstring) {}
 
     static Stream<ReadRejectsParameters> read__rejects() {
         return Stream.of(

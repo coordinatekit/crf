@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class InvalidInputExceptionTest {
     @Test
-    void inputOnly() {
-        InvalidInputException exception = new InvalidInputException("test input");
+    void inputAndNullReason() {
+        InvalidInputException exception = new InvalidInputException("test input", null);
 
         assertEquals("test input", exception.input());
         assertNull(exception.reason());
@@ -43,8 +43,8 @@ class InvalidInputExceptionTest {
     }
 
     @Test
-    void inputAndNullReason() {
-        InvalidInputException exception = new InvalidInputException("test input", null);
+    void inputOnly() {
+        InvalidInputException exception = new InvalidInputException("test input");
 
         assertEquals("test input", exception.input());
         assertNull(exception.reason());

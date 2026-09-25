@@ -58,6 +58,56 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Shared fixtures and helpers for the annotator unit and integration tests. */
 public final class AnnotatorTestSupport {
     /**
+     * A whitespace tokenizer that additionally peels each chunk's trailing run of {@code ','} and
+     * {@code '.'} characters into separate single-character tokens, and rejects any surface containing
+     * {@code '?'}. Surfaces tokenized whole under the old data therefore misalign here.
+     */
+    public static final class PunctuationTokenizer implements Tokenizer {
+        @Override
+        public Tokenization tokenize(String input) {
+            Objects.requireNonNull(input, "input must not be null");
+            if (input.isBlank()) {
+                throw new InvalidInputException(input, "The input string is blank");
+            }
+            if (input.indexOf('?') >= 0) {
+                throw new InvalidInputException(input, "The input string contains an unsupported '?' character");
+            }
+
+            List<Segment> segments = new ArrayList<>();
+            int index = 0;
+            int length = input.length();
+            while (index < length) {
+                int whitespaceStart = index;
+                while (index < length && Character.isWhitespace(input.charAt(index))) {
+                    index++;
+                }
+                if (index > whitespaceStart) {
+                    segments.add(Segments.excluded(input.substring(whitespaceStart, index)));
+                }
+                if (index >= length) {
+                    break;
+                }
+                int chunkStart = index;
+                while (index < length && !Character.isWhitespace(input.charAt(index))) {
+                    index++;
+                }
+                String chunk = input.substring(chunkStart, index);
+                int wordEnd = chunk.length();
+                while (wordEnd > 0 && (chunk.charAt(wordEnd - 1) == ',' || chunk.charAt(wordEnd - 1) == '.')) {
+                    wordEnd--;
+                }
+                if (wordEnd > 0) {
+                    segments.add(Segments.token(chunk.substring(0, wordEnd)));
+                }
+                for (int position = wordEnd; position < chunk.length(); position++) {
+                    segments.add(Segments.token(String.valueOf(chunk.charAt(position))));
+                }
+            }
+            return new Tokenization(segments);
+        }
+    }
+
+    /**
      * Malformed XML whose unterminated {@code xmlns:crf="unclosed} attribute makes parsing fail with an
      * {@code XMLStreamException} regardless of the root element name, for exercising the parse-failure
      * path.
@@ -280,55 +330,4 @@ public final class AnnotatorTestSupport {
         }
         return file;
     }
-
-    /**
-     * A whitespace tokenizer that additionally peels each chunk's trailing run of {@code ','} and
-     * {@code '.'} characters into separate single-character tokens, and rejects any surface containing
-     * {@code '?'}. Surfaces tokenized whole under the old data therefore misalign here.
-     */
-    public static final class PunctuationTokenizer implements Tokenizer {
-        @Override
-        public Tokenization tokenize(String input) {
-            Objects.requireNonNull(input, "input must not be null");
-            if (input.isBlank()) {
-                throw new InvalidInputException(input, "The input string is blank");
-            }
-            if (input.indexOf('?') >= 0) {
-                throw new InvalidInputException(input, "The input string contains an unsupported '?' character");
-            }
-
-            List<Segment> segments = new ArrayList<>();
-            int index = 0;
-            int length = input.length();
-            while (index < length) {
-                int whitespaceStart = index;
-                while (index < length && Character.isWhitespace(input.charAt(index))) {
-                    index++;
-                }
-                if (index > whitespaceStart) {
-                    segments.add(Segments.excluded(input.substring(whitespaceStart, index)));
-                }
-                if (index >= length) {
-                    break;
-                }
-                int chunkStart = index;
-                while (index < length && !Character.isWhitespace(input.charAt(index))) {
-                    index++;
-                }
-                String chunk = input.substring(chunkStart, index);
-                int wordEnd = chunk.length();
-                while (wordEnd > 0 && (chunk.charAt(wordEnd - 1) == ',' || chunk.charAt(wordEnd - 1) == '.')) {
-                    wordEnd--;
-                }
-                if (wordEnd > 0) {
-                    segments.add(Segments.token(chunk.substring(0, wordEnd)));
-                }
-                for (int position = wordEnd; position < chunk.length(); position++) {
-                    segments.add(Segments.token(String.valueOf(chunk.charAt(position))));
-                }
-            }
-            return new Tokenization(segments);
-        }
-    }
-
 }

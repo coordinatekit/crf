@@ -29,10 +29,6 @@ import java.util.List;
  * @param prompt the selection prompt shown below the table
  */
 record EditViewModel(String headerLine, String tokenLine, List<TagRow> tagRows, String prompt) {
-    EditViewModel {
-        tagRows = List.copyOf(tagRows);
-    }
-
     /**
      * A candidate tag row: the row number, the tag, and its confidence.
      *
@@ -41,4 +37,8 @@ record EditViewModel(String headerLine, String tokenLine, List<TagRow> tagRows, 
      * @param confidenceText the formatted confidence, or a placeholder when absent
      */
     record TagRow(String number, String tagText, String confidenceText) {}
+
+    EditViewModel {
+        tagRows = List.copyOf(tagRows);
+    }
 }

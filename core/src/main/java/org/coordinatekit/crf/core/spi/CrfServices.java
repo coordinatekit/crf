@@ -131,6 +131,21 @@ public final class CrfServices {
     }
 
     /**
+     * Resolves an arbitrary service type by {@code explicit > single registered provider > fallback},
+     * exposing the discovery kernel to callers outside this package that have no dedicated slot.
+     *
+     * @param serviceType the service type to discover and resolve
+     * @param explicit the explicitly supplied provider, or {@code null} if none was set
+     * @param fallback the built-in default
+     * @param <X> the service type
+     * @return the resolved provider, never {@code null}
+     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
+     */
+    public static <X> X resolve(Class<X> serviceType, @Nullable X explicit, X fallback) {
+        return requireNonNull(ServiceResolution.resolve(serviceType, explicit, requireNonNull(fallback)));
+    }
+
+    /**
      * Resolves a marker-typed feature extractor slot by
      * {@code explicit > single registered provider > none}, shared by the full and key overloads.
      *
@@ -183,52 +198,6 @@ public final class CrfServices {
     }
 
     /**
-     * Resolves an arbitrary service type by {@code explicit > single registered provider > fallback},
-     * exposing the discovery kernel to callers outside this package that have no dedicated slot.
-     *
-     * @param serviceType the service type to discover and resolve
-     * @param explicit the explicitly supplied provider, or {@code null} if none was set
-     * @param fallback the built-in default
-     * @param <X> the service type
-     * @return the resolved provider, never {@code null}
-     * @throws AmbiguousServiceException if more than one provider is registered and none is explicit
-     */
-    public static <X> X resolve(Class<X> serviceType, @Nullable X explicit, X fallback) {
-        return requireNonNull(ServiceResolution.resolve(serviceType, explicit, requireNonNull(fallback)));
-    }
-
-    /**
-     * Discovers the tag provider by {@code single registered TagProvider > none}.
-     *
-     * @param <T> the tag type
-     * @return the resolved tag provider, or empty if none is registered
-     * @throws AmbiguousServiceException if more than one tag provider is registered
-     */
-    public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider() {
-        return tagProvider(null);
-    }
-
-    /**
-     * Resolves the tag provider by {@code explicit > single registered TagProvider > none}.
-     *
-     * <p>
-     * Returns empty when nothing is registered; requiredness is the caller's decision.
-     *
-     * @param explicit the explicitly supplied tag provider, or {@code null} if none was set
-     * @param <T> the tag type
-     * @return the resolved tag provider, or empty if none was supplied or registered
-     * @throws AmbiguousServiceException if more than one tag provider is registered and none is
-     *         explicit
-     */
-    // ServiceLoader erases the type; T is bound from explicit or assumed of the discovered provider
-    @SuppressWarnings("unchecked")
-    public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider(@Nullable TagProvider<T> explicit) {
-        List<TagProvider<T>> discovered = (List<TagProvider<T>>) (List<?>) ServiceResolution
-                .discover(TagProvider.class);
-        return Optional.ofNullable(ServiceResolution.resolve(TagProvider.class, explicit, discovered, null));
-    }
-
-    /**
      * Discovers the tagger loader by {@code single registered CrfTaggerLoader > none}.
      *
      * @return the resolved tagger loader, or empty if none is registered
@@ -274,6 +243,37 @@ public final class CrfServices {
             return Optional.of(explicit);
         }
         return selectTaggerLoader(ServiceResolution.discover(CrfTaggerLoader.class), name);
+    }
+
+    /**
+     * Discovers the tag provider by {@code single registered TagProvider > none}.
+     *
+     * @param <T> the tag type
+     * @return the resolved tag provider, or empty if none is registered
+     * @throws AmbiguousServiceException if more than one tag provider is registered
+     */
+    public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider() {
+        return tagProvider(null);
+    }
+
+    /**
+     * Resolves the tag provider by {@code explicit > single registered TagProvider > none}.
+     *
+     * <p>
+     * Returns empty when nothing is registered; requiredness is the caller's decision.
+     *
+     * @param explicit the explicitly supplied tag provider, or {@code null} if none was set
+     * @param <T> the tag type
+     * @return the resolved tag provider, or empty if none was supplied or registered
+     * @throws AmbiguousServiceException if more than one tag provider is registered and none is
+     *         explicit
+     */
+    // ServiceLoader erases the type; T is bound from explicit or assumed of the discovered provider
+    @SuppressWarnings("unchecked")
+    public static <T extends Comparable<T>> Optional<TagProvider<T>> tagProvider(@Nullable TagProvider<T> explicit) {
+        List<TagProvider<T>> discovered = (List<TagProvider<T>>) (List<?>) ServiceResolution
+                .discover(TagProvider.class);
+        return Optional.ofNullable(ServiceResolution.resolve(TagProvider.class, explicit, discovered, null));
     }
 
     /**

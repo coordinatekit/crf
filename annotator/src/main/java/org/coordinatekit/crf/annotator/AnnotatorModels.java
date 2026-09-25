@@ -43,6 +43,44 @@ import java.util.function.ToDoubleFunction;
  * methods.
  */
 public final class AnnotatorModels {
+    private record DefaultAnnotatorSequence<T extends Comparable<T>> (
+            int sequenceNumber,
+            int totalSequences,
+            List<AnnotatorToken<T>> tokens,
+            FeatureAvailability featureAvailability,
+            @Nullable ToDoubleFunction<List<T>> probabilityFunction
+    ) implements AnnotatorSequence<T> {
+        private DefaultAnnotatorSequence {
+            tokens = List.copyOf(tokens);
+        }
+
+        @Override
+        public @Nullable Double probabilityOf(List<T> tags) {
+            return probabilityFunction == null ? null : probabilityFunction.applyAsDouble(tags);
+        }
+    }
+
+    private record DefaultAnnotatorToken<T extends Comparable<T>> (
+            String token,
+            Set<Feature> features,
+            T initialTag,
+            @Nullable Double initialConfidence,
+            Map<T, @Nullable Double> alternativeTagScores,
+            Set<Feature> verboseFeatures
+    ) implements AnnotatorToken<T> {
+        private DefaultAnnotatorToken {
+            alternativeTagScores = canonicallyOrderedScoreMap(alternativeTagScores);
+        }
+    }
+
+    private record DefaultTaggingResult<T> (TaggingAction action, List<T> finalTags) implements TaggingResult<T> {
+        private DefaultTaggingResult {
+            Objects.requireNonNull(action, "action must not be null");
+            Objects.requireNonNull(finalTags, "finalTags must not be null");
+            finalTags = List.copyOf(finalTags);
+        }
+    }
+
     private AnnotatorModels() {}
 
     /**
@@ -283,21 +321,6 @@ public final class AnnotatorModels {
         );
     }
 
-    /**
-     * Creates a {@link TaggingResult}.
-     *
-     * <p>
-     * The {@code finalTags} list is defensively copied.
-     *
-     * @param action the action chosen by the user
-     * @param finalTags the per-token tags chosen by the user (may be empty)
-     * @param <T> the tag type
-     * @return a new tagging result
-     */
-    public static <T> TaggingResult<T> taggingResult(TaggingAction action, List<T> finalTags) {
-        return new DefaultTaggingResult<>(action, finalTags);
-    }
-
     private static <T extends Comparable<T>> Map<T, @Nullable Double> canonicallyOrderedScoreMap(
             Map<T, @Nullable Double> scores
     ) {
@@ -316,6 +339,21 @@ public final class AnnotatorModels {
 
     private static Set<Feature> displayFeaturesAt(@Nullable List<Set<Feature>> features, int index) {
         return features != null ? Set.copyOf(features.get(index)) : Set.of();
+    }
+
+    /**
+     * Creates a {@link TaggingResult}.
+     *
+     * <p>
+     * The {@code finalTags} list is defensively copied.
+     *
+     * @param action the action chosen by the user
+     * @param finalTags the per-token tags chosen by the user (may be empty)
+     * @param <T> the tag type
+     * @return a new tagging result
+     */
+    public static <T> TaggingResult<T> taggingResult(TaggingAction action, List<T> finalTags) {
+        return new DefaultTaggingResult<>(action, finalTags);
     }
 
     private static void validateDisplayFeatures(
@@ -346,44 +384,6 @@ public final class AnnotatorModels {
                     "totalSequences must be at least sequenceNumber, got: totalSequences=" + totalSequences
                             + ", sequenceNumber=" + sequenceNumber
             );
-        }
-    }
-
-    private record DefaultAnnotatorSequence<T extends Comparable<T>> (
-            int sequenceNumber,
-            int totalSequences,
-            List<AnnotatorToken<T>> tokens,
-            FeatureAvailability featureAvailability,
-            @Nullable ToDoubleFunction<List<T>> probabilityFunction
-    ) implements AnnotatorSequence<T> {
-        private DefaultAnnotatorSequence {
-            tokens = List.copyOf(tokens);
-        }
-
-        @Override
-        public @Nullable Double probabilityOf(List<T> tags) {
-            return probabilityFunction == null ? null : probabilityFunction.applyAsDouble(tags);
-        }
-    }
-
-    private record DefaultAnnotatorToken<T extends Comparable<T>> (
-            String token,
-            Set<Feature> features,
-            T initialTag,
-            @Nullable Double initialConfidence,
-            Map<T, @Nullable Double> alternativeTagScores,
-            Set<Feature> verboseFeatures
-    ) implements AnnotatorToken<T> {
-        private DefaultAnnotatorToken {
-            alternativeTagScores = canonicallyOrderedScoreMap(alternativeTagScores);
-        }
-    }
-
-    private record DefaultTaggingResult<T> (TaggingAction action, List<T> finalTags) implements TaggingResult<T> {
-        private DefaultTaggingResult {
-            Objects.requireNonNull(action, "action must not be null");
-            Objects.requireNonNull(finalTags, "finalTags must not be null");
-            finalTags = List.copyOf(finalTags);
         }
     }
 }

@@ -35,36 +35,6 @@ import java.util.function.ToDoubleFunction;
  */
 @NullMarked
 public final class TaggedTokenizations {
-    private TaggedTokenizations() {}
-
-    /**
-     * Creates a tagged tokenization pairing a tagged sequence with the tokenization it came from and a
-     * function that scores arbitrary taggings of the input.
-     *
-     * <p>
-     * The token segments of {@code tokenization} must line up one-to-one with the entries of
-     * {@code taggedSequence} in document order; this method rejects a tagged sequence whose size
-     * differs from the tokenization's token count.
-     *
-     * @param taggedSequence the per-token tagging output
-     * @param tokenization the authoritative tokenization carrying tokens and excluded runs
-     * @param probabilityFunction the function computing {@code P(tags | input)} for an arbitrary
-     *        tagging
-     * @param <T> the type of tags assigned to tokens, must be comparable for ordering
-     * @return a new tagged tokenization
-     * @throws NullPointerException if {@code taggedSequence}, {@code tokenization}, or
-     *         {@code probabilityFunction} is null
-     * @throws IllegalArgumentException if {@code taggedSequence} does not have exactly one entry per
-     *         token segment of {@code tokenization}
-     */
-    public static <T extends Comparable<T>> TaggedTokenization<T> of(
-            Sequence<TaggedPositionedToken<T>> taggedSequence,
-            Tokenization tokenization,
-            ToDoubleFunction<List<T>> probabilityFunction
-    ) {
-        return new DefaultTaggedTokenization<>(probabilityFunction, taggedSequence, tokenization);
-    }
-
     private record DefaultTaggedTokenization<T extends Comparable<T>> (
             ToDoubleFunction<List<T>> probabilityFunction,
             Sequence<TaggedPositionedToken<T>> taggedSequence,
@@ -98,5 +68,35 @@ public final class TaggedTokenizations {
             }
             return probabilityFunction.applyAsDouble(tags);
         }
+    }
+
+    private TaggedTokenizations() {}
+
+    /**
+     * Creates a tagged tokenization pairing a tagged sequence with the tokenization it came from and a
+     * function that scores arbitrary taggings of the input.
+     *
+     * <p>
+     * The token segments of {@code tokenization} must line up one-to-one with the entries of
+     * {@code taggedSequence} in document order; this method rejects a tagged sequence whose size
+     * differs from the tokenization's token count.
+     *
+     * @param taggedSequence the per-token tagging output
+     * @param tokenization the authoritative tokenization carrying tokens and excluded runs
+     * @param probabilityFunction the function computing {@code P(tags | input)} for an arbitrary
+     *        tagging
+     * @param <T> the type of tags assigned to tokens, must be comparable for ordering
+     * @return a new tagged tokenization
+     * @throws NullPointerException if {@code taggedSequence}, {@code tokenization}, or
+     *         {@code probabilityFunction} is null
+     * @throws IllegalArgumentException if {@code taggedSequence} does not have exactly one entry per
+     *         token segment of {@code tokenization}
+     */
+    public static <T extends Comparable<T>> TaggedTokenization<T> of(
+            Sequence<TaggedPositionedToken<T>> taggedSequence,
+            Tokenization tokenization,
+            ToDoubleFunction<List<T>> probabilityFunction
+    ) {
+        return new DefaultTaggedTokenization<>(probabilityFunction, taggedSequence, tokenization);
     }
 }

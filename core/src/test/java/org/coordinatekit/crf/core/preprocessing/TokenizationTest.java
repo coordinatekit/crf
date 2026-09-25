@@ -33,36 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class TokenizationTest {
     record SurfaceParameters(String name, List<Segment> segments, String expectedSurface) {}
 
-    static Stream<SurfaceParameters> surface() {
-        return Stream.of(
-                new SurfaceParameters("no_excluded", List.of(token("Hello"), token("world")), "Helloworld"),
-                new SurfaceParameters(
-                        "single_space_between",
-                        List.of(token("Hello"), excluded(" "), token("world")),
-                        "Hello world"
-                ),
-                new SurfaceParameters(
-                        "leading_and_trailing",
-                        List.of(excluded("  "), token("Hello"), excluded(" "), token("world"), excluded("\n")),
-                        "  Hello world\n"
-                ),
-                new SurfaceParameters("single_token", List.of(token("Hello")), "Hello")
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void surface(SurfaceParameters parameters) {
-        // ARRANGE //
-        Tokenization tokenization = new Tokenization(parameters.segments());
-
-        // ACT //
-        String surface = tokenization.surface();
-
-        // ASSERT //
-        assertEquals(parameters.expectedSurface(), surface);
-    }
-
     @Test
     void constructor__rejectsNoTokenSegments() {
         // ACT //
@@ -102,5 +72,35 @@ class TokenizationTest {
         assertEquals("world", sequence.get(1).token());
         assertEquals(1, sequence.get(1).position());
         assertIterableEquals(List.of("Hello", "world"), sequence.stream().map(PositionedToken::token).toList());
+    }
+
+    static Stream<SurfaceParameters> surface() {
+        return Stream.of(
+                new SurfaceParameters("no_excluded", List.of(token("Hello"), token("world")), "Helloworld"),
+                new SurfaceParameters(
+                        "single_space_between",
+                        List.of(token("Hello"), excluded(" "), token("world")),
+                        "Hello world"
+                ),
+                new SurfaceParameters(
+                        "leading_and_trailing",
+                        List.of(excluded("  "), token("Hello"), excluded(" "), token("world"), excluded("\n")),
+                        "  Hello world\n"
+                ),
+                new SurfaceParameters("single_token", List.of(token("Hello")), "Hello")
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void surface(SurfaceParameters parameters) {
+        // ARRANGE //
+        Tokenization tokenization = new Tokenization(parameters.segments());
+
+        // ACT //
+        String surface = tokenization.surface();
+
+        // ASSERT //
+        assertEquals(parameters.expectedSurface(), surface);
     }
 }

@@ -43,87 +43,6 @@ import java.util.Objects;
  */
 @NullMarked
 public final class ModelOutputConfiguration {
-    private static final ModelOutputConfiguration DEFAULTS = builder().build();
-
-    private final String filePrefix;
-    private final String fileSuffix;
-    private final int iterationInterval;
-    private final Path outputDirectory;
-
-    private ModelOutputConfiguration(Builder builder) {
-        this.outputDirectory = builder.outputDirectory;
-        this.filePrefix = builder.filePrefix;
-        this.fileSuffix = builder.fileSuffix;
-        this.iterationInterval = builder.iterationInterval;
-    }
-
-    /**
-     * Returns a new {@link Builder} instance for constructing a configuration.
-     *
-     * @return a new builder with default values
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a configuration with all default values.
-     *
-     * <p>
-     * This is equivalent to calling {@code ModelOutputConfiguration.builder().build()}.
-     *
-     * @return a configuration with default settings
-     */
-    public static ModelOutputConfiguration defaults() {
-        return DEFAULTS;
-    }
-
-    /**
-     * Returns the prefix for output file names.
-     *
-     * <p>
-     * Output files are named as {@code {prefix}_iter{N}.{suffix}}. Default is "model".
-     *
-     * @return the file prefix
-     */
-    public String filePrefix() {
-        return filePrefix;
-    }
-
-    /**
-     * Returns the suffix (extension) for output file names.
-     *
-     * <p>
-     * Output files are named as {@code {prefix}_iter{N}.{suffix}}. Default is "ser".
-     *
-     * @return the file suffix
-     */
-    public String fileSuffix() {
-        return fileSuffix;
-    }
-
-    /**
-     * Returns the iteration interval for writing model files.
-     *
-     * <p>
-     * The model is written every N iterations. For example, if set to 10, files are written at
-     * iterations 10, 20, 30, etc. Default is 10.
-     *
-     * @return the iteration interval
-     */
-    public int iterationInterval() {
-        return iterationInterval;
-    }
-
-    /**
-     * Returns the directory in which to write model files.
-     *
-     * @return the output directory path
-     */
-    public Path outputDirectory() {
-        return outputDirectory;
-    }
-
     /**
      * Builder for constructing {@link ModelOutputConfiguration} instances.
      *
@@ -214,5 +133,86 @@ public final class ModelOutputConfiguration {
             this.outputDirectory = outputDirectory;
             return this;
         }
+    }
+
+    private static final ModelOutputConfiguration DEFAULTS = builder().build();
+
+    private final String filePrefix;
+    private final String fileSuffix;
+    private final int iterationInterval;
+    private final Path outputDirectory;
+
+    private ModelOutputConfiguration(Builder builder) {
+        this.outputDirectory = builder.outputDirectory;
+        this.filePrefix = builder.filePrefix;
+        this.fileSuffix = builder.fileSuffix;
+        this.iterationInterval = builder.iterationInterval;
+    }
+
+    /**
+     * Returns a new {@link Builder} instance for constructing a configuration.
+     *
+     * @return a new builder with default values
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Returns a configuration with all default values.
+     *
+     * <p>
+     * This is equivalent to calling {@code ModelOutputConfiguration.builder().build()}.
+     *
+     * @return a configuration with default settings
+     */
+    public static ModelOutputConfiguration defaults() {
+        return DEFAULTS;
+    }
+
+    /**
+     * Returns the prefix for output file names.
+     *
+     * <p>
+     * Output files are named as {@code {prefix}_iter{N}.{suffix}}. Default is "model".
+     *
+     * @return the file prefix
+     */
+    public String filePrefix() {
+        return filePrefix;
+    }
+
+    /**
+     * Returns the suffix (extension) for output file names.
+     *
+     * <p>
+     * Output files are named as {@code {prefix}_iter{N}.{suffix}}. Default is "ser".
+     *
+     * @return the file suffix
+     */
+    public String fileSuffix() {
+        return fileSuffix;
+    }
+
+    /**
+     * Returns the iteration interval for writing model files.
+     *
+     * <p>
+     * The model is written every N iterations. For example, if set to 10, files are written at
+     * iterations 10, 20, 30, etc. Default is 10.
+     *
+     * @return the iteration interval
+     */
+    public int iterationInterval() {
+        return iterationInterval;
+    }
+
+    /**
+     * Returns the directory in which to write model files.
+     *
+     * @return the output directory path
+     */
+    public Path outputDirectory() {
+        return outputDirectory;
     }
 }

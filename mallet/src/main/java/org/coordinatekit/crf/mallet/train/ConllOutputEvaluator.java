@@ -66,8 +66,8 @@ import java.nio.file.Paths;
  */
 @NullMarked
 public class ConllOutputEvaluator extends TransducerEvaluator {
-    private static final Logger logger = LoggerFactory.getLogger(ConllOutputEvaluator.class);
     private static final String HEADER = "token actual predicted confidence";
+    private static final Logger logger = LoggerFactory.getLogger(ConllOutputEvaluator.class);
 
     private Path basePath = Paths.get("").toAbsolutePath();
     private final ConllOutputConfiguration configuration;
@@ -84,17 +84,9 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
         this.configuration = configuration;
     }
 
-    /**
-     * Sets the base path for resolving relative output directories.
-     *
-     * <p>
-     * This is package-private for testing purposes. In production, the base path defaults to the
-     * current working directory.
-     *
-     * @param basePath the base path to use for resolving relative output directories
-     */
-    void setBasePath(Path basePath) {
-        this.basePath = basePath;
+    private String escapeToken(String token) {
+        // Replace spaces with underscores to maintain column alignment
+        return token.replace(' ', '_');
     }
 
     @Override
@@ -128,6 +120,35 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
                     .setCause(e)
                     .log("Iteration {}: Failed to write CoNLL output to {}");
         }
+    }
+
+    private double getConfidence(
+            Transducer transducer,
+            SumLatticeDefault lattice,
+            int position,
+            String predictedLabel
+    ) {
+        // Find the state index for the predicted label and get its marginal probability
+        for (int stateIndex = 0; stateIndex < transducer.numStates(); stateIndex++) {
+            Transducer.State state = transducer.getState(stateIndex);
+            if (state.getName().equals(predictedLabel)) {
+                return lattice.getGammaProbability(position + 1, state);
+            }
+        }
+        return 0.0;
+    }
+
+    /**
+     * Sets the base path for resolving relative output directories.
+     *
+     * <p>
+     * This is package-private for testing purposes. In production, the base path defaults to the
+     * current working directory.
+     *
+     * @param basePath the base path to use for resolving relative output directories
+     */
+    void setBasePath(Path basePath) {
+        this.basePath = basePath;
     }
 
     private void writeConllOutput(Transducer transducer, InstanceList instances, Path outputFile) throws IOException {
@@ -171,26 +192,5 @@ public class ConllOutputEvaluator extends TransducerEvaluator {
             writer.write(String.format("%s %s %s %.4f", escapeToken(token), actual, predicted, confidence));
             writer.newLine();
         }
-    }
-
-    private double getConfidence(
-            Transducer transducer,
-            SumLatticeDefault lattice,
-            int position,
-            String predictedLabel
-    ) {
-        // Find the state index for the predicted label and get its marginal probability
-        for (int stateIndex = 0; stateIndex < transducer.numStates(); stateIndex++) {
-            Transducer.State state = transducer.getState(stateIndex);
-            if (state.getName().equals(predictedLabel)) {
-                return lattice.getGammaProbability(position + 1, state);
-            }
-        }
-        return 0.0;
-    }
-
-    private String escapeToken(String token) {
-        // Replace spaces with underscores to maintain column alignment
-        return token.replace(' ', '_');
     }
 }

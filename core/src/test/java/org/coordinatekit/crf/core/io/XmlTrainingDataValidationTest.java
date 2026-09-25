@@ -49,34 +49,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XmlTrainingDataValidationTest {
-    private static final String TAGS_NAMESPACE = "https://example.org/tags";
+    record InvalidDocumentParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            String xml,
+            String expectedElement
+    ) {}
 
-    // A library-shaped document with tags in the default (tag) namespace and a crf:Excluded run.
-    // language=XML
-    private static final String VALID_DOCUMENT = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
-            </crf:Collection>
-            """;
+    record ValidDocumentParameters(String name, Supplier<XmlTrainingData<String>> data, String xml) {}
 
-    // A tag element with no declaration in the tag schema; the strict wildcard rejects it.
-    // language=XML
-    private static final String INVALID__UNKNOWN_TAG = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
-            </crf:Collection>
-            """;
-
-    // A tag element directly under the root, where the structure permits only crf:Sequence.
-    // language=XML
-    private static final String INVALID__TAG_UNDER_ROOT = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <Adjective>Brown</Adjective>
-            </crf:Collection>
-            """;
+    record WrittenRoundTripParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            boolean expectsDefaultNamespace
+    ) {}
 
     // A crf:Excluded run directly under the root, where the structure permits only crf:Sequence.
     // language=XML
@@ -96,6 +82,15 @@ class XmlTrainingDataValidationTest {
             </crf:Collection>
             """;
 
+    // A non-well-formed document: the crf:Sequence start tag is never closed.
+    // language=XML
+    private static final String INVALID__MALFORMED = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
+                <crf:Sequence><Noun>Fox</Noun>
+            </crf:Collection>
+            """;
+
     // A single sequence with two distinct undeclared tags; the validator should report both, not just
     // the first.
     // language=XML
@@ -106,12 +101,21 @@ class XmlTrainingDataValidationTest {
             </crf:Collection>
             """;
 
-    // A non-well-formed document: the crf:Sequence start tag is never closed.
+    // A tag element directly under the root, where the structure permits only crf:Sequence.
     // language=XML
-    private static final String INVALID__MALFORMED = """
+    private static final String INVALID__TAG_UNDER_ROOT = """
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
-                <crf:Sequence><Noun>Fox</Noun>
+                <Adjective>Brown</Adjective>
+            </crf:Collection>
+            """;
+
+    // A tag element with no declaration in the tag schema; the strict wildcard rejects it.
+    // language=XML
+    private static final String INVALID__UNKNOWN_TAG = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
+                <crf:Sequence><Pronoun>It</Pronoun></crf:Sequence>
             </crf:Collection>
             """;
 
@@ -125,11 +129,32 @@ class XmlTrainingDataValidationTest {
             </crf:Collection>
             """;
 
+    private static final String TAGS_NAMESPACE = "https://example.org/tags";
+
+    // A library-shaped document with tags in the default (tag) namespace and a crf:Excluded run.
+    // language=XML
+    private static final String VALID_DOCUMENT = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags">
+                <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
+            </crf:Collection>
+            """;
+
     // An empty collection: the structural grammar permits zero sequences (minOccurs="0").
     // language=XML
     private static final String VALID_EMPTY_COLLECTION = """
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data" xmlns="https://example.org/tags"/>
+            """;
+
+    // A no-namespace document: tags carry no namespace (no default xmlns), matching what the writer
+    // emits when no target namespace is configured.
+    // language=XML
+    private static final String VALID_NO_NAMESPACE_DOCUMENT = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
+                <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
+            </crf:Collection>
             """;
 
     // Tag elements left in no namespace, validated by a namespace-configured instance whose tag schema
@@ -140,16 +165,6 @@ class XmlTrainingDataValidationTest {
             <?xml version="1.0" encoding="UTF-8"?>
             <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
                 <crf:Sequence><Adjective>Brown</Adjective><Noun>Fox</Noun></crf:Sequence>
-            </crf:Collection>
-            """;
-
-    // A no-namespace document: tags carry no namespace (no default xmlns), matching what the writer
-    // emits when no target namespace is configured.
-    // language=XML
-    private static final String VALID_NO_NAMESPACE_DOCUMENT = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <crf:Collection xmlns:crf="https://coordinatekit.org/schema/crf/training-data">
-                <crf:Sequence><Adjective>Brown</Adjective><crf:Excluded> </crf:Excluded><Noun>Fox</Noun><crf:Excluded>!</crf:Excluded></crf:Sequence>
             </crf:Collection>
             """;
 
@@ -173,12 +188,12 @@ class XmlTrainingDataValidationTest {
         );
     }
 
-    private static XmlTrainingData<String> noNamespaceData() {
-        return new XmlTrainingData<>(new StringTagProvider(Set.of("Adjective", "Noun"), "Noun"));
-    }
-
     private static ByteArrayInputStream inputStream(String xml) {
         return new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static XmlTrainingData<String> noNamespaceData() {
+        return new XmlTrainingData<>(new StringTagProvider(Set.of("Adjective", "Noun"), "Noun"));
     }
 
     @Test
@@ -237,13 +252,6 @@ class XmlTrainingDataValidationTest {
         // ASSERT //
         assertEquals(emptyTagProviderMessage(StringTagProvider.class), exception.getMessage());
     }
-
-    record InvalidDocumentParameters(
-            String name,
-            Supplier<XmlTrainingData<String>> data,
-            String xml,
-            String expectedElement
-    ) {}
 
     static Stream<InvalidDocumentParameters> validate__invalidDocument() {
         return Stream.of(
@@ -340,8 +348,6 @@ class XmlTrainingDataValidationTest {
         );
     }
 
-    record ValidDocumentParameters(String name, Supplier<XmlTrainingData<String>> data, String xml) {}
-
     static Stream<ValidDocumentParameters> validate__validDocument() {
         return Stream.of(
                 new ValidDocumentParameters(
@@ -381,12 +387,6 @@ class XmlTrainingDataValidationTest {
         // ACT & ASSERT //
         assertDoesNotThrow(() -> data.validate(inputStream(parameters.xml())));
     }
-
-    record WrittenRoundTripParameters(
-            String name,
-            Supplier<XmlTrainingData<String>> data,
-            boolean expectsDefaultNamespace
-    ) {}
 
     static Stream<WrittenRoundTripParameters> validate__writtenDocumentValidates() {
         return Stream.of(

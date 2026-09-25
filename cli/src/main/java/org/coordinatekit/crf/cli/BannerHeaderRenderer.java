@@ -45,43 +45,6 @@ import picocli.CommandLine;
  */
 @NullMarked
 final class BannerHeaderRenderer implements CommandLine.IHelpSectionRenderer {
-    private final BannerRenderer bannerRenderer;
-
-    BannerHeaderRenderer() {
-        // A lambda, not BannerHolder.BANNER::render: a bound method reference evaluates its receiver
-        // where it is written, which would initialize the holder here and defeat the deferral.
-        this(ansiEnabled -> BannerHolder.BANNER.render(ansiEnabled));
-    }
-
-    BannerHeaderRenderer(BannerRenderer bannerRenderer) {
-        this.bannerRenderer = Objects.requireNonNull(bannerRenderer, "bannerRenderer must not be null");
-    }
-
-    @Override
-    public String render(CommandLine.Help help) {
-        Objects.requireNonNull(help, "help must not be null");
-        return bannerRenderer.render(help.colorScheme().ansi().enabled());
-    }
-
-    /**
-     * Loads a brand-art resource into its lines, dropping trailing blank lines so the renderer alone
-     * controls vertical spacing. Resolves {@code resource} against this class's package. Fails loudly
-     * if the resource is missing from the jar.
-     */
-    private static List<String> load(String resource) {
-        try (InputStream in = BannerHeaderRenderer.class.getResourceAsStream(resource)) {
-            Objects.requireNonNull(in, "missing banner resource: " + resource);
-            String content = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            List<String> lines = new ArrayList<>(List.of(content.split("\n", -1)));
-            while (!lines.isEmpty() && lines.getLast().isBlank()) {
-                lines.removeLast();
-            }
-            return List.copyOf(lines);
-        } catch (IOException exception) {
-            throw new IllegalStateException("failed to read banner resource: " + resource, exception);
-        }
-    }
-
     /**
      * Holds the product banner so its art is read on the first render rather than when the renderer is
      * constructed, keeping a malformed or missing resource from failing commands that draw no banner.
@@ -106,5 +69,42 @@ final class BannerHeaderRenderer implements CommandLine.IHelpSectionRenderer {
          * @return the rendered banner block
          */
         String render(boolean ansiEnabled);
+    }
+
+    private final BannerRenderer bannerRenderer;
+
+    BannerHeaderRenderer() {
+        // A lambda, not BannerHolder.BANNER::render: a bound method reference evaluates its receiver
+        // where it is written, which would initialize the holder here and defeat the deferral.
+        this(ansiEnabled -> BannerHolder.BANNER.render(ansiEnabled));
+    }
+
+    BannerHeaderRenderer(BannerRenderer bannerRenderer) {
+        this.bannerRenderer = Objects.requireNonNull(bannerRenderer, "bannerRenderer must not be null");
+    }
+
+    /**
+     * Loads a brand-art resource into its lines, dropping trailing blank lines so the renderer alone
+     * controls vertical spacing. Resolves {@code resource} against this class's package. Fails loudly
+     * if the resource is missing from the jar.
+     */
+    private static List<String> load(String resource) {
+        try (InputStream in = BannerHeaderRenderer.class.getResourceAsStream(resource)) {
+            Objects.requireNonNull(in, "missing banner resource: " + resource);
+            String content = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            List<String> lines = new ArrayList<>(List.of(content.split("\n", -1)));
+            while (!lines.isEmpty() && lines.getLast().isBlank()) {
+                lines.removeLast();
+            }
+            return List.copyOf(lines);
+        } catch (IOException exception) {
+            throw new IllegalStateException("failed to read banner resource: " + resource, exception);
+        }
+    }
+
+    @Override
+    public String render(CommandLine.Help help) {
+        Objects.requireNonNull(help, "help must not be null");
+        return bannerRenderer.render(help.colorScheme().ansi().enabled());
     }
 }

@@ -76,6 +76,11 @@ public class InputSequence implements Sequence<PositionedToken> {
     }
 
     @Override
+    public Iterator<PositionedToken> iterator() {
+        return tokens.iterator();
+    }
+
+    @Override
     public int size() {
         return tokens.size();
     }
@@ -83,10 +88,5 @@ public class InputSequence implements Sequence<PositionedToken> {
     @Override
     public Stream<PositionedToken> stream() {
         return tokens.stream();
-    }
-
-    @Override
-    public Iterator<PositionedToken> iterator() {
-        return tokens.iterator();
     }
 }

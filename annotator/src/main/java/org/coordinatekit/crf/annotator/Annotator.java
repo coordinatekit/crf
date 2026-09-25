@@ -90,10 +90,168 @@ import static org.coordinatekit.crf.annotator.AnnotatorSupport.toSegments;
  */
 @NullMarked
 public final class Annotator<T extends Comparable<T>> {
+    private static final class AnnotationState<T extends Comparable<T>> {
+        int presentationNumber;
+        final Set<Long> seenHashes;
+        int skipped;
+        boolean startupMessageEmitted;
+        final int totalSequences;
+        int untokenizable;
+        final TrainingSequenceWriter<T> writer;
+
+        AnnotationState(TrainingSequenceWriter<T> writer, Set<Long> seenHashes, int totalSequences) {
+            this.seenHashes = seenHashes;
+            this.totalSequences = totalSequences;
+            this.writer = writer;
+        }
+    }
+
+    /**
+     * Builder for {@link Annotator}.
+     *
+     * <p>
+     * {@link #tagProvider(TagProvider)}, {@link #taggingInterface(TaggingInterface)}, and
+     * {@link #terminal(Terminal)} are required. At least one of {@link #tokenizer(Tokenizer) tokenizer}
+     * or {@link #tagger(CrfTagger) tagger} must be set: a tagger supplies both the tokenization and tag
+     * suggestions, while a tokenizer alone drives the manual-only path — see the class-level Javadoc.
+     *
+     * @param <T> the tag type
+     */
+    public static final class Builder<T extends Comparable<T>> {
+        private @Nullable FeatureExtractor featureExtractor;
+        private @Nullable CrfTagger<T> tagger;
+        private @Nullable TaggingInterface<T> taggingInterface;
+        private @Nullable TagProvider<T> tagProvider;
+        private @Nullable Terminal terminal;
+        private @Nullable Tokenizer tokenizer;
+        private @Nullable FeatureExtractor verboseFeatureExtractor;
+
+        private Builder() {}
+
+        /**
+         * Builds the annotator.
+         *
+         * @return a new {@link Annotator}
+         * @throws IllegalStateException if {@link #tagProvider(TagProvider) tagProvider},
+         *         {@link #taggingInterface(TaggingInterface) taggingInterface}, or
+         *         {@link #terminal(Terminal) terminal} have not been set; if neither a
+         *         {@link #tokenizer(Tokenizer) tokenizer} nor a {@link #tagger(CrfTagger) tagger} has been
+         *         set; or if the supplied {@link TagProvider#tags()} set is empty
+         */
+        public Annotator<T> build() {
+            if (tagProvider == null) {
+                throw new IllegalStateException("tagProvider must be set");
+            } else if (taggingInterface == null) {
+                throw new IllegalStateException("taggingInterface must be set");
+            } else if (terminal == null) {
+                throw new IllegalStateException("terminal must be set");
+            } else if (tagProvider.tags().isEmpty()) {
+                throw new IllegalStateException("tagProvider.tags() must not be empty");
+            } else if (tokenizer == null && tagger == null) {
+                throw new IllegalStateException("at least one of tokenizer or tagger must be set");
+            }
+
+            return new Annotator<>(this);
+        }
+
+        /**
+         * Sets the feature extractor used to compute the key display features shown by the feature view of
+         * the tagging interface. May be {@code null}; when {@code null}, the key-feature view is not
+         * offered (the all-features view may still be, when a verbose source applies). The extracted
+         * features are presentational only — they have no effect on tagging or training output.
+         *
+         * @param featureExtractor the display feature extractor, or {@code null} to disable the feature
+         *        display
+         * @return this builder
+         */
+        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
+            this.featureExtractor = featureExtractor;
+            return this;
+        }
+
+        /**
+         * Sets the CRF tagger used to suggest tags for each input line. May be {@code null}. When present
+         * the tagger is the authoritative source of tokens and excluded runs — its tokenization is used
+         * directly and its suggestions are always shown — and the {@link #tokenizer(Tokenizer)} becomes
+         * optional. When absent the tokenizer supplies the tokenization instead.
+         *
+         * @param tagger the tagger, or {@code null} to run without tag suggestions
+         * @return this builder
+         */
+        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
+            this.tagger = tagger;
+            return this;
+        }
+
+        /**
+         * Sets the tagging interface used to present each sequence to the user.
+         *
+         * @param taggingInterface the tagging interface
+         * @return this builder
+         */
+        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
+            this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the tag provider, whose {@link TagProvider#tags()} set defines the tag space.
+         *
+         * @param tagProvider the tag provider
+         * @return this builder
+         */
+        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
+            this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the JLine terminal used to emit the one-line resume message at session start. Ownership is
+         * not transferred; the caller is responsible for closing it.
+         *
+         * @param terminal the terminal
+         * @return this builder
+         */
+        public Builder<T> terminal(Terminal terminal) {
+            this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the tokenizer used to split every input line into tokens and excluded runs. Required only
+         * when no {@link #tagger(CrfTagger) tagger} is configured; when a tagger is present it supplies the
+         * tokenization and this tokenizer is unused.
+         *
+         * @param tokenizer the tokenizer
+         * @return this builder
+         */
+        public Builder<T> tokenizer(Tokenizer tokenizer) {
+            this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the feature extractor used to compute the verbose display features shown only by the
+         * all-features view of the tagging interface. May be {@code null}; when {@code null} and a
+         * {@link #tagger(CrfTagger) tagger} is configured, the all-features view falls back to the tagger's
+         * embedded {@link TaggedPositionedToken#features() features} which are the features the model
+         * actually saw. Setting this extractor overrides that fallback. The extracted features are
+         * presentational only and have no effect on tagging or training output.
+         *
+         * @param verboseFeatureExtractor the verbose display feature extractor, or {@code null} to use the
+         *        tagger fallback (or no verbose display)
+         * @return this builder
+         */
+        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
+            this.verboseFeatureExtractor = verboseFeatureExtractor;
+            return this;
+        }
+    }
+
     private final @Nullable FeatureExtractor featureExtractor;
     private final @Nullable CrfTagger<T> tagger;
-    private final TagProvider<T> tagProvider;
     private final TaggingInterface<T> taggingInterface;
+    private final TagProvider<T> tagProvider;
     private final Terminal terminal;
     private final @Nullable Tokenizer tokenizer;
     private final @Nullable FeatureExtractor verboseFeatureExtractor;
@@ -113,16 +271,6 @@ public final class Annotator<T extends Comparable<T>> {
         this.terminal = Objects.requireNonNull(builder.terminal, "terminal must be set");
         this.tokenizer = builder.tokenizer;
         this.verboseFeatureExtractor = builder.verboseFeatureExtractor;
-    }
-
-    /**
-     * Returns a new builder for {@link Annotator}.
-     *
-     * @param <T> the tag type
-     * @return a new builder with no values set
-     */
-    public static <T extends Comparable<T>> Builder<T> builder() {
-        return new Builder<>();
     }
 
     /**
@@ -165,6 +313,16 @@ public final class Annotator<T extends Comparable<T>> {
                 emitResumeMessage(state.skipped, state.totalSequences);
             }
         }
+    }
+
+    /**
+     * Returns a new builder for {@link Annotator}.
+     *
+     * @param <T> the tag type
+     * @return a new builder with no values set
+     */
+    public static <T extends Comparable<T>> Builder<T> builder() {
+        return new Builder<>();
     }
 
     /**
@@ -347,161 +505,4 @@ public final class Annotator<T extends Comparable<T>> {
         return seenHashes;
     }
 
-    private static final class AnnotationState<T extends Comparable<T>> {
-        int presentationNumber;
-        final Set<Long> seenHashes;
-        int skipped;
-        boolean startupMessageEmitted;
-        final int totalSequences;
-        int untokenizable;
-        final TrainingSequenceWriter<T> writer;
-
-        AnnotationState(TrainingSequenceWriter<T> writer, Set<Long> seenHashes, int totalSequences) {
-            this.seenHashes = seenHashes;
-            this.totalSequences = totalSequences;
-            this.writer = writer;
-        }
-    }
-
-    /**
-     * Builder for {@link Annotator}.
-     *
-     * <p>
-     * {@link #tagProvider(TagProvider)}, {@link #taggingInterface(TaggingInterface)}, and
-     * {@link #terminal(Terminal)} are required. At least one of {@link #tokenizer(Tokenizer) tokenizer}
-     * or {@link #tagger(CrfTagger) tagger} must be set: a tagger supplies both the tokenization and tag
-     * suggestions, while a tokenizer alone drives the manual-only path — see the class-level Javadoc.
-     *
-     * @param <T> the tag type
-     */
-    public static final class Builder<T extends Comparable<T>> {
-        private @Nullable FeatureExtractor featureExtractor;
-        private @Nullable CrfTagger<T> tagger;
-        private @Nullable TagProvider<T> tagProvider;
-        private @Nullable TaggingInterface<T> taggingInterface;
-        private @Nullable Terminal terminal;
-        private @Nullable Tokenizer tokenizer;
-        private @Nullable FeatureExtractor verboseFeatureExtractor;
-
-        private Builder() {}
-
-        /**
-         * Builds the annotator.
-         *
-         * @return a new {@link Annotator}
-         * @throws IllegalStateException if {@link #tagProvider(TagProvider) tagProvider},
-         *         {@link #taggingInterface(TaggingInterface) taggingInterface}, or
-         *         {@link #terminal(Terminal) terminal} have not been set; if neither a
-         *         {@link #tokenizer(Tokenizer) tokenizer} nor a {@link #tagger(CrfTagger) tagger} has been
-         *         set; or if the supplied {@link TagProvider#tags()} set is empty
-         */
-        public Annotator<T> build() {
-            if (tagProvider == null) {
-                throw new IllegalStateException("tagProvider must be set");
-            } else if (taggingInterface == null) {
-                throw new IllegalStateException("taggingInterface must be set");
-            } else if (terminal == null) {
-                throw new IllegalStateException("terminal must be set");
-            } else if (tagProvider.tags().isEmpty()) {
-                throw new IllegalStateException("tagProvider.tags() must not be empty");
-            } else if (tokenizer == null && tagger == null) {
-                throw new IllegalStateException("at least one of tokenizer or tagger must be set");
-            }
-
-            return new Annotator<>(this);
-        }
-
-        /**
-         * Sets the feature extractor used to compute the key display features shown by the feature view of
-         * the tagging interface. May be {@code null}; when {@code null}, the key-feature view is not
-         * offered (the all-features view may still be, when a verbose source applies). The extracted
-         * features are presentational only — they have no effect on tagging or training output.
-         *
-         * @param featureExtractor the display feature extractor, or {@code null} to disable the feature
-         *        display
-         * @return this builder
-         */
-        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
-            this.featureExtractor = featureExtractor;
-            return this;
-        }
-
-        /**
-         * Sets the CRF tagger used to suggest tags for each input line. May be {@code null}. When present
-         * the tagger is the authoritative source of tokens and excluded runs — its tokenization is used
-         * directly and its suggestions are always shown — and the {@link #tokenizer(Tokenizer)} becomes
-         * optional. When absent the tokenizer supplies the tokenization instead.
-         *
-         * @param tagger the tagger, or {@code null} to run without tag suggestions
-         * @return this builder
-         */
-        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
-            this.tagger = tagger;
-            return this;
-        }
-
-        /**
-         * Sets the tag provider, whose {@link TagProvider#tags()} set defines the tag space.
-         *
-         * @param tagProvider the tag provider
-         * @return this builder
-         */
-        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
-            this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the tagging interface used to present each sequence to the user.
-         *
-         * @param taggingInterface the tagging interface
-         * @return this builder
-         */
-        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
-            this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the JLine terminal used to emit the one-line resume message at session start. Ownership is
-         * not transferred; the caller is responsible for closing it.
-         *
-         * @param terminal the terminal
-         * @return this builder
-         */
-        public Builder<T> terminal(Terminal terminal) {
-            this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the tokenizer used to split every input line into tokens and excluded runs. Required only
-         * when no {@link #tagger(CrfTagger) tagger} is configured; when a tagger is present it supplies the
-         * tokenization and this tokenizer is unused.
-         *
-         * @param tokenizer the tokenizer
-         * @return this builder
-         */
-        public Builder<T> tokenizer(Tokenizer tokenizer) {
-            this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the feature extractor used to compute the verbose display features shown only by the
-         * all-features view of the tagging interface. May be {@code null}; when {@code null} and a
-         * {@link #tagger(CrfTagger) tagger} is configured, the all-features view falls back to the tagger's
-         * embedded {@link TaggedPositionedToken#features() features} which are the features the model
-         * actually saw. Setting this extractor overrides that fallback. The extracted features are
-         * presentational only and have no effect on tagging or training output.
-         *
-         * @param verboseFeatureExtractor the verbose display feature extractor, or {@code null} to use the
-         *        tagger fallback (or no verbose display)
-         * @return this builder
-         */
-        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
-            this.verboseFeatureExtractor = verboseFeatureExtractor;
-            return this;
-        }
-    }
 }

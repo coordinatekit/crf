@@ -33,6 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FeatureExtractorTest {
+    record ExtractParameters(String name, List<String> tokens, List<Set<Feature>> expectedFeatures) {}
+
+    record ExtractTrainingParameters(
+            String name,
+            List<String> tokens,
+            List<String> tags,
+            List<Set<Feature>> expectedFeatures
+    ) {}
+
     private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
@@ -40,8 +49,6 @@ class FeatureExtractorTest {
                 createFeatureWithValue("LOWER", token.toLowerCase(Locale.ROOT))
         );
     };
-
-    record ExtractParameters(String name, List<String> tokens, List<Set<Feature>> expectedFeatures) {}
 
     static Stream<ExtractParameters> extract() {
         return Stream.of(
@@ -93,13 +100,6 @@ class FeatureExtractorTest {
             );
         }
     }
-
-    record ExtractTrainingParameters(
-            String name,
-            List<String> tokens,
-            List<String> tags,
-            List<Set<Feature>> expectedFeatures
-    ) {}
 
     static Stream<ExtractTrainingParameters> extractTraining() {
         return Stream.of(

@@ -37,6 +37,46 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SerializablesTest {
+    record DeserializeExceptionParameters(
+            String name,
+            @Nullable Class<?> clazz,
+            @Nullable Path file,
+            Class<? extends Exception> expectedClass,
+            @Nullable String expectedMessage
+    ) {}
+
+    record SerializeExceptionParameters(
+            String name,
+            @Nullable Object object,
+            @Nullable Path file,
+            Class<? extends Exception> expectedClass,
+            @Nullable String expectedMessage
+    ) {}
+
+    static class TestObject implements Serializable {
+        private final String name;
+        private final int value;
+
+        TestObject(String name, int value) {
+            this.name = name;
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (!(o instanceof TestObject that))
+                return false;
+            return value == that.value && Objects.equals(name, that.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, value);
+        }
+    }
+
     private static final byte[] CLASS_NOT_FOUND_SERIALIZATION = {(byte) 0xAC, (byte) 0xED, // STREAM_MAGIC
                     0x00, 0x05, // STREAM_VERSION
                     0x73, // TC_OBJECT
@@ -52,22 +92,6 @@ class SerializablesTest {
 
     @TempDir
     static Path temporaryDirectory;
-
-    @BeforeAll
-    static void setup() throws IOException {
-        Files.createDirectories(temporaryDirectory.resolve("empty"));
-        Files.write(temporaryDirectory.resolve("classNotFound.ser"), CLASS_NOT_FOUND_SERIALIZATION);
-        Files.writeString(temporaryDirectory.resolve("file.txt"), "The quick brown fox jumps over the lazy dog.");
-        Serializables.serialize(new TestObject("hello", 42), temporaryDirectory.resolve("testObject.ser"));
-    }
-
-    record DeserializeExceptionParameters(
-            String name,
-            @Nullable Class<?> clazz,
-            @Nullable Path file,
-            Class<? extends Exception> expectedClass,
-            @Nullable String expectedMessage
-    ) {}
 
     static Stream<DeserializeExceptionParameters> deserialize__exception() {
         return Stream.of(
@@ -173,14 +197,6 @@ class SerializablesTest {
         assertEquals(original, restored);
     }
 
-    record SerializeExceptionParameters(
-            String name,
-            @Nullable Object object,
-            @Nullable Path file,
-            Class<? extends Exception> expectedClass,
-            @Nullable String expectedMessage
-    ) {}
-
     static Stream<SerializeExceptionParameters> serialize__exception() {
         return Stream.of(
                 new SerializeExceptionParameters(
@@ -247,27 +263,11 @@ class SerializablesTest {
         assertEquals(original, restored);
     }
 
-    static class TestObject implements Serializable {
-        private final String name;
-        private final int value;
-
-        TestObject(String name, int value) {
-            this.name = name;
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (!(o instanceof TestObject that))
-                return false;
-            return value == that.value && Objects.equals(name, that.name);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, value);
-        }
+    @BeforeAll
+    static void setup() throws IOException {
+        Files.createDirectories(temporaryDirectory.resolve("empty"));
+        Files.write(temporaryDirectory.resolve("classNotFound.ser"), CLASS_NOT_FOUND_SERIALIZATION);
+        Files.writeString(temporaryDirectory.resolve("file.txt"), "The quick brown fox jumps over the lazy dog.");
+        Serializables.serialize(new TestObject("hello", 42), temporaryDirectory.resolve("testObject.ser"));
     }
 }

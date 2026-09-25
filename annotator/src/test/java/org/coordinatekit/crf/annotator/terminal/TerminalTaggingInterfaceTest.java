@@ -67,34 +67,6 @@ import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 
 class TerminalTaggingInterfaceTest {
-    enum PartOfSpeech {
-        Adjective, Adverb, Determiner, Noun, Preposition, Verb
-    }
-
-    static final class PartOfSpeechTagProvider implements TagProvider<PartOfSpeech> {
-        @Override
-        public PartOfSpeech decode(@Nullable String tag) {
-            return tag == null ? PartOfSpeech.Noun : PartOfSpeech.valueOf(tag);
-        }
-
-        @Override
-        public String encode(PartOfSpeech rawTag) {
-            return rawTag.name();
-        }
-
-        @Override
-        public PartOfSpeech startingTag() {
-            return PartOfSpeech.Noun;
-        }
-
-        @Override
-        public SortedSet<PartOfSpeech> tags() {
-            SortedSet<PartOfSpeech> sorted = new TreeSet<>();
-            Collections.addAll(sorted, PartOfSpeech.values());
-            return Collections.unmodifiableSortedSet(sorted);
-        }
-    }
-
     record ActionParameters(
             String name,
             Supplier<AnnotatorSequence<PartOfSpeech>> sequenceSupplier,
@@ -133,6 +105,34 @@ class TerminalTaggingInterfaceTest {
     ) {}
 
     record InteractionResult(TaggingResult<PartOfSpeech> result, String output) {}
+
+    enum PartOfSpeech {
+        Adjective, Adverb, Determiner, Noun, Preposition, Verb
+    }
+
+    static final class PartOfSpeechTagProvider implements TagProvider<PartOfSpeech> {
+        @Override
+        public PartOfSpeech decode(@Nullable String tag) {
+            return tag == null ? PartOfSpeech.Noun : PartOfSpeech.valueOf(tag);
+        }
+
+        @Override
+        public String encode(PartOfSpeech rawTag) {
+            return rawTag.name();
+        }
+
+        @Override
+        public PartOfSpeech startingTag() {
+            return PartOfSpeech.Noun;
+        }
+
+        @Override
+        public SortedSet<PartOfSpeech> tags() {
+            SortedSet<PartOfSpeech> sorted = new TreeSet<>();
+            Collections.addAll(sorted, PartOfSpeech.values());
+            return Collections.unmodifiableSortedSet(sorted);
+        }
+    }
 
     record ThresholdParameters(String name, double threshold) {}
 
@@ -212,6 +212,24 @@ class TerminalTaggingInterfaceTest {
         assertEquals(parameters.expectedFinalTags().apply(sequence), interaction.result().finalTags());
     }
 
+    private static void assertRowsInOrder(List<String> lines, List<String> patterns) {
+        int searchFrom = 0;
+        for (String rowPattern : patterns) {
+            int matchIndex = -1;
+            for (int index = searchFrom; index < lines.size(); index++) {
+                if (lines.get(index).matches(rowPattern)) {
+                    matchIndex = index;
+                    break;
+                }
+            }
+            assertTrue(
+                    matchIndex >= 0,
+                    "expected the final features section to have a row matching (in order): " + rowPattern
+            );
+            searchFrom = matchIndex + 1;
+        }
+    }
+
     // Builders are intentionally write-only: each case asserts the setter throws before build() is
     // reached.
     @SuppressWarnings("WriteOnlyObject")
@@ -280,6 +298,85 @@ class TerminalTaggingInterfaceTest {
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
+
+    private static String editScreenRegion(String output) {
+        int sequencePromptIndex = output.indexOf(SEQUENCE_PROMPT);
+        if (sequencePromptIndex < 0) {
+            throw new AssertionError("sequence-screen prompt not found in output");
+        }
+        int start = sequencePromptIndex + SEQUENCE_PROMPT.length();
+        int end = output.indexOf(EDIT_PROMPT, start);
+        if (end < 0) {
+            throw new AssertionError("edit-screen prompt not found in output");
+        }
+        return output.substring(start, end + EDIT_PROMPT.length());
+    }
+
+    private static TagProvider<PartOfSpeech> emptyTagProvider() {
+        return new TagProvider<>() {
+            @Override
+            public PartOfSpeech decode(@Nullable String tag) {
+                return PartOfSpeech.Noun;
+            }
+
+            @Override
+            public String encode(PartOfSpeech rawTag) {
+                return rawTag.name();
+            }
+
+            @Override
+            public PartOfSpeech startingTag() {
+                return PartOfSpeech.Noun;
+            }
+
+            @Override
+            public SortedSet<PartOfSpeech> tags() {
+                return Collections.emptySortedSet();
+            }
+        };
+    }
+
+    /**
+     * The verbose set for "fox" repeats the key feature {@code ANIMAL} so the all-features view
+     * exercises key/verbose union deduplication.
+     */
+    private static AnnotatorSequence<PartOfSpeech> featureAnnotatorSequence(
+            boolean includeKey,
+            boolean includeVerbose
+    ) {
+        List<String> tokens = List.of("The", "fox", ".");
+        List<Set<Feature>> embeddedFeatures = List.of(Set.of(), Set.of(), Set.of());
+        Map<PartOfSpeech, Double> firstScores = scoreMap(PartOfSpeech.Determiner, 0.9, PartOfSpeech.Adjective, 0.1);
+        Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
+        Map<PartOfSpeech, Double> thirdScores = scoreMap(PartOfSpeech.Noun, 0.6, PartOfSpeech.Adverb, 0.4);
+        var tagged = new TaggedSequence<>(tokens, embeddedFeatures, List.of(firstScores, secondScores, thirdScores));
+        List<Set<Feature>> features = includeKey ? List
+                .of(Set.of(createFeature("CAP")), Set.of(createFeature("LOWER"), createFeature("ANIMAL")), Set.of())
+                : null;
+        List<Set<Feature>> verboseFeatures = includeVerbose ? List.of(
+                Set.of(createFeature("WINDOW_NEXT_fox")),
+                Set.of(createFeature("ANIMAL")),
+                Set.of(createFeature("PUNCT"))
+        ) : null;
+        return annotatorSequence(1, 1, tagged, features, verboseFeatures);
+    }
+
+    private static long featuresHeadingCount(String output) {
+        return output.lines().filter(line -> line.trim().endsWith(FEATURES_HEADING)).count();
+    }
+
+    /** Returns the last rendered features section, i.e. the final visible view. */
+    private static String featuresRegion(String output) {
+        int headingIndex = output.lastIndexOf(FEATURES_HEADING);
+        if (headingIndex < 0) {
+            throw new AssertionError("features heading not found in output");
+        }
+        int end = output.indexOf(FOOTER_PROMPT_PREFIX, headingIndex);
+        if (end < 0) {
+            throw new AssertionError("footer prompt not found after features heading");
+        }
+        return output.substring(headingIndex, end);
     }
 
     static Stream<FeaturesViewContentParameters> featuresView__content() {
@@ -508,6 +605,18 @@ class TerminalTaggingInterfaceTest {
         assertTrue(promptLineFound, "expected footer prompt: " + parameters.expectedPrompt());
     }
 
+    private static List<PartOfSpeech> initialTagsWithSecondTokenSwapped(AnnotatorSequence<PartOfSpeech> sequence) {
+        List<PartOfSpeech> tags = new ArrayList<>(initialTagsOf(sequence));
+        List<PartOfSpeech> canonicalTags = List.copyOf(sequence.tokens().get(1).alternativeTagScores().keySet());
+        tags.set(1, canonicalTags.get(1));
+        return tags;
+    }
+
+    private static AnnotatorSequence<PartOfSpeech> noModelAnnotatorSequence() {
+        List<String> tokens = List.of("The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", ".");
+        return annotatorSequence(1, 1, tokens, new PartOfSpeechTagProvider());
+    }
+
     @Test
     void noModelEditScreenListsEveryTagAtItsRowIndex() throws Exception {
         // ARRANGE //
@@ -550,176 +659,6 @@ class TerminalTaggingInterfaceTest {
                 interaction.output().contains("Total likelihood: " + current + " (was " + original + ")"),
                 "expected the post-edit total-likelihood line to track the session total and the original"
         );
-    }
-
-    static Stream<ThresholdParameters> thresholdAffectsStyledRowCount() {
-        return Stream.of(
-                new ThresholdParameters("zero_styles_none", 0.00),
-                new ThresholdParameters("default_styles_below_080", 0.80),
-                new ThresholdParameters("ninety_styles_below_090", 0.90),
-                new ThresholdParameters("one_styles_everything", 1.00)
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void thresholdAffectsStyledRowCount(ThresholdParameters parameters) throws Exception {
-        // ARRANGE //
-        var sequence = withModelAnnotatorSequence();
-        // A row is styled exactly when its confidence falls below the threshold, so the expected count
-        // is derived from the fixture's confidences rather than hard-coded.
-        long expectedStyledRowCount = WITH_MODEL_CONFIDENCES.stream()
-                .filter(confidence -> confidence < parameters.threshold())
-                .count();
-
-        // ACT //
-        var interaction = run("A\n", sequence, builder -> builder.threshold(parameters.threshold()));
-
-        // ASSERT //
-        long styledLineCount = interaction.output().lines().filter(line -> line.contains(BOLD_YELLOW)).count();
-        assertEquals(expectedStyledRowCount, styledLineCount);
-    }
-
-    @Test
-    void tokenLongerThanMaxIsTruncatedInTableButFullInEditScreen() throws Exception {
-        // ARRANGE //
-        int maxWidth = 10;
-        String longToken = "extraordinarily";
-        var tokens = List.of(longToken, "normal");
-        var features = List.<Set<Feature>>of(Set.of(), Set.of());
-        Map<PartOfSpeech, Double> scores = new LinkedHashMap<>();
-        scores.put(PartOfSpeech.Determiner, 0.95);
-        scores.put(PartOfSpeech.Adjective, 0.03);
-        scores.put(PartOfSpeech.Noun, 0.01);
-        scores.put(PartOfSpeech.Verb, 0.005);
-        scores.put(PartOfSpeech.Adverb, 0.003);
-        scores.put(PartOfSpeech.Preposition, 0.002);
-        var tagged = new TaggedSequence<>(tokens, features, List.of(scores, scores));
-        var sequence = annotatorSequence(1, 1, tagged);
-
-        // ACT //
-        var interaction = run("1\nC\nA\n", sequence, builder -> builder.maxTokenDisplayWidth(maxWidth));
-
-        // ASSERT //
-        String sequenceRegion = sequenceScreenRegion(interaction.output());
-        String editRegion = editScreenRegion(interaction.output());
-        assertTrue(sequenceRegion.contains("extraordi…"), "expected truncated token in sequence-screen table");
-        long longTokenInSequenceRegion = sequenceRegion.lines().filter(line -> line.contains(longToken)).count();
-        assertEquals(
-                1,
-                longTokenInSequenceRegion,
-                "expected full token only on sequence-header line, not in table cell"
-        );
-        assertTrue(editRegion.contains("Token 1 of 2: " + longToken), "expected full token in edit-screen header");
-    }
-
-    private static void assertRowsInOrder(List<String> lines, List<String> patterns) {
-        int searchFrom = 0;
-        for (String rowPattern : patterns) {
-            int matchIndex = -1;
-            for (int index = searchFrom; index < lines.size(); index++) {
-                if (lines.get(index).matches(rowPattern)) {
-                    matchIndex = index;
-                    break;
-                }
-            }
-            assertTrue(
-                    matchIndex >= 0,
-                    "expected the final features section to have a row matching (in order): " + rowPattern
-            );
-            searchFrom = matchIndex + 1;
-        }
-    }
-
-    private static String editScreenRegion(String output) {
-        int sequencePromptIndex = output.indexOf(SEQUENCE_PROMPT);
-        if (sequencePromptIndex < 0) {
-            throw new AssertionError("sequence-screen prompt not found in output");
-        }
-        int start = sequencePromptIndex + SEQUENCE_PROMPT.length();
-        int end = output.indexOf(EDIT_PROMPT, start);
-        if (end < 0) {
-            throw new AssertionError("edit-screen prompt not found in output");
-        }
-        return output.substring(start, end + EDIT_PROMPT.length());
-    }
-
-    private static TagProvider<PartOfSpeech> emptyTagProvider() {
-        return new TagProvider<>() {
-            @Override
-            public PartOfSpeech decode(@Nullable String tag) {
-                return PartOfSpeech.Noun;
-            }
-
-            @Override
-            public String encode(PartOfSpeech rawTag) {
-                return rawTag.name();
-            }
-
-            @Override
-            public PartOfSpeech startingTag() {
-                return PartOfSpeech.Noun;
-            }
-
-            @Override
-            public SortedSet<PartOfSpeech> tags() {
-                return Collections.emptySortedSet();
-            }
-        };
-    }
-
-    /**
-     * The verbose set for "fox" repeats the key feature {@code ANIMAL} so the all-features view
-     * exercises key/verbose union deduplication.
-     */
-    private static AnnotatorSequence<PartOfSpeech> featureAnnotatorSequence(
-            boolean includeKey,
-            boolean includeVerbose
-    ) {
-        List<String> tokens = List.of("The", "fox", ".");
-        List<Set<Feature>> embeddedFeatures = List.of(Set.of(), Set.of(), Set.of());
-        Map<PartOfSpeech, Double> firstScores = scoreMap(PartOfSpeech.Determiner, 0.9, PartOfSpeech.Adjective, 0.1);
-        Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
-        Map<PartOfSpeech, Double> thirdScores = scoreMap(PartOfSpeech.Noun, 0.6, PartOfSpeech.Adverb, 0.4);
-        var tagged = new TaggedSequence<>(tokens, embeddedFeatures, List.of(firstScores, secondScores, thirdScores));
-        List<Set<Feature>> features = includeKey ? List
-                .of(Set.of(createFeature("CAP")), Set.of(createFeature("LOWER"), createFeature("ANIMAL")), Set.of())
-                : null;
-        List<Set<Feature>> verboseFeatures = includeVerbose ? List.of(
-                Set.of(createFeature("WINDOW_NEXT_fox")),
-                Set.of(createFeature("ANIMAL")),
-                Set.of(createFeature("PUNCT"))
-        ) : null;
-        return annotatorSequence(1, 1, tagged, features, verboseFeatures);
-    }
-
-    private static long featuresHeadingCount(String output) {
-        return output.lines().filter(line -> line.trim().endsWith(FEATURES_HEADING)).count();
-    }
-
-    /** Returns the last rendered features section, i.e. the final visible view. */
-    private static String featuresRegion(String output) {
-        int headingIndex = output.lastIndexOf(FEATURES_HEADING);
-        if (headingIndex < 0) {
-            throw new AssertionError("features heading not found in output");
-        }
-        int end = output.indexOf(FOOTER_PROMPT_PREFIX, headingIndex);
-        if (end < 0) {
-            throw new AssertionError("footer prompt not found after features heading");
-        }
-        return output.substring(headingIndex, end);
-    }
-
-    private static List<PartOfSpeech> initialTagsWithSecondTokenSwapped(AnnotatorSequence<PartOfSpeech> sequence) {
-        List<PartOfSpeech> tags = new ArrayList<>(initialTagsOf(sequence));
-        List<PartOfSpeech> canonicalTags = List.copyOf(sequence.tokens().get(1).alternativeTagScores().keySet());
-        tags.set(1, canonicalTags.get(1));
-        return tags;
-    }
-
-    private static AnnotatorSequence<PartOfSpeech> noModelAnnotatorSequence() {
-        List<String> tokens = List.of("The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog", ".");
-        return annotatorSequence(1, 1, tokens, new PartOfSpeechTagProvider());
     }
 
     private InteractionResult run(String input, AnnotatorSequence<PartOfSpeech> sequence) throws Exception {
@@ -784,6 +723,67 @@ class TerminalTaggingInterfaceTest {
         Map<PartOfSpeech, Double> secondScores = scoreMap(PartOfSpeech.Noun, 0.95, PartOfSpeech.Verb, 0.05);
         var tagged = new TaggedSequence<>(tokens, features, List.of(firstScores, secondScores));
         return annotatorSequence(1, 1, tagged);
+    }
+
+    static Stream<ThresholdParameters> thresholdAffectsStyledRowCount() {
+        return Stream.of(
+                new ThresholdParameters("zero_styles_none", 0.00),
+                new ThresholdParameters("default_styles_below_080", 0.80),
+                new ThresholdParameters("ninety_styles_below_090", 0.90),
+                new ThresholdParameters("one_styles_everything", 1.00)
+        );
+    }
+
+    @MethodSource
+    @ParameterizedTest
+    void thresholdAffectsStyledRowCount(ThresholdParameters parameters) throws Exception {
+        // ARRANGE //
+        var sequence = withModelAnnotatorSequence();
+        // A row is styled exactly when its confidence falls below the threshold, so the expected count
+        // is derived from the fixture's confidences rather than hard-coded.
+        long expectedStyledRowCount = WITH_MODEL_CONFIDENCES.stream()
+                .filter(confidence -> confidence < parameters.threshold())
+                .count();
+
+        // ACT //
+        var interaction = run("A\n", sequence, builder -> builder.threshold(parameters.threshold()));
+
+        // ASSERT //
+        long styledLineCount = interaction.output().lines().filter(line -> line.contains(BOLD_YELLOW)).count();
+        assertEquals(expectedStyledRowCount, styledLineCount);
+    }
+
+    @Test
+    void tokenLongerThanMaxIsTruncatedInTableButFullInEditScreen() throws Exception {
+        // ARRANGE //
+        int maxWidth = 10;
+        String longToken = "extraordinarily";
+        var tokens = List.of(longToken, "normal");
+        var features = List.<Set<Feature>>of(Set.of(), Set.of());
+        Map<PartOfSpeech, Double> scores = new LinkedHashMap<>();
+        scores.put(PartOfSpeech.Determiner, 0.95);
+        scores.put(PartOfSpeech.Adjective, 0.03);
+        scores.put(PartOfSpeech.Noun, 0.01);
+        scores.put(PartOfSpeech.Verb, 0.005);
+        scores.put(PartOfSpeech.Adverb, 0.003);
+        scores.put(PartOfSpeech.Preposition, 0.002);
+        var tagged = new TaggedSequence<>(tokens, features, List.of(scores, scores));
+        var sequence = annotatorSequence(1, 1, tagged);
+
+        // ACT //
+        var interaction = run("1\nC\nA\n", sequence, builder -> builder.maxTokenDisplayWidth(maxWidth));
+
+        // ASSERT //
+        String sequenceRegion = sequenceScreenRegion(interaction.output());
+        String editRegion = editScreenRegion(interaction.output());
+        assertTrue(sequenceRegion.contains("extraordi…"), "expected truncated token in sequence-screen table");
+        long longTokenInSequenceRegion = sequenceRegion.lines().filter(line -> line.contains(longToken)).count();
+        assertEquals(
+                1,
+                longTokenInSequenceRegion,
+                "expected full token only on sequence-header line, not in table cell"
+        );
+        assertTrue(editRegion.contains("Token 1 of 2: " + longToken), "expected full token in edit-screen header");
     }
 
     private static AnnotatorSequence<PartOfSpeech> withModelAnnotatorSequence() {

@@ -48,6 +48,17 @@ import java.util.stream.Stream;
  * hint for a mistyped name.
  */
 class ParameterValidationTest {
+    record RangeDescriptionParameters(String name, int minimum, int maximum, String expected) {}
+
+    record RelativeResourceParameters(String name, String fileName) {}
+
+    record ValidateExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
     private static final URL BASE = ConfigurationTestSupport
             .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
@@ -68,12 +79,6 @@ class ParameterValidationTest {
                     .build()
     );
 
-    private static FeatureExtractorParameters validate(Map<String, String> raw) {
-        return ParameterValidation.validate("length", raw, PARAMETERS, BASE, LOCATION);
-    }
-
-    record RangeDescriptionParameters(String name, int minimum, int maximum, String expected) {}
-
     static Stream<RangeDescriptionParameters> rangeDescription() {
         return Stream.of(
                 new RangeDescriptionParameters("both_bounds", 1, 5, "between 1 and 5"),
@@ -91,6 +96,10 @@ class ParameterValidationTest {
 
         // ASSERT //
         assertEquals(parameters.expected(), actual);
+    }
+
+    private static FeatureExtractorParameters validate(Map<String, String> raw) {
+        return ParameterValidation.validate("length", raw, PARAMETERS, BASE, LOCATION);
     }
 
     @Test
@@ -128,13 +137,6 @@ class ParameterValidationTest {
                 parameters.getResource("dictionary").toString()
         );
     }
-
-    record ValidateExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
 
     static Stream<ValidateExceptionParameters> validate__exception() throws MalformedURLException, URISyntaxException {
         return Stream.of(
@@ -307,8 +309,6 @@ class ParameterValidationTest {
                 parameters.getResource("dictionary").toString()
         );
     }
-
-    record RelativeResourceParameters(String name, String fileName) {}
 
     static Stream<RelativeResourceParameters> validate__resolvesRelativeDictionaryWithUriSignificantCharacters() {
         return Stream.of(

@@ -40,19 +40,6 @@ class CrfLauncherTest {
     final CapturedStandardStreams streams = new CapturedStandardStreams();
 
     @Test
-    void run__annotateWithoutTagProviderFailsFast() {
-        // ACT //
-        int exitCode = CrfLauncher.run(new String[] {"annotate", "-i", "in.txt", "-o", "out.xml"});
-
-        // ASSERT //
-        assertEquals(1, exitCode);
-        assertTrue(
-                streams.err().contains("TagProvider"),
-                "stderr should guide the user to register a TagProvider; was: " + streams.err()
-        );
-    }
-
-    @Test
     void run__annotateHelpOmitsBanner() {
         // ACT //
         int exitCode = CrfLauncher.run(new String[] {"annotate", "--help"});
@@ -62,6 +49,19 @@ class CrfLauncherTest {
         assertFalse(
                 streams.out().contains(BANNER_MARKER),
                 "subcommand help should not carry the root banner; was: " + streams.out()
+        );
+    }
+
+    @Test
+    void run__annotateWithoutTagProviderFailsFast() {
+        // ACT //
+        int exitCode = CrfLauncher.run(new String[] {"annotate", "-i", "in.txt", "-o", "out.xml"});
+
+        // ASSERT //
+        assertEquals(1, exitCode);
+        assertTrue(
+                streams.err().contains("TagProvider"),
+                "stderr should guide the user to register a TagProvider; was: " + streams.err()
         );
     }
 

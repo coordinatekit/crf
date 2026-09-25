@@ -48,46 +48,26 @@ import static java.util.stream.Collectors.toSet;
  */
 @NullMarked
 public class LengthFeatureExtractor implements FeatureExtractor {
-    private final @Nullable Function<Integer, Feature> hasLengthFeatureMapper;
-    private final @Nullable Function<Integer, Feature> lacksLengthFeatureMapper;
-    private final int lengthUpperLimit;
-
-    private LengthFeatureExtractor(Builder builder) {
-        this.hasLengthFeatureMapper = builder.hasLengthFeatureMapper;
-        this.lacksLengthFeatureMapper = builder.lacksLengthFeatureMapper;
-        this.lengthUpperLimit = builder.lengthUpperLimit;
-    }
-
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        int actualLength = sequence.size();
-        return IntStream.rangeClosed(1, lengthUpperLimit).boxed().flatMap(length -> {
-            Function<Integer, Feature> mapper = length <= actualLength ? hasLengthFeatureMapper
-                    : lacksLengthFeatureMapper;
-            return mapper != null ? Stream.of(mapper.apply(length)) : Stream.empty();
-        }).collect(toSet());
-    }
-
-    /**
-     * Creates a new builder with the specified length upper limit.
-     *
-     * @param lengthUpperLimit the maximum length to generate features for
-     * @return a new builder instance
-     */
-    public static Builder builder(int lengthUpperLimit) {
-        return new Builder(lengthUpperLimit);
-    }
 
     /**
      * Builder for {@link LengthFeatureExtractor}.
      */
     public static final class Builder {
-        private final int lengthUpperLimit;
         private @Nullable Function<Integer, Feature> hasLengthFeatureMapper;
         private @Nullable Function<Integer, Feature> lacksLengthFeatureMapper;
+        private final int lengthUpperLimit;
 
         private Builder(int lengthUpperLimit) {
             this.lengthUpperLimit = lengthUpperLimit;
+        }
+
+        /**
+         * Builds the feature extractor.
+         *
+         * @return a new {@link LengthFeatureExtractor} instance
+         */
+        public LengthFeatureExtractor build() {
+            return new LengthFeatureExtractor(this);
         }
 
         /**
@@ -120,14 +100,35 @@ public class LengthFeatureExtractor implements FeatureExtractor {
             this.lacksLengthFeatureMapper = lacksLengthFeatureMapper;
             return this;
         }
+    }
 
-        /**
-         * Builds the feature extractor.
-         *
-         * @return a new {@link LengthFeatureExtractor} instance
-         */
-        public LengthFeatureExtractor build() {
-            return new LengthFeatureExtractor(this);
-        }
+    private final @Nullable Function<Integer, Feature> hasLengthFeatureMapper;
+    private final @Nullable Function<Integer, Feature> lacksLengthFeatureMapper;
+    private final int lengthUpperLimit;
+
+    private LengthFeatureExtractor(Builder builder) {
+        this.hasLengthFeatureMapper = builder.hasLengthFeatureMapper;
+        this.lacksLengthFeatureMapper = builder.lacksLengthFeatureMapper;
+        this.lengthUpperLimit = builder.lengthUpperLimit;
+    }
+
+    /**
+     * Creates a new builder with the specified length upper limit.
+     *
+     * @param lengthUpperLimit the maximum length to generate features for
+     * @return a new builder instance
+     */
+    public static Builder builder(int lengthUpperLimit) {
+        return new Builder(lengthUpperLimit);
+    }
+
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        int actualLength = sequence.size();
+        return IntStream.rangeClosed(1, lengthUpperLimit).boxed().flatMap(length -> {
+            Function<Integer, Feature> mapper = length <= actualLength ? hasLengthFeatureMapper
+                    : lacksLengthFeatureMapper;
+            return mapper != null ? Stream.of(mapper.apply(length)) : Stream.empty();
+        }).collect(toSet());
     }
 }

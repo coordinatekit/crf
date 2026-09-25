@@ -58,10 +58,79 @@ import java.util.Set;
  */
 @NullMarked
 public class WindowFeatureExtractor implements FeatureExtractor {
+    /**
+     * Builder for constructing {@link WindowFeatureExtractor} instances.
+     */
+    public static class Builder {
+        private final FeatureExtractor delegate;
+        private boolean includeCurrentToken = true;
+        private int windowAfter = 1;
+        private int windowBefore = 1;
+
+        private Builder(FeatureExtractor delegate) {
+            this.delegate = delegate;
+        }
+
+        /**
+         * Builds a new {@link WindowFeatureExtractor} with the configured parameters.
+         *
+         * @return a new WindowFeatureExtractor instance
+         */
+        public WindowFeatureExtractor build() {
+            return new WindowFeatureExtractor(this);
+        }
+
+        /**
+         * Sets whether to include features from the current token. Defaults to {@code true}.
+         *
+         * <p>
+         * When enabled, features from the current token are included at offset {@code 0}. When disabled,
+         * only features from neighboring tokens (stamped with their window offset) are included.
+         *
+         * @param includeCurrentToken {@code true} to include current token features, {@code false} to
+         *        exclude them
+         * @return this builder
+         */
+        public Builder includeCurrentToken(boolean includeCurrentToken) {
+            this.includeCurrentToken = includeCurrentToken;
+            return this;
+        }
+
+        /**
+         * Sets the number of tokens to look forward from the current position. Defaults to 1.
+         *
+         * @param windowAfter the number of following tokens to include
+         * @return this builder
+         * @throws IllegalArgumentException if windowAfter is negative
+         */
+        public Builder windowAfter(int windowAfter) {
+            if (windowAfter < 0) {
+                throw new IllegalArgumentException("windowAfter must be non-negative");
+            }
+            this.windowAfter = windowAfter;
+            return this;
+        }
+
+        /**
+         * Sets the number of tokens to look back from the current position. Defaults to 1.
+         *
+         * @param windowBefore the number of preceding tokens to include
+         * @return this builder
+         * @throws IllegalArgumentException if windowBefore is negative
+         */
+        public Builder windowBefore(int windowBefore) {
+            if (windowBefore < 0) {
+                throw new IllegalArgumentException("windowBefore must be non-negative");
+            }
+            this.windowBefore = windowBefore;
+            return this;
+        }
+    }
+
     private final FeatureExtractor delegate;
-    private final int windowBefore;
-    private final int windowAfter;
     private final boolean includeCurrentToken;
+    private final int windowAfter;
+    private final int windowBefore;
 
     private WindowFeatureExtractor(Builder builder) {
         this.delegate = builder.delegate;
@@ -112,74 +181,5 @@ public class WindowFeatureExtractor implements FeatureExtractor {
         }
 
         return Collections.unmodifiableSet(features);
-    }
-
-    /**
-     * Builder for constructing {@link WindowFeatureExtractor} instances.
-     */
-    public static class Builder {
-        private final FeatureExtractor delegate;
-        private int windowBefore = 1;
-        private int windowAfter = 1;
-        private boolean includeCurrentToken = true;
-
-        private Builder(FeatureExtractor delegate) {
-            this.delegate = delegate;
-        }
-
-        /**
-         * Sets whether to include features from the current token. Defaults to {@code true}.
-         *
-         * <p>
-         * When enabled, features from the current token are included at offset {@code 0}. When disabled,
-         * only features from neighboring tokens (stamped with their window offset) are included.
-         *
-         * @param includeCurrentToken {@code true} to include current token features, {@code false} to
-         *        exclude them
-         * @return this builder
-         */
-        public Builder includeCurrentToken(boolean includeCurrentToken) {
-            this.includeCurrentToken = includeCurrentToken;
-            return this;
-        }
-
-        /**
-         * Sets the number of tokens to look back from the current position. Defaults to 1.
-         *
-         * @param windowBefore the number of preceding tokens to include
-         * @return this builder
-         * @throws IllegalArgumentException if windowBefore is negative
-         */
-        public Builder windowBefore(int windowBefore) {
-            if (windowBefore < 0) {
-                throw new IllegalArgumentException("windowBefore must be non-negative");
-            }
-            this.windowBefore = windowBefore;
-            return this;
-        }
-
-        /**
-         * Sets the number of tokens to look forward from the current position. Defaults to 1.
-         *
-         * @param windowAfter the number of following tokens to include
-         * @return this builder
-         * @throws IllegalArgumentException if windowAfter is negative
-         */
-        public Builder windowAfter(int windowAfter) {
-            if (windowAfter < 0) {
-                throw new IllegalArgumentException("windowAfter must be non-negative");
-            }
-            this.windowAfter = windowAfter;
-            return this;
-        }
-
-        /**
-         * Builds a new {@link WindowFeatureExtractor} with the configured parameters.
-         *
-         * @return a new WindowFeatureExtractor instance
-         */
-        public WindowFeatureExtractor build() {
-            return new WindowFeatureExtractor(this);
-        }
     }
 }

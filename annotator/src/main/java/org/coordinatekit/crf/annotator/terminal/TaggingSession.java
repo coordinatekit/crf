@@ -40,6 +40,8 @@ import java.util.List;
  * @param <T> the tag type
  */
 final class TaggingSession<T> {
+    private record Edit<T> (int position, T previousTag) {}
+
     private final List<T> currentTags;
     private final FeatureAvailability featureAvailability;
 
@@ -55,26 +57,6 @@ final class TaggingSession<T> {
         this.currentTags = currentTags;
         this.featureAvailability = featureAvailability;
         this.featureViewState = featureViewState;
-    }
-
-    /**
-     * Starts a session for {@code sequence}, seeding each token's current tag from its initial tag and
-     * sharing {@code featureViewState} so the feature view persists across sequences.
-     *
-     * @param sequence the sequence being presented
-     * @param featureViewState the sticky feature-view state shared across sequences
-     * @param <T> the tag type
-     * @return a new session
-     */
-    static <T extends Comparable<T>> TaggingSession<T> startingFrom(
-            AnnotatorSequence<T> sequence,
-            FeatureViewState featureViewState
-    ) {
-        List<T> currentTags = new ArrayList<>(sequence.tokens().size());
-        for (AnnotatorToken<T> token : sequence.tokens()) {
-            currentTags.add(token.initialTag());
-        }
-        return new TaggingSession<>(currentTags, sequence.featureAvailability(), featureViewState);
     }
 
     /**
@@ -134,6 +116,26 @@ final class TaggingSession<T> {
         }
     }
 
+    /**
+     * Starts a session for {@code sequence}, seeding each token's current tag from its initial tag and
+     * sharing {@code featureViewState} so the feature view persists across sequences.
+     *
+     * @param sequence the sequence being presented
+     * @param featureViewState the sticky feature-view state shared across sequences
+     * @param <T> the tag type
+     * @return a new session
+     */
+    static <T extends Comparable<T>> TaggingSession<T> startingFrom(
+            AnnotatorSequence<T> sequence,
+            FeatureViewState featureViewState
+    ) {
+        List<T> currentTags = new ArrayList<>(sequence.tokens().size());
+        for (AnnotatorToken<T> token : sequence.tokens()) {
+            currentTags.add(token.initialTag());
+        }
+        return new TaggingSession<>(currentTags, sequence.featureAvailability(), featureViewState);
+    }
+
     private void toggleAllFeatures() {
         if (featureAvailability.verboseAvailable()) {
             featureViewState
@@ -154,6 +156,4 @@ final class TaggingSession<T> {
             currentTags.set(edit.position(), edit.previousTag());
         }
     }
-
-    private record Edit<T> (int position, T previousTag) {}
 }

@@ -42,44 +42,6 @@ import java.util.Set;
 class FeatureConfigurationAcceptanceTest {
     private static final List<String> TOKENS = List.of("Ohio", "is", "a", "state");
 
-    private static Path baseDirectory() {
-        return ConfigurationTestSupport
-                .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/states.xml");
-    }
-
-    private static FeatureExtractor handCoded(Path baseDirectory) throws IOException {
-        FeatureExtractor length = new TransformingFeatureExtractor(
-                token -> Set.of(createFeatureWithValue("LENGTH", "" + token.length()))
-        );
-        FeatureExtractor prefix = SubstringFeatureExtractor
-                .builder(substring -> createFeatureWithValue("PREFIX2", substring))
-                .ending(false)
-                .includeIfLessThanLength(true)
-                .length(2)
-                .build();
-        FeatureExtractor lookup;
-        try (InputStream states = Files.newInputStream(baseDirectory.resolve("states.xml"))) {
-            lookup = XPathFeatureExtractor.builder(states, "/states/state")
-                    .caseSensitive(true)
-                    .presentFeature(createFeatureWithValue("STATE", "US"))
-                    .build();
-        }
-        CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(length, prefix, lookup);
-        return WindowFeatureExtractor.builder(composite)
-                .windowBefore(3)
-                .windowAfter(3)
-                .includeCurrentToken(true)
-                .build();
-    }
-
-    private static Path featuresXml() {
-        return baseDirectory().resolve("features.xml");
-    }
-
-    private static Set<String> render(FeatureExtractor extractor, int position) {
-        return ConfigurationTestSupport.renderFeatures(extractor, TOKENS, position);
-    }
-
     @Test
     void assembledTreeMatchesHandCodedComposition() throws IOException {
         // ARRANGE //
@@ -122,5 +84,43 @@ class FeatureConfigurationAcceptanceTest {
                 ),
                 rendered
         );
+    }
+
+    private static Path baseDirectory() {
+        return ConfigurationTestSupport
+                .resourceDirectory("/org/coordinatekit/crf/core/feature/configuration/states.xml");
+    }
+
+    private static Path featuresXml() {
+        return baseDirectory().resolve("features.xml");
+    }
+
+    private static FeatureExtractor handCoded(Path baseDirectory) throws IOException {
+        FeatureExtractor length = new TransformingFeatureExtractor(
+                token -> Set.of(createFeatureWithValue("LENGTH", "" + token.length()))
+        );
+        FeatureExtractor prefix = SubstringFeatureExtractor
+                .builder(substring -> createFeatureWithValue("PREFIX2", substring))
+                .ending(false)
+                .includeIfLessThanLength(true)
+                .length(2)
+                .build();
+        FeatureExtractor lookup;
+        try (InputStream states = Files.newInputStream(baseDirectory.resolve("states.xml"))) {
+            lookup = XPathFeatureExtractor.builder(states, "/states/state")
+                    .caseSensitive(true)
+                    .presentFeature(createFeatureWithValue("STATE", "US"))
+                    .build();
+        }
+        CompositeFeatureExtractor composite = CompositeFeatureExtractor.of(length, prefix, lookup);
+        return WindowFeatureExtractor.builder(composite)
+                .windowBefore(3)
+                .windowAfter(3)
+                .includeCurrentToken(true)
+                .build();
+    }
+
+    private static Set<String> render(FeatureExtractor extractor, int position) {
+        return ConfigurationTestSupport.renderFeatures(extractor, TOKENS, position);
     }
 }

@@ -76,12 +76,90 @@ class RetokenizeReviewerTest {
             String expectedMessage
     ) {}
 
+    /**
+     * A tagger with canned per-token tag scores keyed by surface, tokenized by
+     * {@link PunctuationTokenizer}.
+     */
+    private static final class FixedTagger implements CrfTagger<String> {
+        private final Map<String, List<Map<String, Double>>> tagScoresBySurface;
+        private final Tokenizer tokenizer;
+
+        FixedTagger(Map<String, List<Map<String, Double>>> tagScoresBySurface) {
+            this(tagScoresBySurface, new PunctuationTokenizer());
+        }
+
+        FixedTagger(Map<String, List<Map<String, Double>>> tagScoresBySurface, Tokenizer tokenizer) {
+            this.tagScoresBySurface = tagScoresBySurface;
+            this.tokenizer = tokenizer;
+        }
+
+        @Override
+        public TaggedTokenization<String> tag(String input) {
+            List<Map<String, Double>> tagScores = tagScoresBySurface.get(input);
+            if (tagScores == null) {
+                throw new AssertionError("FixedTagger has no scripted response for input: " + input);
+            }
+            Tokenization tokenization = tokenizer.tokenize(input);
+            List<String> tokens = tokenization.sequence().stream().map(PositionedToken::token).toList();
+            List<Set<Feature>> features = tokens.stream().map(unused -> Set.<Feature>of()).toList();
+            return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScores), tokenization, tags -> 0.0);
+        }
+    }
+
     record PreconditionParameters(
             String name,
             boolean outputEqualsInput,
             boolean preexistingOutput,
             String expectedSubstring
     ) {}
+
+    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
+        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
+        final Deque<TaggingResult<T>> results = new ArrayDeque<>();
+
+        @Override
+        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
+            presented.add(sequence);
+            if (results.isEmpty()) {
+                throw new AssertionError(
+                        "ScriptedTaggingInterface exhausted: no scripted result for presentation " + presented.size()
+                );
+            }
+            return results.removeFirst();
+        }
+    }
+
+    private static TaggingResult<String> accept(String... tags) {
+        return taggingResult(ACCEPT, List.of(tags));
+    }
+
+    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
+    @Test
+    void aligned__copiedThroughUnchanged(@TempDir Path tempDirectory) throws Exception {
+        // ARRANGE //
+        Path inputFile = writeInput(
+                tempDirectory,
+                words(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN")),
+                words(List.of("a", "lazy", "dog"), List.of("DT", "NN", "NN"))
+        );
+        Path outputFile = tempDirectory.resolve("output.xml");
+        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
+
+        // ACT //
+        try (Terminal terminal = quietTerminal()) {
+            reviewerWith(tagging, terminal).review(inputFile, outputFile);
+        }
+
+        // ASSERT //
+        assertEquals(0, tagging.presented.size(), "aligned sequences must never be presented");
+        List<TrainingSequence<String>> written = readOutput(outputFile);
+        assertEquals(2, written.size());
+        assertEquals(List.of("the", "quick", "brown"), tokensOf(written.get(0)));
+        assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.get(0)));
+        assertEquals("the quick brown", written.get(0).surface());
+        assertEquals(List.of("a", "lazy", "dog"), tokensOf(written.get(1)));
+        assertEquals("a lazy dog", written.get(1).surface());
+    }
 
     static Stream<BuilderExceptionParameters> builder__exception() {
         return Stream.of(
@@ -139,41 +217,6 @@ class RetokenizeReviewerTest {
         );
     }
 
-    static Stream<PreconditionParameters> review__preconditionException() {
-        return Stream.of(
-                new PreconditionParameters("existing_non_empty_output", false, true, "must be absent or empty"),
-                new PreconditionParameters("input_equals_output", true, false, "must be different")
-        );
-    }
-
-    @SuppressWarnings("SequencedCollectionMethodCanBeUsed")
-    @Test
-    void aligned__copiedThroughUnchanged(@TempDir Path tempDirectory) throws Exception {
-        // ARRANGE //
-        Path inputFile = writeInput(
-                tempDirectory,
-                words(List.of("the", "quick", "brown"), List.of("DT", "NN", "NN")),
-                words(List.of("a", "lazy", "dog"), List.of("DT", "NN", "NN"))
-        );
-        Path outputFile = tempDirectory.resolve("output.xml");
-        ScriptedTaggingInterface<String> tagging = new ScriptedTaggingInterface<>();
-
-        // ACT //
-        try (Terminal terminal = quietTerminal()) {
-            reviewerWith(tagging, terminal).review(inputFile, outputFile);
-        }
-
-        // ASSERT //
-        assertEquals(0, tagging.presented.size(), "aligned sequences must never be presented");
-        List<TrainingSequence<String>> written = readOutput(outputFile);
-        assertEquals(2, written.size());
-        assertEquals(List.of("the", "quick", "brown"), tokensOf(written.get(0)));
-        assertEquals(List.of("DT", "NN", "NN"), tagsOf(written.get(0)));
-        assertEquals("the quick brown", written.get(0).surface());
-        assertEquals(List.of("a", "lazy", "dog"), tokensOf(written.get(1)));
-        assertEquals("a lazy dog", written.get(1).surface());
-    }
-
     @MethodSource
     @ParameterizedTest
     void builder__exception(BuilderExceptionParameters parameters) {
@@ -182,6 +225,25 @@ class RetokenizeReviewerTest {
 
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
+    }
+
+    /**
+     * A tokenizer that rejects any surface containing a comma and otherwise tokenizes like
+     * {@link PunctuationTokenizer}, for driving a tagger that rejects a surface the alignment authority
+     * accepts.
+     */
+    private static Tokenizer commaRejectingTokenizer() {
+        PunctuationTokenizer delegate = new PunctuationTokenizer();
+        return input -> {
+            if (input.indexOf(',') >= 0) {
+                throw new InvalidInputException(input, "the tagger tokenizer rejected an unsupported ',' character");
+            }
+            return delegate.tokenize(input);
+        };
+    }
+
+    private static TaggingResult<String> exit() {
+        return taggingResult(EXIT, List.of());
     }
 
     @Test
@@ -327,6 +389,17 @@ class RetokenizeReviewerTest {
         );
     }
 
+    private static List<String> presentedTokens(AnnotatorSequence<String> sequence) {
+        return sequence.tokens().stream().map(AnnotatorToken::token).toList();
+    }
+
+    static Stream<PreconditionParameters> review__preconditionException() {
+        return Stream.of(
+                new PreconditionParameters("existing_non_empty_output", false, true, "must be absent or empty"),
+                new PreconditionParameters("input_equals_output", true, false, "must be different")
+        );
+    }
+
     @MethodSource
     @ParameterizedTest
     void review__preconditionException(PreconditionParameters parameters, @TempDir Path tempDirectory)
@@ -354,6 +427,19 @@ class RetokenizeReviewerTest {
             );
             assertMessageContains(exception, parameters.expectedSubstring());
         }
+    }
+
+    private static RetokenizeReviewer<String> reviewerWith(TaggingInterface<String> tagging, Terminal terminal) {
+        return RetokenizeReviewer.<String>builder()
+                .tagProvider(TAG_PROVIDER)
+                .taggingInterface(tagging)
+                .terminal(terminal)
+                .tokenizer(new PunctuationTokenizer())
+                .build();
+    }
+
+    private static TaggingResult<String> skip() {
+        return taggingResult(SKIP, List.of());
     }
 
     @Test
@@ -569,46 +655,6 @@ class RetokenizeReviewerTest {
         );
     }
 
-    private static TaggingResult<String> accept(String... tags) {
-        return taggingResult(ACCEPT, List.of(tags));
-    }
-
-    /**
-     * A tokenizer that rejects any surface containing a comma and otherwise tokenizes like
-     * {@link PunctuationTokenizer}, for driving a tagger that rejects a surface the alignment authority
-     * accepts.
-     */
-    private static Tokenizer commaRejectingTokenizer() {
-        PunctuationTokenizer delegate = new PunctuationTokenizer();
-        return input -> {
-            if (input.indexOf(',') >= 0) {
-                throw new InvalidInputException(input, "the tagger tokenizer rejected an unsupported ',' character");
-            }
-            return delegate.tokenize(input);
-        };
-    }
-
-    private static TaggingResult<String> exit() {
-        return taggingResult(EXIT, List.of());
-    }
-
-    private static List<String> presentedTokens(AnnotatorSequence<String> sequence) {
-        return sequence.tokens().stream().map(AnnotatorToken::token).toList();
-    }
-
-    private static RetokenizeReviewer<String> reviewerWith(TaggingInterface<String> tagging, Terminal terminal) {
-        return RetokenizeReviewer.<String>builder()
-                .tagProvider(TAG_PROVIDER)
-                .taggingInterface(tagging)
-                .terminal(terminal)
-                .tokenizer(new PunctuationTokenizer())
-                .build();
-    }
-
-    private static TaggingResult<String> skip() {
-        return taggingResult(SKIP, List.of());
-    }
-
     /**
      * A tokenizer that emits the whole surface as a single token, to force a token-count disagreement.
      */
@@ -635,51 +681,5 @@ class RetokenizeReviewerTest {
                 words(List.of("Brown,", "Lee"), List.of("NN", "NN")),
                 words(List.of("Young,", "Diaz"), List.of("NN", "NN"))
         );
-    }
-
-    /**
-     * A tagger with canned per-token tag scores keyed by surface, tokenized by
-     * {@link PunctuationTokenizer}.
-     */
-    private static final class FixedTagger implements CrfTagger<String> {
-        private final Map<String, List<Map<String, Double>>> tagScoresBySurface;
-        private final Tokenizer tokenizer;
-
-        FixedTagger(Map<String, List<Map<String, Double>>> tagScoresBySurface) {
-            this(tagScoresBySurface, new PunctuationTokenizer());
-        }
-
-        FixedTagger(Map<String, List<Map<String, Double>>> tagScoresBySurface, Tokenizer tokenizer) {
-            this.tagScoresBySurface = tagScoresBySurface;
-            this.tokenizer = tokenizer;
-        }
-
-        @Override
-        public TaggedTokenization<String> tag(String input) {
-            List<Map<String, Double>> tagScores = tagScoresBySurface.get(input);
-            if (tagScores == null) {
-                throw new AssertionError("FixedTagger has no scripted response for input: " + input);
-            }
-            Tokenization tokenization = tokenizer.tokenize(input);
-            List<String> tokens = tokenization.sequence().stream().map(PositionedToken::token).toList();
-            List<Set<Feature>> features = tokens.stream().map(unused -> Set.<Feature>of()).toList();
-            return TaggedTokenizations.of(new TaggedSequence<>(tokens, features, tagScores), tokenization, tags -> 0.0);
-        }
-    }
-
-    private static final class ScriptedTaggingInterface<T extends Comparable<T>> implements TaggingInterface<T> {
-        final List<AnnotatorSequence<T>> presented = new ArrayList<>();
-        final Deque<TaggingResult<T>> results = new ArrayDeque<>();
-
-        @Override
-        public TaggingResult<T> present(AnnotatorSequence<T> sequence) {
-            presented.add(sequence);
-            if (results.isEmpty()) {
-                throw new AssertionError(
-                        "ScriptedTaggingInterface exhausted: no scripted result for presentation " + presented.size()
-                );
-            }
-            return results.removeFirst();
-        }
     }
 }

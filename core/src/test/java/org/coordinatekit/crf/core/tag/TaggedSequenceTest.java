@@ -52,41 +52,6 @@ class TaggedSequenceTest {
             List<Integer> expectedPositions
     ) {}
 
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters(
-                        "single_token",
-                        List.of("Hello"),
-                        List.of(Set.of(createFeature("f1"))),
-                        List.of(Map.of("TAG", 0.5, "ANOTHER_TAG", 0.5)),
-                        List.of("Hello"),
-                        List.of(Set.of(createFeature("f1"))),
-                        List.of("ANOTHER_TAG"),
-                        List.of(List.of("ANOTHER_TAG", "TAG")),
-                        List.of(List.of("ANOTHER_TAG", "TAG")),
-                        List.of(List.of(0.5, 0.5)),
-                        List.of(0)
-                ),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")), Set.of(createFeature("f3"))),
-                        List.of(
-                                Map.of("NOUN", 0.2, "INTERJECTION", 0.75, "VERB", 0.05),
-                                Map.of("NOUN", 0.7),
-                                Map.of("PUNCT", 0.9)
-                        ),
-                        List.of("Hello", "world", "!"),
-                        List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")), Set.of(createFeature("f3"))),
-                        List.of("INTERJECTION", "NOUN", "PUNCT"),
-                        List.of(List.of("INTERJECTION", "NOUN", "VERB"), List.of("NOUN"), List.of("PUNCT")),
-                        List.of(List.of("INTERJECTION", "NOUN"), List.of("NOUN"), List.of("PUNCT")),
-                        List.of(List.of(0.75, 0.2, 0.05), List.of(0.7), List.of(0.9)),
-                        List.of(0, 1, 2)
-                )
-        );
-    }
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -187,6 +152,41 @@ class TaggedSequenceTest {
         assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
         assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
         assertIterableEquals(parameters.expectedTagScores(), actualTagScores, parameters.name());
+    }
+
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters(
+                        "single_token",
+                        List.of("Hello"),
+                        List.of(Set.of(createFeature("f1"))),
+                        List.of(Map.of("TAG", 0.5, "ANOTHER_TAG", 0.5)),
+                        List.of("Hello"),
+                        List.of(Set.of(createFeature("f1"))),
+                        List.of("ANOTHER_TAG"),
+                        List.of(List.of("ANOTHER_TAG", "TAG")),
+                        List.of(List.of("ANOTHER_TAG", "TAG")),
+                        List.of(List.of(0.5, 0.5)),
+                        List.of(0)
+                ),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")), Set.of(createFeature("f3"))),
+                        List.of(
+                                Map.of("NOUN", 0.2, "INTERJECTION", 0.75, "VERB", 0.05),
+                                Map.of("NOUN", 0.7),
+                                Map.of("PUNCT", 0.9)
+                        ),
+                        List.of("Hello", "world", "!"),
+                        List.of(Set.of(createFeature("f1")), Set.of(createFeature("f2")), Set.of(createFeature("f3"))),
+                        List.of("INTERJECTION", "NOUN", "PUNCT"),
+                        List.of(List.of("INTERJECTION", "NOUN", "VERB"), List.of("NOUN"), List.of("PUNCT")),
+                        List.of(List.of("INTERJECTION", "NOUN"), List.of("NOUN"), List.of("PUNCT")),
+                        List.of(List.of(0.75, 0.2, 0.05), List.of(0.7), List.of(0.9)),
+                        List.of(0, 1, 2)
+                )
+        );
     }
 
     @ParameterizedTest

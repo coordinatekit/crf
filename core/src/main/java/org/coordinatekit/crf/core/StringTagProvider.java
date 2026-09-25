@@ -35,8 +35,8 @@ import java.util.TreeSet;
  */
 @NullMarked
 public class StringTagProvider implements TagProvider<String> {
-    private final SortedSet<String> tags;
     private final String startingTag;
+    private final SortedSet<String> tags;
 
     /**
      * Constructs a new string tag provider with the starting tag.

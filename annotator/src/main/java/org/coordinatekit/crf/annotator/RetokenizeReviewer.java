@@ -106,11 +106,198 @@ import static org.coordinatekit.crf.core.align.AlignmentModels.exactMatchStrateg
  */
 @NullMarked
 public final class RetokenizeReviewer<T extends Comparable<T>> {
+    /**
+     * Builder for {@link RetokenizeReviewer}.
+     *
+     * <p>
+     * {@link #tagProvider(TagProvider)}, {@link #taggingInterface(TaggingInterface)},
+     * {@link #terminal(Terminal)}, and {@link #tokenizer(Tokenizer)} are required. Unlike
+     * {@link Annotator.Builder}, the tokenizer is always required: it is the alignment-detection
+     * authority. A {@link #tagger(CrfTagger) tagger} is optional and supplies tag suggestions only.
+     *
+     * @param <T> the tag type
+     */
+    public static final class Builder<T extends Comparable<T>> {
+        private @Nullable AlignmentStrategy alignmentStrategy;
+        private @Nullable FeatureExtractor featureExtractor;
+        private @Nullable CrfTagger<T> tagger;
+        private @Nullable TaggingInterface<T> taggingInterface;
+        private @Nullable TagProvider<T> tagProvider;
+        private @Nullable Terminal terminal;
+        private @Nullable Tokenizer tokenizer;
+        private @Nullable FeatureExtractor verboseFeatureExtractor;
+
+        private Builder() {}
+
+        /**
+         * Sets the strategy used to compare a stored token list against the re-tokenized surface when
+         * deciding whether a sequence is aligned. May be {@code null}; when {@code null} the whole-list
+         * exact-match strategy
+         * ({@link org.coordinatekit.crf.core.align.AlignmentModels#exactMatchStrategy()}) is used, which
+         * treats a sequence as aligned only when the re-tokenization reproduces the stored tokens exactly.
+         *
+         * @param alignmentStrategy the comparison strategy, or {@code null} to use the exact-match default
+         * @return this builder
+         */
+        public Builder<T> alignmentStrategy(@Nullable AlignmentStrategy alignmentStrategy) {
+            this.alignmentStrategy = alignmentStrategy;
+            return this;
+        }
+
+        /**
+         * Builds the reviewer.
+         *
+         * @return a new {@link RetokenizeReviewer}
+         * @throws IllegalStateException if {@link #tagProvider(TagProvider) tagProvider},
+         *         {@link #taggingInterface(TaggingInterface) taggingInterface}, {@link #terminal(Terminal)
+         *         terminal}, or {@link #tokenizer(Tokenizer) tokenizer} have not been set, or if the
+         *         supplied {@link TagProvider#tags()} set is empty
+         */
+        public RetokenizeReviewer<T> build() {
+            if (tagProvider == null) {
+                throw new IllegalStateException("tagProvider must be set");
+            } else if (taggingInterface == null) {
+                throw new IllegalStateException("taggingInterface must be set");
+            } else if (terminal == null) {
+                throw new IllegalStateException("terminal must be set");
+            } else if (tokenizer == null) {
+                throw new IllegalStateException("tokenizer must be set");
+            } else if (tagProvider.tags().isEmpty()) {
+                throw new IllegalStateException("tagProvider.tags() must not be empty");
+            }
+
+            return new RetokenizeReviewer<>(this);
+        }
+
+        /**
+         * Sets the feature extractor used to compute the key display features shown by the feature view of
+         * the tagging interface. May be {@code null}; when {@code null}, the key-feature view is not
+         * offered. The extracted features are presentational only — they have no effect on tagging or the
+         * written training data.
+         *
+         * @param featureExtractor the display feature extractor, or {@code null} to disable the feature
+         *        display
+         * @return this builder
+         */
+        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
+            this.featureExtractor = featureExtractor;
+            return this;
+        }
+
+        /**
+         * Sets the CRF tagger used to suggest tags when re-tagging a misaligned sequence. May be
+         * {@code null}. When present, the tagger tokenizes the surface and its suggestions seed the
+         * presented tags; when absent, the configured {@link #tokenizer(Tokenizer)} splits the surface and
+         * every token starts at {@link TagProvider#startingTag()}. The tagger never affects alignment
+         * detection, which always uses the configured tokenizer.
+         *
+         * @param tagger the tagger, or {@code null} to re-tag without suggestions
+         * @return this builder
+         */
+        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
+            this.tagger = tagger;
+            return this;
+        }
+
+        /**
+         * Sets the tagging interface used to present each misaligned sequence to the user.
+         *
+         * @param taggingInterface the tagging interface
+         * @return this builder
+         */
+        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
+            this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the tag provider, whose {@link TagProvider#tags()} set defines the tag space.
+         *
+         * @param tagProvider the tag provider
+         * @return this builder
+         */
+        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
+            this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the JLine terminal used to emit untokenizable warnings and the closing summary. Ownership is
+         * not transferred; the caller is responsible for closing it.
+         *
+         * @param terminal the terminal
+         * @return this builder
+         */
+        public Builder<T> terminal(Terminal terminal) {
+            this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the tokenizer used to re-tokenize each sequence's surface. This is the alignment-detection
+         * authority — a sequence is misaligned when this tokenizer's output differs from the stored tokens
+         * — and it also splits surfaces for presentation when no {@link #tagger(CrfTagger) tagger} is
+         * configured. Required.
+         *
+         * @param tokenizer the tokenizer
+         * @return this builder
+         */
+        public Builder<T> tokenizer(Tokenizer tokenizer) {
+            this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
+            return this;
+        }
+
+        /**
+         * Sets the feature extractor used to compute the verbose display features shown only by the
+         * all-features view of the tagging interface. May be {@code null}; when {@code null} and a
+         * {@link #tagger(CrfTagger) tagger} is configured, the all-features view falls back to the tagger's
+         * embedded {@link TaggedPositionedToken#features() features}. Setting this extractor overrides that
+         * fallback. The extracted features are presentational only and have no effect on tagging or the
+         * written training data.
+         *
+         * @param verboseFeatureExtractor the verbose display feature extractor, or {@code null} to use the
+         *        tagger fallback (or no verbose display)
+         * @return this builder
+         */
+        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
+            this.verboseFeatureExtractor = verboseFeatureExtractor;
+            return this;
+        }
+    }
+
+    /**
+     * The configured {@link Tokenizer}'s tokenization for a misaligned sequence — the alignment
+     * authority, independent of any tagger — paired with the user's tagging result. Keeping the
+     * tokenization lets an accepted sequence be written with that tokenizer's token boundaries and
+     * excluded runs without re-tokenizing.
+     *
+     * @param <T> the tag type
+     */
+    private record Presentation<T extends Comparable<T>> (Tokenization tokenization, TaggingResult<T> result) {}
+
+    /**
+     * Mutable per-status tally of a review pass. Every input sequence increments exactly one of the
+     * five counters ({@link #aligned}, {@link #retagged}, {@link #skipped}, {@link #untokenizable},
+     * {@link #copiedAfterExit}), which always sum to {@link #total}.
+     */
+    private static final class ReviewSummary {
+        int aligned;
+        int copiedAfterExit;
+        int retagged;
+        int skipped;
+        final int total;
+        int untokenizable;
+
+        ReviewSummary(int total) {
+            this.total = total;
+        }
+    }
+
     private final AlignmentStrategy alignmentStrategy;
     private final @Nullable FeatureExtractor featureExtractor;
     private final @Nullable CrfTagger<T> tagger;
-    private final TagProvider<T> tagProvider;
     private final TaggingInterface<T> taggingInterface;
+    private final TagProvider<T> tagProvider;
     private final Terminal terminal;
     private final Tokenizer tokenizer;
     private final @Nullable FeatureExtractor verboseFeatureExtractor;
@@ -403,192 +590,5 @@ public final class RetokenizeReviewer<T extends Comparable<T>> {
     private void writeThrough(TrainingSequenceWriter<T> writer, TrainingSequence<T> sequence) throws IOException {
         writer.write(sequence);
         writer.flush();
-    }
-
-    /**
-     * The configured {@link Tokenizer}'s tokenization for a misaligned sequence — the alignment
-     * authority, independent of any tagger — paired with the user's tagging result. Keeping the
-     * tokenization lets an accepted sequence be written with that tokenizer's token boundaries and
-     * excluded runs without re-tokenizing.
-     *
-     * @param <T> the tag type
-     */
-    private record Presentation<T extends Comparable<T>> (Tokenization tokenization, TaggingResult<T> result) {}
-
-    /**
-     * Mutable per-status tally of a review pass. Every input sequence increments exactly one of the
-     * five counters ({@link #aligned}, {@link #retagged}, {@link #skipped}, {@link #untokenizable},
-     * {@link #copiedAfterExit}), which always sum to {@link #total}.
-     */
-    private static final class ReviewSummary {
-        int aligned;
-        int copiedAfterExit;
-        int retagged;
-        int skipped;
-        final int total;
-        int untokenizable;
-
-        ReviewSummary(int total) {
-            this.total = total;
-        }
-    }
-
-    /**
-     * Builder for {@link RetokenizeReviewer}.
-     *
-     * <p>
-     * {@link #tagProvider(TagProvider)}, {@link #taggingInterface(TaggingInterface)},
-     * {@link #terminal(Terminal)}, and {@link #tokenizer(Tokenizer)} are required. Unlike
-     * {@link Annotator.Builder}, the tokenizer is always required: it is the alignment-detection
-     * authority. A {@link #tagger(CrfTagger) tagger} is optional and supplies tag suggestions only.
-     *
-     * @param <T> the tag type
-     */
-    public static final class Builder<T extends Comparable<T>> {
-        private @Nullable AlignmentStrategy alignmentStrategy;
-        private @Nullable FeatureExtractor featureExtractor;
-        private @Nullable CrfTagger<T> tagger;
-        private @Nullable TagProvider<T> tagProvider;
-        private @Nullable TaggingInterface<T> taggingInterface;
-        private @Nullable Terminal terminal;
-        private @Nullable Tokenizer tokenizer;
-        private @Nullable FeatureExtractor verboseFeatureExtractor;
-
-        private Builder() {}
-
-        /**
-         * Sets the strategy used to compare a stored token list against the re-tokenized surface when
-         * deciding whether a sequence is aligned. May be {@code null}; when {@code null} the whole-list
-         * exact-match strategy
-         * ({@link org.coordinatekit.crf.core.align.AlignmentModels#exactMatchStrategy()}) is used, which
-         * treats a sequence as aligned only when the re-tokenization reproduces the stored tokens exactly.
-         *
-         * @param alignmentStrategy the comparison strategy, or {@code null} to use the exact-match default
-         * @return this builder
-         */
-        public Builder<T> alignmentStrategy(@Nullable AlignmentStrategy alignmentStrategy) {
-            this.alignmentStrategy = alignmentStrategy;
-            return this;
-        }
-
-        /**
-         * Builds the reviewer.
-         *
-         * @return a new {@link RetokenizeReviewer}
-         * @throws IllegalStateException if {@link #tagProvider(TagProvider) tagProvider},
-         *         {@link #taggingInterface(TaggingInterface) taggingInterface}, {@link #terminal(Terminal)
-         *         terminal}, or {@link #tokenizer(Tokenizer) tokenizer} have not been set, or if the
-         *         supplied {@link TagProvider#tags()} set is empty
-         */
-        public RetokenizeReviewer<T> build() {
-            if (tagProvider == null) {
-                throw new IllegalStateException("tagProvider must be set");
-            } else if (taggingInterface == null) {
-                throw new IllegalStateException("taggingInterface must be set");
-            } else if (terminal == null) {
-                throw new IllegalStateException("terminal must be set");
-            } else if (tokenizer == null) {
-                throw new IllegalStateException("tokenizer must be set");
-            } else if (tagProvider.tags().isEmpty()) {
-                throw new IllegalStateException("tagProvider.tags() must not be empty");
-            }
-
-            return new RetokenizeReviewer<>(this);
-        }
-
-        /**
-         * Sets the feature extractor used to compute the key display features shown by the feature view of
-         * the tagging interface. May be {@code null}; when {@code null}, the key-feature view is not
-         * offered. The extracted features are presentational only — they have no effect on tagging or the
-         * written training data.
-         *
-         * @param featureExtractor the display feature extractor, or {@code null} to disable the feature
-         *        display
-         * @return this builder
-         */
-        public Builder<T> featureExtractor(@Nullable FeatureExtractor featureExtractor) {
-            this.featureExtractor = featureExtractor;
-            return this;
-        }
-
-        /**
-         * Sets the CRF tagger used to suggest tags when re-tagging a misaligned sequence. May be
-         * {@code null}. When present, the tagger tokenizes the surface and its suggestions seed the
-         * presented tags; when absent, the configured {@link #tokenizer(Tokenizer)} splits the surface and
-         * every token starts at {@link TagProvider#startingTag()}. The tagger never affects alignment
-         * detection, which always uses the configured tokenizer.
-         *
-         * @param tagger the tagger, or {@code null} to re-tag without suggestions
-         * @return this builder
-         */
-        public Builder<T> tagger(@Nullable CrfTagger<T> tagger) {
-            this.tagger = tagger;
-            return this;
-        }
-
-        /**
-         * Sets the tag provider, whose {@link TagProvider#tags()} set defines the tag space.
-         *
-         * @param tagProvider the tag provider
-         * @return this builder
-         */
-        public Builder<T> tagProvider(TagProvider<T> tagProvider) {
-            this.tagProvider = Objects.requireNonNull(tagProvider, "tagProvider must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the tagging interface used to present each misaligned sequence to the user.
-         *
-         * @param taggingInterface the tagging interface
-         * @return this builder
-         */
-        public Builder<T> taggingInterface(TaggingInterface<T> taggingInterface) {
-            this.taggingInterface = Objects.requireNonNull(taggingInterface, "taggingInterface must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the JLine terminal used to emit untokenizable warnings and the closing summary. Ownership is
-         * not transferred; the caller is responsible for closing it.
-         *
-         * @param terminal the terminal
-         * @return this builder
-         */
-        public Builder<T> terminal(Terminal terminal) {
-            this.terminal = Objects.requireNonNull(terminal, "terminal must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the tokenizer used to re-tokenize each sequence's surface. This is the alignment-detection
-         * authority — a sequence is misaligned when this tokenizer's output differs from the stored tokens
-         * — and it also splits surfaces for presentation when no {@link #tagger(CrfTagger) tagger} is
-         * configured. Required.
-         *
-         * @param tokenizer the tokenizer
-         * @return this builder
-         */
-        public Builder<T> tokenizer(Tokenizer tokenizer) {
-            this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer must not be null");
-            return this;
-        }
-
-        /**
-         * Sets the feature extractor used to compute the verbose display features shown only by the
-         * all-features view of the tagging interface. May be {@code null}; when {@code null} and a
-         * {@link #tagger(CrfTagger) tagger} is configured, the all-features view falls back to the tagger's
-         * embedded {@link TaggedPositionedToken#features() features}. Setting this extractor overrides that
-         * fallback. The extracted features are presentational only and have no effect on tagging or the
-         * written training data.
-         *
-         * @param verboseFeatureExtractor the verbose display feature extractor, or {@code null} to use the
-         *        tagger fallback (or no verbose display)
-         * @return this builder
-         */
-        public Builder<T> verboseFeatureExtractor(@Nullable FeatureExtractor verboseFeatureExtractor) {
-            this.verboseFeatureExtractor = verboseFeatureExtractor;
-            return this;
-        }
     }
 }

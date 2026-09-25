@@ -44,70 +44,6 @@ import java.util.Objects;
  * @see Builder
  */
 public final class XmlTrainingDataConfiguration {
-    /**
-     * The default local name used for the root element of training data documents written by
-     * {@link XmlTrainingData}.
-     */
-    public static final String DEFAULT_ROOT_ELEMENT_NAME = "Collection";
-
-    private static final XmlTrainingDataConfiguration DEFAULTS = builder().build();
-
-    private final String rootElementName;
-    private final @Nullable String targetNamespace;
-
-    private XmlTrainingDataConfiguration(Builder builder) {
-        this.rootElementName = builder.rootElementName;
-        this.targetNamespace = builder.targetNamespace;
-    }
-
-    /**
-     * Returns a new {@link Builder} instance for constructing a configuration.
-     *
-     * @return a new builder with default values
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a configuration with all default values.
-     *
-     * <p>
-     * This is equivalent to calling {@code XmlTrainingDataConfiguration.builder().build()}.
-     *
-     * @return a configuration with default settings
-     */
-    public static XmlTrainingDataConfiguration defaults() {
-        return DEFAULTS;
-    }
-
-    /**
-     * Returns the local name to use for the root element of training data documents.
-     *
-     * <p>
-     * The root element is emitted in the CRF schema namespace by {@link XmlTrainingData} writers and
-     * matched against the same namespace when validating files for append. Defaults to
-     * {@link #DEFAULT_ROOT_ELEMENT_NAME}.
-     *
-     * @return the root element local name
-     */
-    public String rootElementName() {
-        return rootElementName;
-    }
-
-    /**
-     * Returns the target namespace used for XSD schema generation, or {@code null} if tag elements
-     * should sit in no namespace.
-     *
-     * <p>
-     * The namespace is optional. A non-blank value places tag elements in it for both generated schemas
-     * and written documents; a {@code null} or blank value leaves them in no namespace.
-     *
-     * @return the target namespace URI, or {@code null} if unset
-     */
-    public @Nullable String targetNamespace() {
-        return targetNamespace;
-    }
 
     /**
      * Builder for constructing {@link XmlTrainingDataConfiguration} instances.
@@ -175,5 +111,70 @@ public final class XmlTrainingDataConfiguration {
             this.targetNamespace = targetNamespace;
             return this;
         }
+    }
+
+    /**
+     * The default local name used for the root element of training data documents written by
+     * {@link XmlTrainingData}.
+     */
+    public static final String DEFAULT_ROOT_ELEMENT_NAME = "Collection";
+
+    private static final XmlTrainingDataConfiguration DEFAULTS = builder().build();
+
+    private final String rootElementName;
+    private final @Nullable String targetNamespace;
+
+    private XmlTrainingDataConfiguration(Builder builder) {
+        this.rootElementName = builder.rootElementName;
+        this.targetNamespace = builder.targetNamespace;
+    }
+
+    /**
+     * Returns a new {@link Builder} instance for constructing a configuration.
+     *
+     * @return a new builder with default values
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Returns a configuration with all default values.
+     *
+     * <p>
+     * This is equivalent to calling {@code XmlTrainingDataConfiguration.builder().build()}.
+     *
+     * @return a configuration with default settings
+     */
+    public static XmlTrainingDataConfiguration defaults() {
+        return DEFAULTS;
+    }
+
+    /**
+     * Returns the local name to use for the root element of training data documents.
+     *
+     * <p>
+     * The root element is emitted in the CRF schema namespace by {@link XmlTrainingData} writers and
+     * matched against the same namespace when validating files for append. Defaults to
+     * {@link #DEFAULT_ROOT_ELEMENT_NAME}.
+     *
+     * @return the root element local name
+     */
+    public String rootElementName() {
+        return rootElementName;
+    }
+
+    /**
+     * Returns the target namespace used for XSD schema generation, or {@code null} if tag elements
+     * should sit in no namespace.
+     *
+     * <p>
+     * The namespace is optional. A non-blank value places tag elements in it for both generated schemas
+     * and written documents; a {@code null} or blank value leaves them in no namespace.
+     *
+     * @return the target namespace URI, or {@code null} if unset
+     */
+    public @Nullable String targetNamespace() {
+        return targetNamespace;
     }
 }

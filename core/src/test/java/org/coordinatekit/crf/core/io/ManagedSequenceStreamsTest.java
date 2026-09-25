@@ -32,6 +32,35 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ManagedSequenceStreamsTest {
 
+    record PropagateParameters(String name, Throwable failure, Class<? extends Throwable> expectedClass) {}
+
+    /** An input stream that counts {@code close()} calls and optionally fails them. */
+    static final class TrackingInputStream extends InputStream {
+        int closeCount;
+        private final @Nullable IOException closeFailure;
+
+        TrackingInputStream() {
+            this(null);
+        }
+
+        TrackingInputStream(@Nullable IOException closeFailure) {
+            this.closeFailure = closeFailure;
+        }
+
+        @Override
+        public void close() throws IOException {
+            closeCount++;
+            if (closeFailure != null) {
+                throw closeFailure;
+            }
+        }
+
+        @Override
+        public int read() {
+            return -1;
+        }
+    }
+
     @Test
     void readManaged__closesInputWhenDelegateReturns() throws IOException {
         // ARRANGE //
@@ -46,8 +75,6 @@ class ManagedSequenceStreamsTest {
         // ASSERT //
         assertEquals(1, input.closeCount);
     }
-
-    record PropagateParameters(String name, Throwable failure, Class<? extends Throwable> expectedClass) {}
 
     static Stream<PropagateParameters> readManaged__propagatesDelegateFailureAndCloses() {
         return Stream.of(
@@ -121,32 +148,5 @@ class ManagedSequenceStreamsTest {
         // ASSERT //
         assertSame(closeFailure, thrown.getCause());
         assertEquals(1, input.closeCount);
-    }
-
-    /** An input stream that counts {@code close()} calls and optionally fails them. */
-    static final class TrackingInputStream extends InputStream {
-        int closeCount;
-        private final @Nullable IOException closeFailure;
-
-        TrackingInputStream() {
-            this(null);
-        }
-
-        TrackingInputStream(@Nullable IOException closeFailure) {
-            this.closeFailure = closeFailure;
-        }
-
-        @Override
-        public void close() throws IOException {
-            closeCount++;
-            if (closeFailure != null) {
-                throw closeFailure;
-            }
-        }
-
-        @Override
-        public int read() {
-            return -1;
-        }
     }
 }

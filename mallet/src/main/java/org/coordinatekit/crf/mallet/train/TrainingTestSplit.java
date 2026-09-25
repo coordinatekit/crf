@@ -29,6 +29,15 @@ import cc.mallet.types.LabelAlphabet;
  */
 public interface TrainingTestSplit {
     /**
+     * Returns the total number of instances across both training and test sets.
+     *
+     * @return the combined size of training and test sets
+     */
+    default int size() {
+        return training().size() + test().size();
+    }
+
+    /**
      * Returns the instances to use for model evaluation.
      *
      * @return the test instances
@@ -41,13 +50,4 @@ public interface TrainingTestSplit {
      * @return the training instances
      */
     InstanceList training();
-
-    /**
-     * Returns the total number of instances across both training and test sets.
-     *
-     * @return the combined size of training and test sets
-     */
-    default int size() {
-        return training().size() + test().size();
-    }
 }

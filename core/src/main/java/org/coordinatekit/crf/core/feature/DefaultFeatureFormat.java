@@ -44,8 +44,8 @@ import java.util.regex.Pattern;
  */
 public class DefaultFeatureFormat implements FeatureFormat {
     private static final String NEXT_PREFIX = "NEXT_";
-    private static final String PREV_PREFIX = "PREV_";
     private static final Pattern PREFIX_PATTERN = Pattern.compile("^(PREV|NEXT)_(\\d+)__");
+    private static final String PREV_PREFIX = "PREV_";
     private static final String SUFFIX = "__";
 
     /** Creates a new default feature format. */

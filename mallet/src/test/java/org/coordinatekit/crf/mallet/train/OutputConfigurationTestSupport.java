@@ -31,14 +31,14 @@ import java.util.stream.Stream;
  * {@link #outputBuilderExceptionCases}.
  */
 final class OutputConfigurationTestSupport {
-    private OutputConfigurationTestSupport() {}
-
     record BuilderExceptionParameters(
             String name,
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
     ) {}
+
+    private OutputConfigurationTestSupport() {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"}) // null literals passed to non-null setters
     static <B> Stream<BuilderExceptionParameters> outputBuilderExceptionCases(

@@ -48,6 +48,17 @@ import java.util.stream.Stream;
  * {@link FeatureConfigurationParseException}.
  */
 class XmlFeatureConfigurationParserTest {
+    record DepthCapParameters(String name, int depth) {}
+
+    record KeyAttributeParameters(String name, String rawValue, boolean expectedKey) {}
+
+    record ParseExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessageContains
+    ) {}
+
     private static final String NAMESPACE = "https://coordinatekit.org/schema/crf/feature-configuration";
     private static final XmlFeatureConfigurationParser PARSER = new XmlFeatureConfigurationParser();
 
@@ -132,8 +143,6 @@ class XmlFeatureConfigurationParserTest {
         assertEquals("composite", root.type());
     }
 
-    record DepthCapParameters(String name, int depth) {}
-
     static Stream<DepthCapParameters> parse__depthCap() {
         return Stream.of(
                 new DepthCapParameters("at_cap", FeatureExtractorNode.MAXIMUM_NESTING_DEPTH),
@@ -162,13 +171,6 @@ class XmlFeatureConfigurationParserTest {
         );
         assertTrue(message.startsWith("config.xml:"));
     }
-
-    record ParseExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessageContains
-    ) {}
 
     static Stream<ParseExceptionParameters> parse__exception() {
         return Stream.of(
@@ -380,8 +382,6 @@ class XmlFeatureConfigurationParserTest {
                 "message should report the read failure; was: " + message
         );
     }
-
-    record KeyAttributeParameters(String name, String rawValue, boolean expectedKey) {}
 
     static Stream<KeyAttributeParameters> parse__keyAttributeLexicalForms() {
         return Stream.of(

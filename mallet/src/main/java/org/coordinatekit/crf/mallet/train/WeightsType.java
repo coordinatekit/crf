@@ -36,15 +36,6 @@ public enum WeightsType {
     DENSE,
 
     /**
-     * Use sparse weight storage for all features.
-     *
-     * <p>
-     * Only stores weights for features that appear in the training data. This is more memory-efficient
-     * for large feature spaces with many zero weights.
-     */
-    SPARSE,
-
-    /**
      * Use a hybrid approach with some dense and some sparse weights.
      *
      * <p>
@@ -52,5 +43,14 @@ public enum WeightsType {
      * features and sparse storage for rare features, providing a balance between memory efficiency and
      * computational speed.
      */
-    SOME_DENSE
+    SOME_DENSE,
+
+    /**
+     * Use sparse weight storage for all features.
+     *
+     * <p>
+     * Only stores weights for features that appear in the training data. This is more memory-efficient
+     * for large feature spaces with many zero weights.
+     */
+    SPARSE
 }

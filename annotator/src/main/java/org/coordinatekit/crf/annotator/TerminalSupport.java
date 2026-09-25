@@ -40,6 +40,31 @@ import java.io.PrintWriter;
  */
 @NullMarked
 final class TerminalSupport {
+    /** The command-specific work run inside an opened, interactive terminal. */
+    @FunctionalInterface
+    interface InteractiveAction {
+        /**
+         * Runs the command's work against the opened terminal.
+         *
+         * @param terminal the opened, interactive terminal
+         * @return the process exit code
+         * @throws IOException if the work fails
+         */
+        int run(Terminal terminal) throws IOException;
+    }
+
+    /** Supplies the JLine {@link Terminal} an interactive command runs against. */
+    @FunctionalInterface
+    interface TerminalSupplier {
+        /**
+         * Returns a terminal to run against.
+         *
+         * @return the terminal
+         * @throws IOException if the terminal cannot be opened
+         */
+        Terminal get() throws IOException;
+    }
+
     private TerminalSupport() {
         throw new UnsupportedOperationException("TerminalSupport is a utility class and cannot be instantiated");
     }
@@ -122,30 +147,5 @@ final class TerminalSupport {
             err.println(failureLabel + " failed: " + exception.getMessage());
             return 1;
         }
-    }
-
-    /** The command-specific work run inside an opened, interactive terminal. */
-    @FunctionalInterface
-    interface InteractiveAction {
-        /**
-         * Runs the command's work against the opened terminal.
-         *
-         * @param terminal the opened, interactive terminal
-         * @return the process exit code
-         * @throws IOException if the work fails
-         */
-        int run(Terminal terminal) throws IOException;
-    }
-
-    /** Supplies the JLine {@link Terminal} an interactive command runs against. */
-    @FunctionalInterface
-    interface TerminalSupplier {
-        /**
-         * Returns a terminal to run against.
-         *
-         * @return the terminal
-         * @throws IOException if the terminal cannot be opened
-         */
-        Terminal get() throws IOException;
     }
 }

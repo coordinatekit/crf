@@ -50,6 +50,40 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.*;
 
 class XmlTrainingDataWriterTest {
+    record AfterCloseExceptionParameters(
+            String name,
+            ThrowingConsumer<TrainingSequenceWriter<String>> action,
+            String expectedMessage
+    ) {}
+
+    record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
+
+    record AppendingWriterExceptionParameters(String name, String existingContent, String expectedMessageSubstring) {}
+
+    record EmitParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
+
+    private record NullEncodingTagProvider(String nullTag) implements TagProvider<String> {
+        @Override
+        public String decode(@Nullable String tag) {
+            return tag == null ? "0" : tag;
+        }
+
+        @Override
+        public @Nullable String encode(String rawTag) {
+            return nullTag.equals(rawTag) ? null : rawTag;
+        }
+
+        @Override
+        public String startingTag() {
+            return "0";
+        }
+
+        @Override
+        public SortedSet<String> tags() {
+            return new TreeSet<>(Set.of("0", "Adjective", "Noun"));
+        }
+    }
+
     private static final XmlTrainingData<String> DATA = new XmlTrainingData<>(new StringTagProvider("0"));
 
     private static final String MALFORMED_XML = "<crf:Collection xmlns:crf=\"unclosed";
@@ -75,12 +109,6 @@ class XmlTrainingDataWriterTest {
 
     @TempDir
     Path temporaryDirectory;
-
-    record AfterCloseExceptionParameters(
-            String name,
-            ThrowingConsumer<TrainingSequenceWriter<String>> action,
-            String expectedMessage
-    ) {}
 
     static Stream<AfterCloseExceptionParameters> afterClose__exception() {
         return Stream.of(
@@ -156,8 +184,6 @@ class XmlTrainingDataWriterTest {
         );
     }
 
-    record AppendingWriterExceptionParameters(String name, String existingContent, String expectedMessageSubstring) {}
-
     static Stream<AppendingWriterExceptionParameters> appendingWriter__exception() {
         return Stream.of(
                 new AppendingWriterExceptionParameters("doctype", DOCTYPE_DOCUMENT, "DOCTYPE"),
@@ -205,8 +231,6 @@ class XmlTrainingDataWriterTest {
             assertBrownFox(actual.getFirst());
         }
     }
-
-    record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
 
     static Stream<AppendHappyPathParameters> appendingWriter__happyPath() {
         return Stream.of(new AppendHappyPathParameters("cleanCloseTag", file -> {
@@ -309,6 +333,13 @@ class XmlTrainingDataWriterTest {
         assertArrayEquals(snapshot, output.toByteArray());
     }
 
+    private static XmlTrainingData<String> withRoot(String rootElementName) {
+        return new XmlTrainingData<>(
+                new StringTagProvider("0"),
+                XmlTrainingDataConfiguration.builder().rootElementName(rootElementName).build()
+        );
+    }
+
     @Test
     void write__exceptionWhenTagEncodesToNull() throws IOException {
         // ARRANGE //
@@ -390,119 +421,6 @@ class XmlTrainingDataWriterTest {
         );
     }
 
-    @Test
-    void writer__excludedRunsRoundTripLosslessly() throws IOException {
-        // ARRANGE //
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        TrainingSequence<String> sequence = TrainingSequence.ofSegments(
-                List.of(
-                        excluded("  "),
-                        token("Adjective", "Brown"),
-                        excluded("  "),
-                        token("Noun", "Fox"),
-                        excluded(" .")
-                )
-        );
-
-        // ACT //
-        try (var writer = DATA.writer(output)) {
-            writer.write(sequence);
-        }
-
-        // ASSERT //
-        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
-            TrainingSequence<String> read = sequences.toList().getFirst();
-            assertEquals(sequence.surface(), read.surface());
-            assertEquals("  Brown  Fox .", read.surface());
-            assertEquals(
-                    sequence.segments().stream().map(TrainingSegment::text).toList(),
-                    read.segments().stream().map(TrainingSegment::text).toList()
-            );
-        }
-    }
-
-    @Test
-    void writer__escapesSpecialCharacters() throws IOException {
-        // ARRANGE //
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        TrainingSequence<String> sequence = TrainingSequence
-                .ofTokens(List.of("a<b", "c&d", "e>f"), List.of("Symbol", "Symbol", "Symbol"));
-
-        // ACT //
-        try (var writer = DATA.writer(output)) {
-            writer.write(sequence);
-        }
-
-        // ASSERT //
-        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
-            List<TrainingSequence<String>> actual = sequences.toList();
-            assertEquals(1, actual.size());
-            TrainingSequence<String> read = actual.getFirst();
-            assertEquals(3, read.size());
-            assertEquals("a<b", read.get(0).token());
-            assertEquals("c&d", read.get(1).token());
-            assertEquals("e>f", read.get(2).token());
-        }
-    }
-
-    @Test
-    void writer__flush() throws IOException {
-        // ARRANGE //
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        // ACT //
-        try (var writer = DATA.writer(output)) {
-            writer.write(brownFox());
-            writer.flush();
-            String emitted = output.toString(StandardCharsets.UTF_8);
-
-            // ASSERT //
-            assertTrue(
-                    emitted.contains("<Adjective>Brown</Adjective>"),
-                    "Bytes should be on the underlying stream after flush: " + emitted
-            );
-            assertFalse(
-                    emitted.contains("</crf:Collection>"),
-                    "Root close tag should not be present after flush: " + emitted
-            );
-        }
-
-        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
-            List<TrainingSequence<String>> actual = sequences.toList();
-            assertEquals(1, actual.size());
-            assertBrownFox(actual.getFirst());
-        }
-    }
-
-    @Test
-    void writer__fromStream() throws IOException {
-        // ARRANGE //
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        // ACT //
-        try (var writer = DATA.writer(output)) {
-            writer.write(brownFox());
-            writer.write(lazySleepingDog());
-        }
-
-        // ASSERT //
-        String emitted = output.toString(StandardCharsets.UTF_8);
-        assertTrue(
-                emitted.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<crf:Collection"),
-                "Output should begin with XML prolog and root open tag: " + emitted
-        );
-        assertTrue(emitted.endsWith("</crf:Collection>\n"), "Output should end with root close tag: " + emitted);
-
-        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
-            List<TrainingSequence<String>> actual = sequences.toList();
-            assertEquals(2, actual.size());
-            assertBrownFox(actual.get(0));
-            assertLazySleepingDog(actual.get(1));
-        }
-    }
-
-    record EmitParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
-
     static Stream<EmitParameters> writer__emitsAdjacentTagElementsForTokenOnlySequence() {
         return Stream.of(
                 new EmitParameters(
@@ -576,32 +494,114 @@ class XmlTrainingDataWriterTest {
                 );
     }
 
-    private static XmlTrainingData<String> withRoot(String rootElementName) {
-        return new XmlTrainingData<>(
-                new StringTagProvider("0"),
-                XmlTrainingDataConfiguration.builder().rootElementName(rootElementName).build()
-        );
+    @Test
+    void writer__escapesSpecialCharacters() throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        TrainingSequence<String> sequence = TrainingSequence
+                .ofTokens(List.of("a<b", "c&d", "e>f"), List.of("Symbol", "Symbol", "Symbol"));
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(sequence);
+        }
+
+        // ASSERT //
+        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
+            List<TrainingSequence<String>> actual = sequences.toList();
+            assertEquals(1, actual.size());
+            TrainingSequence<String> read = actual.getFirst();
+            assertEquals(3, read.size());
+            assertEquals("a<b", read.get(0).token());
+            assertEquals("c&d", read.get(1).token());
+            assertEquals("e>f", read.get(2).token());
+        }
     }
 
-    private record NullEncodingTagProvider(String nullTag) implements TagProvider<String> {
-        @Override
-        public String decode(@Nullable String tag) {
-            return tag == null ? "0" : tag;
+    @Test
+    void writer__excludedRunsRoundTripLosslessly() throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        TrainingSequence<String> sequence = TrainingSequence.ofSegments(
+                List.of(
+                        excluded("  "),
+                        token("Adjective", "Brown"),
+                        excluded("  "),
+                        token("Noun", "Fox"),
+                        excluded(" .")
+                )
+        );
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(sequence);
         }
 
-        @Override
-        public @Nullable String encode(String rawTag) {
-            return nullTag.equals(rawTag) ? null : rawTag;
+        // ASSERT //
+        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
+            TrainingSequence<String> read = sequences.toList().getFirst();
+            assertEquals(sequence.surface(), read.surface());
+            assertEquals("  Brown  Fox .", read.surface());
+            assertEquals(
+                    sequence.segments().stream().map(TrainingSegment::text).toList(),
+                    read.segments().stream().map(TrainingSegment::text).toList()
+            );
+        }
+    }
+
+    @Test
+    void writer__flush() throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(brownFox());
+            writer.flush();
+            String emitted = output.toString(StandardCharsets.UTF_8);
+
+            // ASSERT //
+            assertTrue(
+                    emitted.contains("<Adjective>Brown</Adjective>"),
+                    "Bytes should be on the underlying stream after flush: " + emitted
+            );
+            assertFalse(
+                    emitted.contains("</crf:Collection>"),
+                    "Root close tag should not be present after flush: " + emitted
+            );
         }
 
-        @Override
-        public String startingTag() {
-            return "0";
+        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
+            List<TrainingSequence<String>> actual = sequences.toList();
+            assertEquals(1, actual.size());
+            assertBrownFox(actual.getFirst());
+        }
+    }
+
+    @Test
+    void writer__fromStream() throws IOException {
+        // ARRANGE //
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        // ACT //
+        try (var writer = DATA.writer(output)) {
+            writer.write(brownFox());
+            writer.write(lazySleepingDog());
         }
 
-        @Override
-        public SortedSet<String> tags() {
-            return new TreeSet<>(Set.of("0", "Adjective", "Noun"));
+        // ASSERT //
+        String emitted = output.toString(StandardCharsets.UTF_8);
+        assertTrue(
+                emitted.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<crf:Collection"),
+                "Output should begin with XML prolog and root open tag: " + emitted
+        );
+        assertTrue(emitted.endsWith("</crf:Collection>\n"), "Output should end with root close tag: " + emitted);
+
+        try (var sequences = DATA.read(new ByteArrayInputStream(output.toByteArray()))) {
+            List<TrainingSequence<String>> actual = sequences.toList();
+            assertEquals(2, actual.size());
+            assertBrownFox(actual.get(0));
+            assertLazySleepingDog(actual.get(1));
         }
     }
 }

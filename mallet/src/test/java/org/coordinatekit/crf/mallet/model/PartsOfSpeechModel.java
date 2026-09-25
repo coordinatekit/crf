@@ -54,36 +54,6 @@ public enum PartsOfSpeechModel {
     );
 
     /**
-     * Generates a new CRF model file from the training data resource.
-     *
-     * @param modelPath the path where the trained model should be written
-     * @throws IOException if an error occurs during training or writing the model
-     */
-    public void generate(Path modelPath) throws IOException {
-        var trainer = new MalletCrfTrainer<>(
-                featureExtractor(),
-                featureFormat(),
-                tagProvider(),
-                new XmlTrainingData<>(tagProvider()),
-                MalletCrfTrainerConfiguration.builder()
-                        .conllOutputEnabled(false)
-                        .modelOutputEnabled(false)
-                        .trainingFraction(1)
-                        .build()
-        );
-        trainer.train(resourcePath(TRAINING_DATA_RESOURCE), modelPath);
-    }
-
-    /**
-     * Returns the path to the pre-trained model resource.
-     *
-     * @return the path to the serialized CRF model file
-     */
-    public Path modelPath() {
-        return resourcePath(MODEL_PATH);
-    }
-
-    /**
      * Returns the feature extractor used by this model.
      *
      * <p>
@@ -115,21 +85,43 @@ public enum PartsOfSpeechModel {
     }
 
     /**
-     * Returns the tag provider used by this model.
+     * Generates a new CRF model file from the training data resource.
      *
-     * @return the tag provider that maps between string tags and model labels
+     * @param modelPath the path where the trained model should be written
+     * @throws IOException if an error occurs during training or writing the model
      */
-    public TagProvider<String> tagProvider() {
-        return TAG_PROVIDER;
+    public void generate(Path modelPath) throws IOException {
+        var trainer = new MalletCrfTrainer<>(
+                featureExtractor(),
+                featureFormat(),
+                tagProvider(),
+                new XmlTrainingData<>(tagProvider()),
+                MalletCrfTrainerConfiguration.builder()
+                        .conllOutputEnabled(false)
+                        .modelOutputEnabled(false)
+                        .trainingFraction(1)
+                        .build()
+        );
+        trainer.train(resourcePath(TRAINING_DATA_RESOURCE), modelPath);
     }
 
     /**
-     * Returns the set of valid tags recognized by this model.
+     * Command-line entry point to regenerate the model file.
      *
-     * @return a sorted set of valid parts-of-speech tags
+     * @param args command-line arguments where the first argument is the output model path
+     * @throws IOException if an error occurs during model generation
      */
-    public SortedSet<String> validTags() {
-        return VALID_TAGS;
+    public static void main(String[] args) throws IOException {
+        INSTANCE.generate(Path.of(args[0]));
+    }
+
+    /**
+     * Returns the path to the pre-trained model resource.
+     *
+     * @return the path to the serialized CRF model file
+     */
+    public Path modelPath() {
+        return resourcePath(MODEL_PATH);
     }
 
     /**
@@ -147,12 +139,20 @@ public enum PartsOfSpeechModel {
     }
 
     /**
-     * Command-line entry point to regenerate the model file.
+     * Returns the tag provider used by this model.
      *
-     * @param args command-line arguments where the first argument is the output model path
-     * @throws IOException if an error occurs during model generation
+     * @return the tag provider that maps between string tags and model labels
      */
-    public static void main(String[] args) throws IOException {
-        INSTANCE.generate(Path.of(args[0]));
+    public TagProvider<String> tagProvider() {
+        return TAG_PROVIDER;
+    }
+
+    /**
+     * Returns the set of valid tags recognized by this model.
+     *
+     * @return a sorted set of valid parts-of-speech tags
+     */
+    public SortedSet<String> validTags() {
+        return VALID_TAGS;
     }
 }

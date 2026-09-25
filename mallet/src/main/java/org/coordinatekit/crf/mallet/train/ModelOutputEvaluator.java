@@ -75,24 +75,6 @@ public class ModelOutputEvaluator extends TransducerEvaluator {
         this.configuration = configuration;
     }
 
-    /**
-     * Sets the base path for resolving relative output directories.
-     *
-     * <p>
-     * This is package-private for testing purposes. In production, the base path defaults to the
-     * current working directory.
-     *
-     * @param basePath the base path to use for resolving relative output directories
-     */
-    void setBasePath(Path basePath) {
-        this.basePath = basePath;
-    }
-
-    @Override
-    public void evaluateInstanceList(TransducerTrainer trainer, InstanceList instances, String description) {
-        throw new UnsupportedOperationException("This evaluator does not support evaluating instance lists.");
-    }
-
     @Override
     public void evaluate(TransducerTrainer trainer) {
         int iteration = trainer.getIteration();
@@ -114,6 +96,24 @@ public class ModelOutputEvaluator extends TransducerEvaluator {
                     .setCause(e)
                     .log("Iteration {}: Failed to write model to {}");
         }
+    }
+
+    @Override
+    public void evaluateInstanceList(TransducerTrainer trainer, InstanceList instances, String description) {
+        throw new UnsupportedOperationException("This evaluator does not support evaluating instance lists.");
+    }
+
+    /**
+     * Sets the base path for resolving relative output directories.
+     *
+     * <p>
+     * This is package-private for testing purposes. In production, the base path defaults to the
+     * current working directory.
+     *
+     * @param basePath the base path to use for resolving relative output directories
+     */
+    void setBasePath(Path basePath) {
+        this.basePath = basePath;
     }
 
     private void writeModel(Transducer transducer, Path outputFile) throws IOException {

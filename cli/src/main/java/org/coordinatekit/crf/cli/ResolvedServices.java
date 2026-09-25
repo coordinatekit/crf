@@ -59,11 +59,151 @@ import java.util.Set;
  */
 @NullMarked
 final class ResolvedServices {
+    /**
+     * Assembles a resolved set of services, applying the discovery chain and built-in defaults at
+     * {@link #resolve()}.
+     *
+     * <p>
+     * Explicit setters override discovery and are intended for tests and embedding callers; the
+     * {@link CrfLauncher} leaves them unset so every slot is resolved from the classpath.
+     */
+    static final class Builder {
+        private @Nullable FeatureExtractor fullFeatureExtractor;
+        private @Nullable FeatureExtractor keyFeatureExtractor;
+        private @Nullable CrfTaggerLoader taggerLoader;
+        private @Nullable String taggerLoaderName;
+        private @Nullable TagProvider<?> tagProvider;
+        private @Nullable Tokenizer tokenizer;
+
+        private Builder() {}
+
+        /**
+         * Sets an explicit full feature extractor, overriding service discovery.
+         *
+         * @param fullFeatureExtractor the full feature extractor
+         * @return this builder
+         */
+        Builder fullFeatureExtractor(FeatureExtractor fullFeatureExtractor) {
+            this.fullFeatureExtractor = fullFeatureExtractor;
+            return this;
+        }
+
+        /**
+         * Sets an explicit key feature extractor, overriding service discovery.
+         *
+         * @param keyFeatureExtractor the key feature extractor
+         * @return this builder
+         */
+        Builder keyFeatureExtractor(FeatureExtractor keyFeatureExtractor) {
+            this.keyFeatureExtractor = keyFeatureExtractor;
+            return this;
+        }
+
+        /**
+         * Resolves every slot and returns an immutable resolved set of services.
+         *
+         * <p>
+         * The tokenizer defaults to {@link WhitespaceTokenizer}; the feature format defaults to the single
+         * registered format or the built-in fallback; the full feature extractor defaults to absent (the
+         * tagger then runs without features); the key feature extractor defaults to absent as well; the
+         * tagger loader defaults to absent; the tag provider has no built-in default (tag-set inference is
+         * not yet implemented) and must be supplied explicitly or by a single registered service.
+         *
+         * @return the resolved set of services
+         * @throws CrfStartupException if no tag provider can be resolved, or any slot has more than one
+         *         registered implementation
+         */
+        ResolvedServices resolve() {
+            Tokenizer resolvedTokenizer;
+            FeatureFormat resolvedFeatureFormat;
+            FeatureExtractor resolvedFullFeatureExtractor;
+            FeatureExtractor resolvedKeyFeatureExtractor;
+            CrfTaggerLoader resolvedTaggerLoader;
+            TagProvider<?> resolvedTagProvider;
+            try {
+                resolvedTokenizer = CrfServices.tokenizer(tokenizer);
+                resolvedFeatureFormat = CrfServices.featureFormat();
+                resolvedFullFeatureExtractor = CrfServices.fullFeatureExtractor(fullFeatureExtractor).orElse(null);
+                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor).orElse(null);
+                resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
+                resolvedTagProvider = CrfServices.tagProvider(tagProvider)
+                        .orElseThrow(
+                                () -> new CrfStartupException(
+                                        "no TagProvider is available: register a TagProvider service"
+                                                + " (a META-INF/services/org.coordinatekit.crf.core.TagProvider entry)"
+                                                + " so the launcher can build the label space"
+                                )
+                        );
+            } catch (UnknownServiceException exception) {
+                throw unknownServiceStartupException(exception);
+            } catch (AmbiguousServiceException exception) {
+                throw ambiguityStartupException(exception);
+            }
+            return new ResolvedServices(
+                    resolvedTagProvider,
+                    resolvedTokenizer,
+                    resolvedFeatureFormat,
+                    resolvedFullFeatureExtractor,
+                    resolvedKeyFeatureExtractor,
+                    resolvedTaggerLoader
+            );
+        }
+
+        /**
+         * Sets an explicit model loader, overriding service discovery.
+         *
+         * @param taggerLoader the tagger loader
+         * @return this builder
+         */
+        Builder taggerLoader(CrfTaggerLoader taggerLoader) {
+            this.taggerLoader = taggerLoader;
+            return this;
+        }
+
+        /**
+         * Sets the name of the tagger loader to select, used when more than one loader is registered.
+         *
+         * <p>
+         * A {@code null} name (the default) resolves the loader by discovery alone; a non-null name picks
+         * the registered loader whose {@link CrfTaggerLoader#name()} matches, and fails fast if none does.
+         * Ignored when an explicit {@link #taggerLoader(CrfTaggerLoader)} is set.
+         *
+         * @param taggerLoaderName the loader name to select, or {@code null} to resolve by discovery
+         * @return this builder
+         */
+        Builder taggerLoaderName(@Nullable String taggerLoaderName) {
+            this.taggerLoaderName = taggerLoaderName;
+            return this;
+        }
+
+        /**
+         * Sets an explicit tag provider, overriding service discovery.
+         *
+         * @param tagProvider the tag provider
+         * @return this builder
+         */
+        Builder tagProvider(TagProvider<?> tagProvider) {
+            this.tagProvider = tagProvider;
+            return this;
+        }
+
+        /**
+         * Sets an explicit tokenizer, overriding service discovery and the built-in default.
+         *
+         * @param tokenizer the tokenizer
+         * @return this builder
+         */
+        Builder tokenizer(Tokenizer tokenizer) {
+            this.tokenizer = tokenizer;
+            return this;
+        }
+    }
+
     private final FeatureFormat featureFormat;
     private final @Nullable FeatureExtractor fullFeatureExtractor;
     private final @Nullable FeatureExtractor keyFeatureExtractor;
-    private final TagProvider<?> tagProvider;
     private final @Nullable CrfTaggerLoader taggerLoader;
+    private final TagProvider<?> tagProvider;
     private final Tokenizer tokenizer;
 
     private ResolvedServices(
@@ -242,145 +382,5 @@ final class ResolvedServices {
                                 : String.join(", ", exception.availableNames())),
                 exception
         );
-    }
-
-    /**
-     * Assembles a resolved set of services, applying the discovery chain and built-in defaults at
-     * {@link #resolve()}.
-     *
-     * <p>
-     * Explicit setters override discovery and are intended for tests and embedding callers; the
-     * {@link CrfLauncher} leaves them unset so every slot is resolved from the classpath.
-     */
-    static final class Builder {
-        private @Nullable FeatureExtractor fullFeatureExtractor;
-        private @Nullable FeatureExtractor keyFeatureExtractor;
-        private @Nullable TagProvider<?> tagProvider;
-        private @Nullable CrfTaggerLoader taggerLoader;
-        private @Nullable String taggerLoaderName;
-        private @Nullable Tokenizer tokenizer;
-
-        private Builder() {}
-
-        /**
-         * Sets an explicit full feature extractor, overriding service discovery.
-         *
-         * @param fullFeatureExtractor the full feature extractor
-         * @return this builder
-         */
-        Builder fullFeatureExtractor(FeatureExtractor fullFeatureExtractor) {
-            this.fullFeatureExtractor = fullFeatureExtractor;
-            return this;
-        }
-
-        /**
-         * Sets an explicit key feature extractor, overriding service discovery.
-         *
-         * @param keyFeatureExtractor the key feature extractor
-         * @return this builder
-         */
-        Builder keyFeatureExtractor(FeatureExtractor keyFeatureExtractor) {
-            this.keyFeatureExtractor = keyFeatureExtractor;
-            return this;
-        }
-
-        /**
-         * Resolves every slot and returns an immutable resolved set of services.
-         *
-         * <p>
-         * The tokenizer defaults to {@link WhitespaceTokenizer}; the feature format defaults to the single
-         * registered format or the built-in fallback; the full feature extractor defaults to absent (the
-         * tagger then runs without features); the key feature extractor defaults to absent as well; the
-         * tagger loader defaults to absent; the tag provider has no built-in default (tag-set inference is
-         * not yet implemented) and must be supplied explicitly or by a single registered service.
-         *
-         * @return the resolved set of services
-         * @throws CrfStartupException if no tag provider can be resolved, or any slot has more than one
-         *         registered implementation
-         */
-        ResolvedServices resolve() {
-            Tokenizer resolvedTokenizer;
-            FeatureFormat resolvedFeatureFormat;
-            FeatureExtractor resolvedFullFeatureExtractor;
-            FeatureExtractor resolvedKeyFeatureExtractor;
-            CrfTaggerLoader resolvedTaggerLoader;
-            TagProvider<?> resolvedTagProvider;
-            try {
-                resolvedTokenizer = CrfServices.tokenizer(tokenizer);
-                resolvedFeatureFormat = CrfServices.featureFormat();
-                resolvedFullFeatureExtractor = CrfServices.fullFeatureExtractor(fullFeatureExtractor).orElse(null);
-                resolvedKeyFeatureExtractor = CrfServices.keyFeatureExtractor(keyFeatureExtractor).orElse(null);
-                resolvedTaggerLoader = CrfServices.taggerLoader(taggerLoader, taggerLoaderName).orElse(null);
-                resolvedTagProvider = CrfServices.tagProvider(tagProvider)
-                        .orElseThrow(
-                                () -> new CrfStartupException(
-                                        "no TagProvider is available: register a TagProvider service"
-                                                + " (a META-INF/services/org.coordinatekit.crf.core.TagProvider entry)"
-                                                + " so the launcher can build the label space"
-                                )
-                        );
-            } catch (UnknownServiceException exception) {
-                throw unknownServiceStartupException(exception);
-            } catch (AmbiguousServiceException exception) {
-                throw ambiguityStartupException(exception);
-            }
-            return new ResolvedServices(
-                    resolvedTagProvider,
-                    resolvedTokenizer,
-                    resolvedFeatureFormat,
-                    resolvedFullFeatureExtractor,
-                    resolvedKeyFeatureExtractor,
-                    resolvedTaggerLoader
-            );
-        }
-
-        /**
-         * Sets an explicit tag provider, overriding service discovery.
-         *
-         * @param tagProvider the tag provider
-         * @return this builder
-         */
-        Builder tagProvider(TagProvider<?> tagProvider) {
-            this.tagProvider = tagProvider;
-            return this;
-        }
-
-        /**
-         * Sets an explicit model loader, overriding service discovery.
-         *
-         * @param taggerLoader the tagger loader
-         * @return this builder
-         */
-        Builder taggerLoader(CrfTaggerLoader taggerLoader) {
-            this.taggerLoader = taggerLoader;
-            return this;
-        }
-
-        /**
-         * Sets the name of the tagger loader to select, used when more than one loader is registered.
-         *
-         * <p>
-         * A {@code null} name (the default) resolves the loader by discovery alone; a non-null name picks
-         * the registered loader whose {@link CrfTaggerLoader#name()} matches, and fails fast if none does.
-         * Ignored when an explicit {@link #taggerLoader(CrfTaggerLoader)} is set.
-         *
-         * @param taggerLoaderName the loader name to select, or {@code null} to resolve by discovery
-         * @return this builder
-         */
-        Builder taggerLoaderName(@Nullable String taggerLoaderName) {
-            this.taggerLoaderName = taggerLoaderName;
-            return this;
-        }
-
-        /**
-         * Sets an explicit tokenizer, overriding service discovery and the built-in default.
-         *
-         * @param tokenizer the tokenizer
-         * @return this builder
-         */
-        Builder tokenizer(Tokenizer tokenizer) {
-            this.tokenizer = tokenizer;
-            return this;
-        }
     }
 }

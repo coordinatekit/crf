@@ -62,6 +62,12 @@ class AlignmentSummaryTest {
         );
     }
 
+    @MethodSource
+    @ParameterizedTest
+    void constructor__exception(ExceptionCase parameters) {
+        assertThrowsWithMessage(parameters);
+    }
+
     static Stream<EqualsInequalityParameters> equals__inequality() {
         return Stream.of(
                 new EqualsInequalityParameters("differsInAligned", new AlignmentSummary(9, 2, 3)),
@@ -70,21 +76,6 @@ class AlignmentSummaryTest {
                 new EqualsInequalityParameters("null", null),
                 new EqualsInequalityParameters("otherType", "not a summary")
         );
-    }
-
-    static Stream<SummaryParameters> summary() {
-        return Stream.of(
-                new SummaryParameters("empty", 0, 0, 0, 0, true),
-                new SummaryParameters("allAligned", 3, 0, 0, 3, true),
-                new SummaryParameters("hasMisaligned", 2, 1, 0, 3, false),
-                new SummaryParameters("hasUntokenizable", 2, 0, 1, 3, false)
-        );
-    }
-
-    @MethodSource
-    @ParameterizedTest
-    void constructor__exception(ExceptionCase parameters) {
-        assertThrowsWithMessage(parameters);
     }
 
     @MethodSource
@@ -106,6 +97,15 @@ class AlignmentSummaryTest {
         // ASSERT //
         assertEquals(summary, equal);
         assertEquals(summary.hashCode(), equal.hashCode());
+    }
+
+    static Stream<SummaryParameters> summary() {
+        return Stream.of(
+                new SummaryParameters("empty", 0, 0, 0, 0, true),
+                new SummaryParameters("allAligned", 3, 0, 0, 3, true),
+                new SummaryParameters("hasMisaligned", 2, 1, 0, 3, false),
+                new SummaryParameters("hasUntokenizable", 2, 0, 1, 3, false)
+        );
     }
 
     @MethodSource

@@ -54,8 +54,32 @@ import java.util.Objects;
  */
 @NullMarked
 public final class AnnotatorRunner {
+    /**
+     * Factory that wires the typed beans (tag provider, tokenizer, feature extractor, optional CRF
+     * tagger) into an {@link Annotator}.
+     */
+    @FunctionalInterface
+    public interface AnnotatorFactory {
+        /**
+         * Constructs an annotator from the configuration and the JLine terminal opened by the runner.
+         *
+         * @param configuration the parser-free annotate configuration
+         * @param terminal the JLine terminal to install on the annotator's tagging interface; ownership
+         *        remains with the runner
+         * @return a configured annotator ready to {@link Annotator#annotate(Path, Path) annotate}
+         */
+        Annotator<?> create(AnnotatorConfiguration configuration, Terminal terminal);
+    }
+
     private AnnotatorRunner() {
         throw new UnsupportedOperationException("AnnotatorRunner is a utility class and cannot be instantiated");
+    }
+
+    private static int annotate(AnnotatorConfiguration configuration, AnnotatorFactory factory, Terminal terminal)
+            throws IOException {
+        Annotator<?> annotator = factory.create(configuration, terminal);
+        annotator.annotate(configuration.input(), configuration.output());
+        return 0;
     }
 
     /**
@@ -104,29 +128,5 @@ public final class AnnotatorRunner {
                 err,
                 ownedTerminal -> annotate(configuration, factory, ownedTerminal)
         );
-    }
-
-    private static int annotate(AnnotatorConfiguration configuration, AnnotatorFactory factory, Terminal terminal)
-            throws IOException {
-        Annotator<?> annotator = factory.create(configuration, terminal);
-        annotator.annotate(configuration.input(), configuration.output());
-        return 0;
-    }
-
-    /**
-     * Factory that wires the typed beans (tag provider, tokenizer, feature extractor, optional CRF
-     * tagger) into an {@link Annotator}.
-     */
-    @FunctionalInterface
-    public interface AnnotatorFactory {
-        /**
-         * Constructs an annotator from the configuration and the JLine terminal opened by the runner.
-         *
-         * @param configuration the parser-free annotate configuration
-         * @param terminal the JLine terminal to install on the annotator's tagging interface; ownership
-         *        remains with the runner
-         * @return a configured annotator ready to {@link Annotator#annotate(Path, Path) annotate}
-         */
-        Annotator<?> create(AnnotatorConfiguration configuration, Terminal terminal);
     }
 }

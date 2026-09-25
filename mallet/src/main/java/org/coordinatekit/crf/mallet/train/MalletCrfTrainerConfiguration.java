@@ -42,197 +42,6 @@ import java.util.Objects;
  */
 @NullMarked
 public final class MalletCrfTrainerConfiguration {
-    private static final MalletCrfTrainerConfiguration DEFAULTS = builder().build();
-
-    private final boolean conllOutputEnabled;
-    private final ConllOutputConfiguration conllOutputConfiguration;
-    private final boolean fullyConnected;
-    private final double gaussianVariance;
-    private final int iterations;
-    private final boolean modelOutputEnabled;
-    private final ModelOutputConfiguration modelOutputConfiguration;
-    private final int randomSeed;
-    private final int threads;
-    private final double trainingFraction;
-    private final WeightsType weightsType;
-
-    private MalletCrfTrainerConfiguration(Builder builder) {
-        this.conllOutputEnabled = builder.conllOutputEnabled;
-        this.conllOutputConfiguration = builder.conllOutputConfiguration;
-        this.fullyConnected = builder.fullyConnected;
-        this.gaussianVariance = builder.gaussianVariance;
-        this.iterations = builder.iterations;
-        this.modelOutputEnabled = builder.modelOutputEnabled;
-        this.modelOutputConfiguration = builder.modelOutputConfiguration;
-        this.randomSeed = builder.randomSeed;
-        this.threads = builder.threads;
-        this.trainingFraction = builder.trainingFraction;
-        this.weightsType = builder.weightsType;
-    }
-
-    /**
-     * Returns a new {@link Builder} instance for constructing a configuration.
-     *
-     * @return a new builder with default values
-     */
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a configuration with all default values.
-     *
-     * <p>
-     * This is equivalent to calling {@code MalletCrfTrainerConfig.builder().build()}.
-     *
-     * @return a configuration with default settings
-     */
-    public static MalletCrfTrainerConfiguration defaults() {
-        return DEFAULTS;
-    }
-
-    /**
-     * Returns whether CoNLL output is enabled during training.
-     *
-     * <p>
-     * When enabled, predictions are written to files in CoNLL format at regular intervals. Default is
-     * true.
-     *
-     * @return true if CoNLL output is enabled
-     * @see ConllOutputEvaluator
-     */
-    public boolean conllOutputEnabled() {
-        return conllOutputEnabled;
-    }
-
-    /**
-     * Returns the configuration for CoNLL output.
-     *
-     * <p>
-     * This configuration controls the output directory, file naming, and iteration interval for CoNLL
-     * output files.
-     *
-     * @return the CoNLL output configuration
-     * @see ConllOutputConfiguration
-     */
-    public ConllOutputConfiguration conllOutputConfiguration() {
-        return conllOutputConfiguration;
-    }
-
-    /**
-     * Returns whether to create a fully connected CRF state machine.
-     *
-     * <p>
-     * A fully connected CRF allows transitions between all states. Default is true.
-     *
-     * @return true if the CRF should be fully connected
-     */
-    public boolean fullyConnected() {
-        return fullyConnected;
-    }
-
-    /**
-     * Returns the Gaussian prior variance for L2 regularization.
-     *
-     * <p>
-     * Higher values result in less regularization (weights can grow larger), while lower values result
-     * in stronger regularization. Default is 10.0.
-     *
-     * @return the Gaussian prior variance
-     */
-    public double gaussianVariance() {
-        return gaussianVariance;
-    }
-
-    /**
-     * Returns the maximum number of training iterations.
-     *
-     * <p>
-     * Training may stop earlier if convergence is detected. Default is 500.
-     *
-     * @return the maximum iterations
-     */
-    public int iterations() {
-        return iterations;
-    }
-
-    /**
-     * Returns whether model checkpoint output is enabled during training.
-     *
-     * <p>
-     * When enabled, model checkpoints are serialized to files at regular intervals during training.
-     * Default is true.
-     *
-     * @return true if model output is enabled
-     * @see ModelOutputEvaluator
-     */
-    public boolean modelOutputEnabled() {
-        return modelOutputEnabled;
-    }
-
-    /**
-     * Returns the configuration for model checkpoint output.
-     *
-     * <p>
-     * This configuration controls the output directory, file naming, and iteration interval for model
-     * checkpoint files.
-     *
-     * @return the model output configuration
-     * @see ModelOutputConfiguration
-     */
-    public ModelOutputConfiguration modelOutputConfiguration() {
-        return modelOutputConfiguration;
-    }
-
-    /**
-     * Returns the random seed for reproducible data splitting.
-     *
-     * <p>
-     * Using the same seed will produce the same train/test split. Default is 0.
-     *
-     * @return the random seed
-     */
-    public int randomSeed() {
-        return randomSeed;
-    }
-
-    /**
-     * Returns the number of threads to use for parallel training.
-     *
-     * <p>
-     * More threads can speed up training on multi-core systems. Default is 6.
-     *
-     * @return the number of threads
-     */
-    public int threads() {
-        return threads;
-    }
-
-    /**
-     * Returns the fraction of data to use for training.
-     *
-     * <p>
-     * The remaining data is used for testing/evaluation. Default is 0.5.
-     *
-     * @return the training fraction, between 0.0 (exclusive) and 1.0 (inclusive)
-     */
-    public double trainingFraction() {
-        return trainingFraction;
-    }
-
-    /**
-     * Returns the weight storage type for the CRF.
-     *
-     * <p>
-     * Controls memory usage and computation speed trade-offs. Default is
-     * {@link WeightsType#SOME_DENSE}.
-     *
-     * @return the weights type
-     */
-    public WeightsType weightsType() {
-        return weightsType;
-    }
-
     /**
      * Builder for constructing {@link MalletCrfTrainerConfiguration} instances.
      *
@@ -252,13 +61,13 @@ public final class MalletCrfTrainerConfiguration {
      */
     @NullMarked
     public static final class Builder {
-        private boolean fullyConnected = true;
-        private boolean conllOutputEnabled = true;
         private ConllOutputConfiguration conllOutputConfiguration = ConllOutputConfiguration.defaults();
+        private boolean conllOutputEnabled = true;
+        private boolean fullyConnected = true;
         private double gaussianVariance = 10.0;
         private int iterations = 500;
-        private boolean modelOutputEnabled = true;
         private ModelOutputConfiguration modelOutputConfiguration = ModelOutputConfiguration.defaults();
+        private boolean modelOutputEnabled = true;
         private int randomSeed = 0;
         private int threads = 6;
         private double trainingFraction = 0.5;
@@ -276,17 +85,6 @@ public final class MalletCrfTrainerConfiguration {
         }
 
         /**
-         * Sets whether to enable CoNLL output during training.
-         *
-         * @param conllOutputEnabled true to enable CoNLL output
-         * @return this builder
-         */
-        public Builder conllOutputEnabled(boolean conllOutputEnabled) {
-            this.conllOutputEnabled = conllOutputEnabled;
-            return this;
-        }
-
-        /**
          * Sets the configuration for CoNLL output.
          *
          * <p>
@@ -298,6 +96,17 @@ public final class MalletCrfTrainerConfiguration {
         public Builder conllOutputConfiguration(ConllOutputConfiguration conllOutputConfiguration) {
             this.conllOutputConfiguration = Objects
                     .requireNonNullElseGet(conllOutputConfiguration, () -> ConllOutputConfiguration.builder().build());
+            return this;
+        }
+
+        /**
+         * Sets whether to enable CoNLL output during training.
+         *
+         * @param conllOutputEnabled true to enable CoNLL output
+         * @return this builder
+         */
+        public Builder conllOutputEnabled(boolean conllOutputEnabled) {
+            this.conllOutputEnabled = conllOutputEnabled;
             return this;
         }
 
@@ -343,17 +152,6 @@ public final class MalletCrfTrainerConfiguration {
         }
 
         /**
-         * Sets whether to enable model checkpoint output during training.
-         *
-         * @param modelOutputEnabled true to enable model output
-         * @return this builder
-         */
-        public Builder modelOutputEnabled(boolean modelOutputEnabled) {
-            this.modelOutputEnabled = modelOutputEnabled;
-            return this;
-        }
-
-        /**
          * Sets the configuration for model checkpoint output.
          *
          * <p>
@@ -365,6 +163,17 @@ public final class MalletCrfTrainerConfiguration {
         public Builder modelOutputConfiguration(ModelOutputConfiguration modelOutputConfiguration) {
             this.modelOutputConfiguration = Objects
                     .requireNonNullElseGet(modelOutputConfiguration, ModelOutputConfiguration::defaults);
+            return this;
+        }
+
+        /**
+         * Sets whether to enable model checkpoint output during training.
+         *
+         * @param modelOutputEnabled true to enable model output
+         * @return this builder
+         */
+        public Builder modelOutputEnabled(boolean modelOutputEnabled) {
+            this.modelOutputEnabled = modelOutputEnabled;
             return this;
         }
 
@@ -422,5 +231,196 @@ public final class MalletCrfTrainerConfiguration {
             this.weightsType = weightsType;
             return this;
         }
+    }
+
+    private static final MalletCrfTrainerConfiguration DEFAULTS = builder().build();
+
+    private final ConllOutputConfiguration conllOutputConfiguration;
+    private final boolean conllOutputEnabled;
+    private final boolean fullyConnected;
+    private final double gaussianVariance;
+    private final int iterations;
+    private final ModelOutputConfiguration modelOutputConfiguration;
+    private final boolean modelOutputEnabled;
+    private final int randomSeed;
+    private final int threads;
+    private final double trainingFraction;
+    private final WeightsType weightsType;
+
+    private MalletCrfTrainerConfiguration(Builder builder) {
+        this.conllOutputEnabled = builder.conllOutputEnabled;
+        this.conllOutputConfiguration = builder.conllOutputConfiguration;
+        this.fullyConnected = builder.fullyConnected;
+        this.gaussianVariance = builder.gaussianVariance;
+        this.iterations = builder.iterations;
+        this.modelOutputEnabled = builder.modelOutputEnabled;
+        this.modelOutputConfiguration = builder.modelOutputConfiguration;
+        this.randomSeed = builder.randomSeed;
+        this.threads = builder.threads;
+        this.trainingFraction = builder.trainingFraction;
+        this.weightsType = builder.weightsType;
+    }
+
+    /**
+     * Returns a new {@link Builder} instance for constructing a configuration.
+     *
+     * @return a new builder with default values
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Returns the configuration for CoNLL output.
+     *
+     * <p>
+     * This configuration controls the output directory, file naming, and iteration interval for CoNLL
+     * output files.
+     *
+     * @return the CoNLL output configuration
+     * @see ConllOutputConfiguration
+     */
+    public ConllOutputConfiguration conllOutputConfiguration() {
+        return conllOutputConfiguration;
+    }
+
+    /**
+     * Returns whether CoNLL output is enabled during training.
+     *
+     * <p>
+     * When enabled, predictions are written to files in CoNLL format at regular intervals. Default is
+     * true.
+     *
+     * @return true if CoNLL output is enabled
+     * @see ConllOutputEvaluator
+     */
+    public boolean conllOutputEnabled() {
+        return conllOutputEnabled;
+    }
+
+    /**
+     * Returns a configuration with all default values.
+     *
+     * <p>
+     * This is equivalent to calling {@code MalletCrfTrainerConfig.builder().build()}.
+     *
+     * @return a configuration with default settings
+     */
+    public static MalletCrfTrainerConfiguration defaults() {
+        return DEFAULTS;
+    }
+
+    /**
+     * Returns whether to create a fully connected CRF state machine.
+     *
+     * <p>
+     * A fully connected CRF allows transitions between all states. Default is true.
+     *
+     * @return true if the CRF should be fully connected
+     */
+    public boolean fullyConnected() {
+        return fullyConnected;
+    }
+
+    /**
+     * Returns the Gaussian prior variance for L2 regularization.
+     *
+     * <p>
+     * Higher values result in less regularization (weights can grow larger), while lower values result
+     * in stronger regularization. Default is 10.0.
+     *
+     * @return the Gaussian prior variance
+     */
+    public double gaussianVariance() {
+        return gaussianVariance;
+    }
+
+    /**
+     * Returns the maximum number of training iterations.
+     *
+     * <p>
+     * Training may stop earlier if convergence is detected. Default is 500.
+     *
+     * @return the maximum iterations
+     */
+    public int iterations() {
+        return iterations;
+    }
+
+    /**
+     * Returns the configuration for model checkpoint output.
+     *
+     * <p>
+     * This configuration controls the output directory, file naming, and iteration interval for model
+     * checkpoint files.
+     *
+     * @return the model output configuration
+     * @see ModelOutputConfiguration
+     */
+    public ModelOutputConfiguration modelOutputConfiguration() {
+        return modelOutputConfiguration;
+    }
+
+    /**
+     * Returns whether model checkpoint output is enabled during training.
+     *
+     * <p>
+     * When enabled, model checkpoints are serialized to files at regular intervals during training.
+     * Default is true.
+     *
+     * @return true if model output is enabled
+     * @see ModelOutputEvaluator
+     */
+    public boolean modelOutputEnabled() {
+        return modelOutputEnabled;
+    }
+
+    /**
+     * Returns the random seed for reproducible data splitting.
+     *
+     * <p>
+     * Using the same seed will produce the same train/test split. Default is 0.
+     *
+     * @return the random seed
+     */
+    public int randomSeed() {
+        return randomSeed;
+    }
+
+    /**
+     * Returns the number of threads to use for parallel training.
+     *
+     * <p>
+     * More threads can speed up training on multi-core systems. Default is 6.
+     *
+     * @return the number of threads
+     */
+    public int threads() {
+        return threads;
+    }
+
+    /**
+     * Returns the fraction of data to use for training.
+     *
+     * <p>
+     * The remaining data is used for testing/evaluation. Default is 0.5.
+     *
+     * @return the training fraction, between 0.0 (exclusive) and 1.0 (inclusive)
+     */
+    public double trainingFraction() {
+        return trainingFraction;
+    }
+
+    /**
+     * Returns the weight storage type for the CRF.
+     *
+     * <p>
+     * Controls memory usage and computation speed trade-offs. Default is
+     * {@link WeightsType#SOME_DENSE}.
+     *
+     * @return the weights type
+     */
+    public WeightsType weightsType() {
+        return weightsType;
     }
 }

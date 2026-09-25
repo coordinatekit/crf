@@ -53,57 +53,6 @@ final class ParameterValidation {
     }
 
     /**
-     * Validates and coerces {@code rawParameters} against {@code parameters}.
-     *
-     * @param extractorType the factory type, named in located error messages
-     * @param rawParameters the raw, unvalidated parameters keyed by name
-     * @param parameters the declared parameters to validate against
-     * @param baseLocation the document location that resource parameters resolve against
-     * @param source the current node's source location, or {@code null} if it carried none
-     * @return the validated, coerced parameters
-     * @throws FeatureConfigurationException if a parameter is unknown, a required one is missing, or a
-     *         value cannot be coerced to its declared kind
-     */
-    static FeatureExtractorParameters validate(
-            String extractorType,
-            Map<String, String> rawParameters,
-            Set<ParameterDescriptor> parameters,
-            URL baseLocation,
-            @Nullable SourceLocation source
-    ) {
-        List<ParameterDescriptor> ordered = parameters.stream()
-                .sorted(Comparator.comparing(ParameterDescriptor::name))
-                .toList();
-        for (String name : rawParameters.keySet()) {
-            if (lookup(parameters, name) == null) {
-                throw new FeatureConfigurationException(
-                        extractorType,
-                        source,
-                        "unknown parameter '" + name + "'" + suggestion(ordered, name)
-                );
-            }
-        }
-
-        Map<String, Object> coerced = new LinkedHashMap<>();
-        for (ParameterDescriptor parameter : ordered) {
-            String raw = rawParameters.get(parameter.name());
-            String defaultValue = parameter.defaultValue();
-            if (raw != null) {
-                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, raw));
-            } else if (parameter.required()) {
-                throw new FeatureConfigurationException(
-                        extractorType,
-                        source,
-                        "missing required parameter '" + parameter.name() + "'"
-                );
-            } else if (defaultValue != null) {
-                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, defaultValue));
-            }
-        }
-        return new DefaultFeatureExtractorParameters(parameters, Map.copyOf(coerced));
-    }
-
-    /**
      * Coerces one raw value to the Java type its declared kind maps to.
      *
      * @param extractorType the factory type, named in located error messages
@@ -401,5 +350,56 @@ final class ParameterValidation {
             return "";
         }
         return " (did you mean '" + closest + "'?)";
+    }
+
+    /**
+     * Validates and coerces {@code rawParameters} against {@code parameters}.
+     *
+     * @param extractorType the factory type, named in located error messages
+     * @param rawParameters the raw, unvalidated parameters keyed by name
+     * @param parameters the declared parameters to validate against
+     * @param baseLocation the document location that resource parameters resolve against
+     * @param source the current node's source location, or {@code null} if it carried none
+     * @return the validated, coerced parameters
+     * @throws FeatureConfigurationException if a parameter is unknown, a required one is missing, or a
+     *         value cannot be coerced to its declared kind
+     */
+    static FeatureExtractorParameters validate(
+            String extractorType,
+            Map<String, String> rawParameters,
+            Set<ParameterDescriptor> parameters,
+            URL baseLocation,
+            @Nullable SourceLocation source
+    ) {
+        List<ParameterDescriptor> ordered = parameters.stream()
+                .sorted(Comparator.comparing(ParameterDescriptor::name))
+                .toList();
+        for (String name : rawParameters.keySet()) {
+            if (lookup(parameters, name) == null) {
+                throw new FeatureConfigurationException(
+                        extractorType,
+                        source,
+                        "unknown parameter '" + name + "'" + suggestion(ordered, name)
+                );
+            }
+        }
+
+        Map<String, Object> coerced = new LinkedHashMap<>();
+        for (ParameterDescriptor parameter : ordered) {
+            String raw = rawParameters.get(parameter.name());
+            String defaultValue = parameter.defaultValue();
+            if (raw != null) {
+                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, raw));
+            } else if (parameter.required()) {
+                throw new FeatureConfigurationException(
+                        extractorType,
+                        source,
+                        "missing required parameter '" + parameter.name() + "'"
+                );
+            } else if (defaultValue != null) {
+                coerced.put(parameter.name(), coerce(extractorType, baseLocation, source, parameter, defaultValue));
+            }
+        }
+        return new DefaultFeatureExtractorParameters(parameters, Map.copyOf(coerced));
     }
 }

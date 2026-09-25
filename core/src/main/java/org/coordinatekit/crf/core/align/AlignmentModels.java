@@ -32,6 +32,25 @@ import java.util.Objects;
  * methods.
  */
 public final class AlignmentModels {
+    private record DefaultSequenceAlignment<T extends Comparable<T>> (
+            int sequenceIndex,
+            AlignmentStatus status,
+            TrainingSequence<T> sequence,
+            List<String> retokenizedTokens,
+            @Nullable TokenComparison comparison,
+            @Nullable String failureReason
+    ) implements SequenceAlignment<T> {}
+
+    private record DefaultTokenComparison(List<TokenDifference> differences) implements TokenComparison {}
+
+    private record DefaultTokenDifference(
+            DifferenceKind kind,
+            int storedStart,
+            int storedEnd,
+            int retokenizedStart,
+            int retokenizedEnd
+    ) implements TokenDifference {}
+
     private static final AlignmentStrategy EXACT_MATCH_STRATEGY = AlignmentModels::compareExactMatch;
 
     private AlignmentModels() {}
@@ -301,23 +320,4 @@ public final class AlignmentModels {
         }
         return new DefaultTokenDifference(kind, storedStart, storedEnd, retokenizedStart, retokenizedEnd);
     }
-
-    private record DefaultSequenceAlignment<T extends Comparable<T>> (
-            int sequenceIndex,
-            AlignmentStatus status,
-            TrainingSequence<T> sequence,
-            List<String> retokenizedTokens,
-            @Nullable TokenComparison comparison,
-            @Nullable String failureReason
-    ) implements SequenceAlignment<T> {}
-
-    private record DefaultTokenComparison(List<TokenDifference> differences) implements TokenComparison {}
-
-    private record DefaultTokenDifference(
-            DifferenceKind kind,
-            int storedStart,
-            int storedEnd,
-            int retokenizedStart,
-            int retokenizedEnd
-    ) implements TokenDifference {}
 }

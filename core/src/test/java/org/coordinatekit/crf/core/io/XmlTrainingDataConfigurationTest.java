@@ -27,6 +27,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class XmlTrainingDataConfigurationTest {
 
+    record RootElementNameExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
     @Test
     void builder__storesConfiguredValues() {
         // ARRANGE & ACT //
@@ -39,13 +46,6 @@ class XmlTrainingDataConfigurationTest {
         assertEquals("AddressCollection", configuration.rootElementName());
         assertEquals("https://example.org/tags", configuration.targetNamespace());
     }
-
-    record RootElementNameExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<RootElementNameExceptionParameters> rootElementName__exception() {

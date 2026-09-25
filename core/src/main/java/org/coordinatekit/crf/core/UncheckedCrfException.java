@@ -40,6 +40,15 @@ public class UncheckedCrfException extends RuntimeException {
     }
 
     /**
+     * Constructs a new exception with the specified cause.
+     *
+     * @param cause the cause of this exception
+     */
+    public UncheckedCrfException(Throwable cause) {
+        super(cause);
+    }
+
+    /**
      * Constructs a new exception with the specified detail message and cause.
      *
      * @param message the detail message
@@ -47,14 +56,5 @@ public class UncheckedCrfException extends RuntimeException {
      */
     public UncheckedCrfException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    /**
-     * Constructs a new exception with the specified cause.
-     *
-     * @param cause the cause of this exception
-     */
-    public UncheckedCrfException(Throwable cause) {
-        super(cause);
     }
 }

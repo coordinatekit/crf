@@ -46,9 +46,9 @@ import picocli.CommandLine;
  * used.
  */
 abstract class CommandExecutionTestSupport {
-    record ExitTwoParameters(String name, List<String> arguments, List<String> expectedErrorSubstrings) {}
-
     private record Execution(int exitCode, String out, String err) {}
+
+    record ExitTwoParameters(String name, List<String> arguments, List<String> expectedErrorSubstrings) {}
 
     static void assertMessageContains(Throwable exception, String... fragments) {
         String message = exception.getMessage();

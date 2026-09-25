@@ -41,18 +41,6 @@ class InputSequenceTest {
             List<Integer> expectedPositions
     ) {}
 
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of("Hello", "world", "!"),
-                        List.of(0, 1, 2)
-                )
-        );
-    }
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -105,6 +93,18 @@ class InputSequenceTest {
 
         assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
         assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
+    }
+
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2)
+                )
+        );
     }
 
     @ParameterizedTest

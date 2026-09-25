@@ -59,8 +59,49 @@ import java.util.Objects;
  */
 @NullMarked
 public final class RetokenizeRunner {
+    /**
+     * Factory that wires the typed beans (tag provider, tokenizer, feature extractor, optional CRF
+     * tagger) into a {@link RetokenizeReviewer}.
+     */
+    @FunctionalInterface
+    public interface ReviewerFactory {
+        /**
+         * Constructs a reviewer from the configuration and the JLine terminal opened by the runner.
+         *
+         * @param configuration the parser-free retokenize configuration
+         * @param terminal the JLine terminal to install on the reviewer's tagging interface; ownership
+         *        remains with the runner
+         * @return a configured reviewer ready to {@link RetokenizeReviewer#review(Path, Path) review}
+         */
+        RetokenizeReviewer<?> create(RetokenizeConfiguration configuration, Terminal terminal);
+    }
+
     private RetokenizeRunner() {
         throw new UnsupportedOperationException("RetokenizeRunner is a utility class and cannot be instantiated");
+    }
+
+    /**
+     * Validates the fresh-pass precondition <em>before</em> the factory builds the reviewer, so a bad
+     * path fails before a model is loaded. A {@link ReviewPreconditionException} (input equals output,
+     * or the output exists and is non-empty) is reported to {@code err} and mapped to exit {@code 1};
+     * any other unchecked exception — such as a tokenizer/tagger mismatch surfaced while writing —
+     * propagates so it is not masked as a user error.
+     */
+    private static int review(
+            RetokenizeConfiguration configuration,
+            ReviewerFactory factory,
+            Terminal terminal,
+            PrintWriter err
+    ) throws IOException {
+        try {
+            RetokenizeReviewer.validateFreshPass(configuration.input(), configuration.output());
+            RetokenizeReviewer<?> reviewer = factory.create(configuration, terminal);
+            reviewer.review(configuration.input(), configuration.output());
+            return 0;
+        } catch (ReviewPreconditionException exception) {
+            err.println("Retokenize failed: " + exception.getMessage());
+            return 1;
+        }
     }
 
     /**
@@ -109,46 +150,5 @@ public final class RetokenizeRunner {
                 err,
                 ownedTerminal -> review(configuration, factory, ownedTerminal, err)
         );
-    }
-
-    /**
-     * Validates the fresh-pass precondition <em>before</em> the factory builds the reviewer, so a bad
-     * path fails before a model is loaded. A {@link ReviewPreconditionException} (input equals output,
-     * or the output exists and is non-empty) is reported to {@code err} and mapped to exit {@code 1};
-     * any other unchecked exception — such as a tokenizer/tagger mismatch surfaced while writing —
-     * propagates so it is not masked as a user error.
-     */
-    private static int review(
-            RetokenizeConfiguration configuration,
-            ReviewerFactory factory,
-            Terminal terminal,
-            PrintWriter err
-    ) throws IOException {
-        try {
-            RetokenizeReviewer.validateFreshPass(configuration.input(), configuration.output());
-            RetokenizeReviewer<?> reviewer = factory.create(configuration, terminal);
-            reviewer.review(configuration.input(), configuration.output());
-            return 0;
-        } catch (ReviewPreconditionException exception) {
-            err.println("Retokenize failed: " + exception.getMessage());
-            return 1;
-        }
-    }
-
-    /**
-     * Factory that wires the typed beans (tag provider, tokenizer, feature extractor, optional CRF
-     * tagger) into a {@link RetokenizeReviewer}.
-     */
-    @FunctionalInterface
-    public interface ReviewerFactory {
-        /**
-         * Constructs a reviewer from the configuration and the JLine terminal opened by the runner.
-         *
-         * @param configuration the parser-free retokenize configuration
-         * @param terminal the JLine terminal to install on the reviewer's tagging interface; ownership
-         *        remains with the runner
-         * @return a configured reviewer ready to {@link RetokenizeReviewer#review(Path, Path) review}
-         */
-        RetokenizeReviewer<?> create(RetokenizeConfiguration configuration, Terminal terminal);
     }
 }

@@ -45,6 +45,50 @@ import java.util.regex.Pattern;
  */
 @NullMarked
 public class PatternMatchingFeatureExtractor implements FeatureExtractor {
+    /**
+     * Builder for {@link PatternMatchingFeatureExtractor}.
+     */
+    public static final class Builder {
+        private @Nullable Feature matchedFeature;
+        private @Nullable Feature notMatchedFeature;
+        private final Pattern pattern;
+
+        private Builder(Pattern pattern) {
+            this.pattern = pattern;
+        }
+
+        /**
+         * Builds the feature extractor.
+         *
+         * @return a new {@link PatternMatchingFeatureExtractor} instance
+         */
+        public PatternMatchingFeatureExtractor build() {
+            return new PatternMatchingFeatureExtractor(this);
+        }
+
+        /**
+         * Sets the feature to emit when a token matches the pattern.
+         *
+         * @param matchedFeature the feature to emit on match, or {@code null} for no feature
+         * @return this builder
+         */
+        public Builder matchedFeature(@Nullable Feature matchedFeature) {
+            this.matchedFeature = matchedFeature;
+            return this;
+        }
+
+        /**
+         * Sets the feature to emit when a token does not match the pattern.
+         *
+         * @param notMatchedFeature the feature to emit on non-match, or {@code null} for no feature
+         * @return this builder
+         */
+        public Builder notMatchedFeature(@Nullable Feature notMatchedFeature) {
+            this.notMatchedFeature = notMatchedFeature;
+            return this;
+        }
+    }
+
     private final @Nullable Feature matchedFeature;
     private final @Nullable Feature notMatchedFeature;
     private final Pattern pattern;
@@ -53,17 +97,6 @@ public class PatternMatchingFeatureExtractor implements FeatureExtractor {
         this.pattern = builder.pattern;
         this.matchedFeature = builder.matchedFeature;
         this.notMatchedFeature = builder.notMatchedFeature;
-    }
-
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        Matcher matcher = pattern.matcher(sequence.get(position).token());
-
-        if (matcher.matches()) {
-            return matchedFeature != null ? Set.of(matchedFeature) : Set.of();
-        } else {
-            return notMatchedFeature != null ? Set.of(notMatchedFeature) : Set.of();
-        }
     }
 
     /**
@@ -100,47 +133,14 @@ public class PatternMatchingFeatureExtractor implements FeatureExtractor {
         return new Builder(Pattern.compile(pattern, caseSensitive ? 0 : Pattern.CASE_INSENSITIVE));
     }
 
-    /**
-     * Builder for {@link PatternMatchingFeatureExtractor}.
-     */
-    public static final class Builder {
-        private final Pattern pattern;
-        private @Nullable Feature matchedFeature;
-        private @Nullable Feature notMatchedFeature;
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        Matcher matcher = pattern.matcher(sequence.get(position).token());
 
-        private Builder(Pattern pattern) {
-            this.pattern = pattern;
-        }
-
-        /**
-         * Sets the feature to emit when a token matches the pattern.
-         *
-         * @param matchedFeature the feature to emit on match, or {@code null} for no feature
-         * @return this builder
-         */
-        public Builder matchedFeature(@Nullable Feature matchedFeature) {
-            this.matchedFeature = matchedFeature;
-            return this;
-        }
-
-        /**
-         * Sets the feature to emit when a token does not match the pattern.
-         *
-         * @param notMatchedFeature the feature to emit on non-match, or {@code null} for no feature
-         * @return this builder
-         */
-        public Builder notMatchedFeature(@Nullable Feature notMatchedFeature) {
-            this.notMatchedFeature = notMatchedFeature;
-            return this;
-        }
-
-        /**
-         * Builds the feature extractor.
-         *
-         * @return a new {@link PatternMatchingFeatureExtractor} instance
-         */
-        public PatternMatchingFeatureExtractor build() {
-            return new PatternMatchingFeatureExtractor(this);
+        if (matcher.matches()) {
+            return matchedFeature != null ? Set.of(matchedFeature) : Set.of();
+        } else {
+            return notMatchedFeature != null ? Set.of(notMatchedFeature) : Set.of();
         }
     }
 }

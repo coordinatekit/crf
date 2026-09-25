@@ -65,6 +65,76 @@ import java.util.stream.Stream;
  */
 @NullMarked
 public class XPathFeatureExtractor implements FeatureExtractor {
+    /**
+     * Builder for {@link XPathFeatureExtractor}.
+     */
+    public static final class Builder {
+        private boolean caseSensitive = true;
+        private final InputStream inputStream;
+        private @Nullable Feature notPresentFeature;
+        private @Nullable Feature presentFeature;
+        private final String xpath;
+
+        private Builder(InputStream inputStream, String xpath) {
+            this.inputStream = inputStream;
+            this.xpath = xpath;
+        }
+
+        /**
+         * Builds the feature extractor.
+         *
+         * @return a new {@link XPathFeatureExtractor} instance
+         * @throws UncheckedCrfException if the XPath expression is invalid, the XML parser cannot be
+         *         configured, or an error occurs during XML parsing
+         * @throws UncheckedIOException if an I/O error occurs reading the input stream
+         */
+        public XPathFeatureExtractor build() {
+            try {
+                return new XPathFeatureExtractor(this);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            } catch (Exception e) {
+                throw new UncheckedCrfException(e);
+            }
+        }
+
+        /**
+         * Sets whether token matching should be case-sensitive.
+         *
+         * <p>
+         * Defaults to {@code true} (case-sensitive).
+         *
+         * @param caseSensitive {@code true} for case-sensitive matching, {@code false} for case-insensitive
+         * @return this builder
+         */
+        public Builder caseSensitive(boolean caseSensitive) {
+            this.caseSensitive = caseSensitive;
+            return this;
+        }
+
+        /**
+         * Sets the feature to emit when a token is not present in the value set.
+         *
+         * @param notPresentFeature the feature to emit when not present, or {@code null} for no feature
+         * @return this builder
+         */
+        public Builder notPresentFeature(@Nullable Feature notPresentFeature) {
+            this.notPresentFeature = notPresentFeature;
+            return this;
+        }
+
+        /**
+         * Sets the feature to emit when a token is present in the value set.
+         *
+         * @param presentFeature the feature to emit when present, or {@code null} for no feature
+         * @return this builder
+         */
+        public Builder presentFeature(@Nullable Feature presentFeature) {
+            this.presentFeature = presentFeature;
+            return this;
+        }
+    }
+
     private final Function<String, String> normalizer;
     private final @Nullable Feature notPresentFeature;
     private final @Nullable Feature presentFeature;
@@ -78,16 +148,6 @@ public class XPathFeatureExtractor implements FeatureExtractor {
         this.values = getXPathValues(builder.inputStream, builder.xpath).map(normalizer).collect(Collectors.toSet());
     }
 
-    @Override
-    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
-        String normalizedToken = normalizer.apply(sequence.get(position).token());
-        if (values.contains(normalizedToken)) {
-            return presentFeature != null ? Set.of(presentFeature) : Set.of();
-        } else {
-            return notPresentFeature != null ? Set.of(notPresentFeature) : Set.of();
-        }
-    }
-
     /**
      * Creates a new builder with the specified XML input stream and XPath expression.
      *
@@ -97,6 +157,16 @@ public class XPathFeatureExtractor implements FeatureExtractor {
      */
     public static Builder builder(InputStream inputStream, String xpath) {
         return new Builder(inputStream, xpath);
+    }
+
+    @Override
+    public Set<Feature> extractAt(Sequence<? extends PositionedToken> sequence, int position) {
+        String normalizedToken = normalizer.apply(sequence.get(position).token());
+        if (values.contains(normalizedToken)) {
+            return presentFeature != null ? Set.of(presentFeature) : Set.of();
+        } else {
+            return notPresentFeature != null ? Set.of(notPresentFeature) : Set.of();
+        }
     }
 
     /**
@@ -139,75 +209,5 @@ public class XPathFeatureExtractor implements FeatureExtractor {
                 .map(Node::getTextContent)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty());
-    }
-
-    /**
-     * Builder for {@link XPathFeatureExtractor}.
-     */
-    public static final class Builder {
-        private final InputStream inputStream;
-        private final String xpath;
-        private boolean caseSensitive = true;
-        private @Nullable Feature presentFeature;
-        private @Nullable Feature notPresentFeature;
-
-        private Builder(InputStream inputStream, String xpath) {
-            this.inputStream = inputStream;
-            this.xpath = xpath;
-        }
-
-        /**
-         * Sets whether token matching should be case-sensitive.
-         *
-         * <p>
-         * Defaults to {@code true} (case-sensitive).
-         *
-         * @param caseSensitive {@code true} for case-sensitive matching, {@code false} for case-insensitive
-         * @return this builder
-         */
-        public Builder caseSensitive(boolean caseSensitive) {
-            this.caseSensitive = caseSensitive;
-            return this;
-        }
-
-        /**
-         * Sets the feature to emit when a token is present in the value set.
-         *
-         * @param presentFeature the feature to emit when present, or {@code null} for no feature
-         * @return this builder
-         */
-        public Builder presentFeature(@Nullable Feature presentFeature) {
-            this.presentFeature = presentFeature;
-            return this;
-        }
-
-        /**
-         * Sets the feature to emit when a token is not present in the value set.
-         *
-         * @param notPresentFeature the feature to emit when not present, or {@code null} for no feature
-         * @return this builder
-         */
-        public Builder notPresentFeature(@Nullable Feature notPresentFeature) {
-            this.notPresentFeature = notPresentFeature;
-            return this;
-        }
-
-        /**
-         * Builds the feature extractor.
-         *
-         * @return a new {@link XPathFeatureExtractor} instance
-         * @throws UncheckedCrfException if the XPath expression is invalid, the XML parser cannot be
-         *         configured, or an error occurs during XML parsing
-         * @throws UncheckedIOException if an I/O error occurs reading the input stream
-         */
-        public XPathFeatureExtractor build() {
-            try {
-                return new XPathFeatureExtractor(this);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            } catch (Exception e) {
-                throw new UncheckedCrfException(e);
-            }
-        }
     }
 }

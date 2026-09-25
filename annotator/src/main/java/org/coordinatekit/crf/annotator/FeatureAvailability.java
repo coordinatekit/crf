@@ -38,6 +38,15 @@ public enum FeatureAvailability {
     BOTH;
 
     /**
+     * Returns whether key display features are available, enabling the key-feature view.
+     *
+     * @return {@code true} for {@link #KEY_ONLY} and {@link #BOTH}
+     */
+    public boolean keyAvailable() {
+        return this == KEY_ONLY || this == BOTH;
+    }
+
+    /**
      * Returns the availability matching the two feature sources.
      *
      * @param keyAvailable whether key display features are available
@@ -55,15 +64,6 @@ public enum FeatureAvailability {
             return VERBOSE_ONLY;
         }
         return NONE;
-    }
-
-    /**
-     * Returns whether key display features are available, enabling the key-feature view.
-     *
-     * @return {@code true} for {@link #KEY_ONLY} and {@link #BOTH}
-     */
-    public boolean keyAvailable() {
-        return this == KEY_ONLY || this == BOTH;
     }
 
     /**
