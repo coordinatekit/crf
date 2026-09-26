@@ -35,12 +35,10 @@ import java.util.stream.Stream;
  * full feature extractor.
  */
 class AssembledFeatureExtractorsTest {
-    record OfEmptyKeyParameters(String name, Supplier<AssembledFeatureExtractors> factory) {}
-
-    record OfExceptionParameters(String name, Executable action, String expectedMessage) {}
-
     private static final FeatureExtractor FULL = (sequence, position) -> Set.of();
     private static final FeatureExtractor KEY = (sequence, position) -> Set.of();
+
+    record OfEmptyKeyParameters(String name, Supplier<AssembledFeatureExtractors> factory) {}
 
     static Stream<OfEmptyKeyParameters> of__emptyKey() {
         return Stream.of(
@@ -59,6 +57,8 @@ class AssembledFeatureExtractorsTest {
         assertSame(FULL, assembled.fullFeatureExtractor());
         assertTrue(assembled.keyFeatureExtractor().isEmpty());
     }
+
+    record OfExceptionParameters(String name, Executable action, String expectedMessage) {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<OfExceptionParameters> of__exception() {

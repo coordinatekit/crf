@@ -37,22 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SerializablesTest {
-    record DeserializeExceptionParameters(
-            String name,
-            @Nullable Class<?> clazz,
-            @Nullable Path file,
-            Class<? extends Exception> expectedClass,
-            @Nullable String expectedMessage
-    ) {}
-
-    record SerializeExceptionParameters(
-            String name,
-            @Nullable Object object,
-            @Nullable Path file,
-            Class<? extends Exception> expectedClass,
-            @Nullable String expectedMessage
-    ) {}
-
     static class TestObject implements Serializable {
         private final String name;
         private final int value;
@@ -92,6 +76,14 @@ class SerializablesTest {
 
     @TempDir
     static Path temporaryDirectory;
+
+    record DeserializeExceptionParameters(
+            String name,
+            @Nullable Class<?> clazz,
+            @Nullable Path file,
+            Class<? extends Exception> expectedClass,
+            @Nullable String expectedMessage
+    ) {}
 
     static Stream<DeserializeExceptionParameters> deserialize__exception() {
         return Stream.of(
@@ -196,6 +188,14 @@ class SerializablesTest {
 
         assertEquals(original, restored);
     }
+
+    record SerializeExceptionParameters(
+            String name,
+            @Nullable Object object,
+            @Nullable Path file,
+            Class<? extends Exception> expectedClass,
+            @Nullable String expectedMessage
+    ) {}
 
     static Stream<SerializeExceptionParameters> serialize__exception() {
         return Stream.of(

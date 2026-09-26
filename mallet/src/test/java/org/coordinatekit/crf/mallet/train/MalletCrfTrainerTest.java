@@ -46,27 +46,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MalletCrfTrainerTest {
-    record CreateCrfParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            TagProvider<String> tagProvider,
-            Map<String, Double> expectedStates,
-            Map<String, Set<String>> expectedTransitions
-    ) {}
-
-    record CreateCrfTrainerParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            boolean expectedUseSparseWeights,
-            boolean expectedUseSomeUnsupportedTrick
-    ) {}
-
-    record SplitTrainingDataParameters(
-            @Nullable MalletCrfTrainerConfiguration configuration,
-            int expectedTrainingSize,
-            int expectedTestSize
-    ) {}
-
-    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {}
-
     private static final FeatureExtractor SIMPLE_FEATURE_EXTRACTOR = (sequence, position) -> {
         String token = sequence.get(position).token();
         return Set.of(
@@ -80,6 +59,13 @@ class MalletCrfTrainerTest {
             "0"
     );
     public static final String TRAINING_DATA_RESOURCE = "/org/coordinatekit/crf/mallet/test_addresses.xml";
+
+    record CreateCrfParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            TagProvider<String> tagProvider,
+            Map<String, Double> expectedStates,
+            Map<String, Set<String>> expectedTransitions
+    ) {}
 
     static Stream<CreateCrfParameters> createCrf() {
         return Stream.of(
@@ -214,6 +200,12 @@ class MalletCrfTrainerTest {
             );
         }
     }
+
+    record CreateCrfTrainerParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            boolean expectedUseSparseWeights,
+            boolean expectedUseSomeUnsupportedTrick
+    ) {}
 
     static Stream<CreateCrfTrainerParameters> createCrfTrainer() {
         return Stream.of(
@@ -367,6 +359,12 @@ class MalletCrfTrainerTest {
         return Path.of(Objects.requireNonNull(MalletCrfTrainerTest.class.getResource(name)).toURI());
     }
 
+    record SplitTrainingDataParameters(
+            @Nullable MalletCrfTrainerConfiguration configuration,
+            int expectedTrainingSize,
+            int expectedTestSize
+    ) {}
+
     static Stream<SplitTrainingDataParameters> splitTrainingData() {
         return Stream.of(
                 // Default configuration: trainingFraction=0.5, so 5 instances split ~50/50
@@ -453,6 +451,8 @@ class MalletCrfTrainerTest {
         );
         return trainer.splitTrainingData(Collections.singleton(resourcePath(TRAINING_DATA_RESOURCE)));
     }
+
+    record TrainParameters(String name, MalletCrfTrainerConfiguration configuration, int expectedNumStates) {}
 
     static Stream<TrainParameters> train() {
         return Stream.of(

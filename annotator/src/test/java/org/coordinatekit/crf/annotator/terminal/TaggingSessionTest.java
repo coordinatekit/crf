@@ -27,13 +27,6 @@ import static org.coordinatekit.crf.annotator.AnnotatorTestSupport.sequenceWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TaggingSessionTest {
-    record EffectiveViewParameters(
-            String name,
-            FeatureView stored,
-            FeatureAvailability availability,
-            FeatureView expected
-    ) {}
-
     @Test
     void apply__toggleAllFeaturesIgnoredWhenVerboseUnavailable() {
         // ARRANGE //
@@ -116,6 +109,13 @@ class TaggingSessionTest {
         // ASSERT //
         assertEquals(List.of("NN", "NN"), session.currentTags());
     }
+
+    record EffectiveViewParameters(
+            String name,
+            FeatureView stored,
+            FeatureAvailability availability,
+            FeatureView expected
+    ) {}
 
     static Stream<EffectiveViewParameters> effectiveFeatureView() {
         return Stream.of(

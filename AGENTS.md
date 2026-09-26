@@ -44,6 +44,11 @@ parameter count), then methods. This covers static and instance members alike, p
 Deviate only when another order is part of correctness, like enum constants a lookup walks in numeric order. Add a
 comment at the declaration explaining why.
 
+Test classes have one standing exception. A parameterized test's parameter record and its `@MethodSource`
+provider sit directly above the test they belong to, as described under Parameterized Tests, rather than in
+the sorted record and method groups. A provider shared by several tests sits with its record above the
+first of them.
+
 ### Records vs Classes
 
 Records must never appear on the public API surface. That rule is about records, not interfaces: it does not mean every

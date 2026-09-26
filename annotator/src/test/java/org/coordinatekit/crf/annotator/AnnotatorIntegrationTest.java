@@ -39,15 +39,15 @@ import java.util.List;
 import java.util.stream.Stream;
 
 class AnnotatorIntegrationTest {
+    private static final List<String> INPUT_LINES = List
+            .of("the quick brown", "fox jumps over", "the lazy dog", "a second sentence", "one more line");
+
     record AnnotateParameters(
             String name,
             List<String> scripts,
             List<List<String>> expectedTokens,
             @Nullable List<List<String>> expectedTags
     ) {}
-
-    private static final List<String> INPUT_LINES = List
-            .of("the quick brown", "fox jumps over", "the lazy dog", "a second sentence", "one more line");
 
     static Stream<AnnotateParameters> annotate() {
         List<List<String>> threeAcceptedTokens = List.of(

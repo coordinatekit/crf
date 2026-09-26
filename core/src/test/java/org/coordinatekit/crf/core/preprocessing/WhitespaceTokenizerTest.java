@@ -30,14 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WhitespaceTokenizerTest {
-    record SurfaceParameters(String name, String input, List<Segment> expectedSegments) {}
-
-    record TokenizeExceptionParameters(
-            String input,
-            Class<? extends RuntimeException> expectedClass,
-            String expectedMessage
-    ) {}
-
     record TokenizeParameters(String name, String input, List<String> expectedTokens) {}
 
     static Stream<TokenizeParameters> tokenize() {
@@ -69,6 +61,8 @@ class WhitespaceTokenizerTest {
             assertEquals(index, result.sequence().get(index).position(), parameters.name());
         }
     }
+
+    record SurfaceParameters(String name, String input, List<Segment> expectedSegments) {}
 
     static Stream<SurfaceParameters> tokenize__capturesExcludedRuns() {
         return Stream.of(
@@ -110,6 +104,12 @@ class WhitespaceTokenizerTest {
         assertEquals(parameters.expectedSegments(), result.segments());
         assertEquals(parameters.input(), result.surface());
     }
+
+    record TokenizeExceptionParameters(
+            String input,
+            Class<? extends RuntimeException> expectedClass,
+            String expectedMessage
+    ) {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<TokenizeExceptionParameters> tokenize_exception() {

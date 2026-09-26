@@ -38,20 +38,6 @@ class TaggedSequenceTest {
             String expectedMessage
     ) {}
 
-    record SequenceParameters(
-            String name,
-            List<String> tokens,
-            List<Set<Feature>> features,
-            List<Map<String, Double>> tagScores,
-            List<String> expectedTokens,
-            List<Set<Feature>> expectedFeatures,
-            List<String> expectedBestTags,
-            List<List<String>> expectedTags,
-            List<List<String>> expectedFirstTwoTags,
-            List<List<Double>> expectedTagScores,
-            List<Integer> expectedPositions
-    ) {}
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -122,37 +108,19 @@ class TaggedSequenceTest {
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
     }
 
-    @ParameterizedTest
-    @MethodSource("sequences")
-    void iterator(SequenceParameters parameters) {
-        var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
-
-        var actualBestTags = new ArrayList<String>();
-        var actualFeatures = new ArrayList<Set<Feature>>();
-        var actualFirstTwoTags = new ArrayList<List<String>>();
-        var actualPositions = new ArrayList<Integer>();
-        var actualTags = new ArrayList<List<String>>();
-        var actualTagScores = new ArrayList<List<Double>>();
-        var actualTokens = new ArrayList<String>();
-
-        for (var token : sequence) {
-            actualBestTags.add(token.tag());
-            actualFeatures.add(token.features());
-            actualFirstTwoTags.add(token.tag(2));
-            actualPositions.add(token.position());
-            actualTags.add(token.tag(0));
-            actualTagScores.add(token.tagScores().stream().map(TagScore::score).toList());
-            actualTokens.add(token.token());
-        }
-
-        assertIterableEquals(parameters.expectedBestTags(), actualBestTags, parameters.name());
-        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
-        assertIterableEquals(parameters.expectedFirstTwoTags(), actualFirstTwoTags, parameters.name());
-        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
-        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
-        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
-        assertIterableEquals(parameters.expectedTagScores(), actualTagScores, parameters.name());
-    }
+    record SequenceParameters(
+            String name,
+            List<String> tokens,
+            List<Set<Feature>> features,
+            List<Map<String, Double>> tagScores,
+            List<String> expectedTokens,
+            List<Set<Feature>> expectedFeatures,
+            List<String> expectedBestTags,
+            List<List<String>> expectedTags,
+            List<List<String>> expectedFirstTwoTags,
+            List<List<Double>> expectedTagScores,
+            List<Integer> expectedPositions
+    ) {}
 
     static Stream<SequenceParameters> sequences() {
         return Stream.of(
@@ -187,6 +155,38 @@ class TaggedSequenceTest {
                         List.of(0, 1, 2)
                 )
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("sequences")
+    void iterator(SequenceParameters parameters) {
+        var sequence = new TaggedSequence<>(parameters.tokens(), parameters.features(), parameters.tagScores());
+
+        var actualBestTags = new ArrayList<String>();
+        var actualFeatures = new ArrayList<Set<Feature>>();
+        var actualFirstTwoTags = new ArrayList<List<String>>();
+        var actualPositions = new ArrayList<Integer>();
+        var actualTags = new ArrayList<List<String>>();
+        var actualTagScores = new ArrayList<List<Double>>();
+        var actualTokens = new ArrayList<String>();
+
+        for (var token : sequence) {
+            actualBestTags.add(token.tag());
+            actualFeatures.add(token.features());
+            actualFirstTwoTags.add(token.tag(2));
+            actualPositions.add(token.position());
+            actualTags.add(token.tag(0));
+            actualTagScores.add(token.tagScores().stream().map(TagScore::score).toList());
+            actualTokens.add(token.token());
+        }
+
+        assertIterableEquals(parameters.expectedBestTags(), actualBestTags, parameters.name());
+        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
+        assertIterableEquals(parameters.expectedFirstTwoTags(), actualFirstTwoTags, parameters.name());
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTags(), actualTags, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
+        assertIterableEquals(parameters.expectedTagScores(), actualTagScores, parameters.name());
     }
 
     @ParameterizedTest

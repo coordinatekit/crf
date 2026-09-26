@@ -43,15 +43,6 @@ import picocli.CommandLine.Model.CommandSpec;
  * all. The layout/color ladders themselves belong to that library and are tested there, not here.
  */
 class BannerHeaderRendererTest {
-    record ForwardsAnsiDecisionParameters(String name, Ansi ansi, boolean expectedAnsiEnabled) {}
-
-    record RenderExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
-
     /** The escape that opens every ANSI control sequence; its absence proves uncolored output. */
     private static final String ANSI_ESCAPE = "\u001b";
 
@@ -97,6 +88,13 @@ class BannerHeaderRendererTest {
         );
     }
 
+    record RenderExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<RenderExceptionParameters> render__exception() {
         return Stream.of(
@@ -124,6 +122,8 @@ class BannerHeaderRendererTest {
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
+
+    record ForwardsAnsiDecisionParameters(String name, Ansi ansi, boolean expectedAnsiEnabled) {}
 
     static Stream<ForwardsAnsiDecisionParameters> render__forwardsAnsiDecision() {
         return Stream.of(

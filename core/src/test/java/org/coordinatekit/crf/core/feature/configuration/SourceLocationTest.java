@@ -34,8 +34,6 @@ import java.util.stream.Stream;
 class SourceLocationTest {
     record EqualsParameters(String name, SourceLocation first, SourceLocation second, boolean expectedEqual) {}
 
-    record ToStringParameters(String name, URI source, int line, int column, String expected) {}
-
     static Stream<EqualsParameters> equals__comparesAllFields() {
         SourceLocation base = SourceLocation.of(URI.create("features.xml"), 3, 5);
         return Stream.of(
@@ -102,6 +100,8 @@ class SourceLocationTest {
         // ACT & ASSERT //
         assertNotEquals(null, location);
     }
+
+    record ToStringParameters(String name, URI source, int line, int column, String expected) {}
 
     static Stream<ToStringParameters> toString__rendersColumnWhenKnown() {
         return Stream.of(

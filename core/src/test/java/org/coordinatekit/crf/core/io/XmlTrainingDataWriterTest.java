@@ -50,18 +50,6 @@ import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 import static org.junit.jupiter.api.Assertions.*;
 
 class XmlTrainingDataWriterTest {
-    record AfterCloseExceptionParameters(
-            String name,
-            ThrowingConsumer<TrainingSequenceWriter<String>> action,
-            String expectedMessage
-    ) {}
-
-    record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
-
-    record AppendingWriterExceptionParameters(String name, String existingContent, String expectedMessageSubstring) {}
-
-    record EmitParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
-
     private record NullEncodingTagProvider(String nullTag) implements TagProvider<String> {
         @Override
         public String decode(@Nullable String tag) {
@@ -109,6 +97,12 @@ class XmlTrainingDataWriterTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    record AfterCloseExceptionParameters(
+            String name,
+            ThrowingConsumer<TrainingSequenceWriter<String>> action,
+            String expectedMessage
+    ) {}
 
     static Stream<AfterCloseExceptionParameters> afterClose__exception() {
         return Stream.of(
@@ -184,6 +178,8 @@ class XmlTrainingDataWriterTest {
         );
     }
 
+    record AppendingWriterExceptionParameters(String name, String existingContent, String expectedMessageSubstring) {}
+
     static Stream<AppendingWriterExceptionParameters> appendingWriter__exception() {
         return Stream.of(
                 new AppendingWriterExceptionParameters("doctype", DOCTYPE_DOCUMENT, "DOCTYPE"),
@@ -231,6 +227,8 @@ class XmlTrainingDataWriterTest {
             assertBrownFox(actual.getFirst());
         }
     }
+
+    record AppendHappyPathParameters(String name, ThrowingConsumer<Path> seed) {}
 
     static Stream<AppendHappyPathParameters> appendingWriter__happyPath() {
         return Stream.of(new AppendHappyPathParameters("cleanCloseTag", file -> {
@@ -420,6 +418,8 @@ class XmlTrainingDataWriterTest {
                 "Configured writer should declare the target namespace as the default: " + emitted
         );
     }
+
+    record EmitParameters(String name, TrainingSequence<String> sequence, List<String> expectedFragments) {}
 
     static Stream<EmitParameters> writer__emitsAdjacentTagElementsForTokenOnlySequence() {
         return Stream.of(

@@ -32,21 +32,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 class TerminalTableTest {
-    record BuildExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
-
-    record DisplayWidthParameters(String name, String text, int expectedWidth) {}
-
-    record PadToWidthParameters(String name, String text, int cells, String expected) {}
-
-    record TruncateToWidthParameters(String name, String text, int cells, String expected) {}
-
-    record WrapParameters(String name, int terminalWidth, String features, String expected) {}
-
     private static final String BOLD_YELLOW = AnnotatorTestSupport.boldYellowEscape();
     private static final String NEW_LINE = System.lineSeparator();
 
@@ -105,6 +90,8 @@ class TerminalTableTest {
         assertEquals(expected, rendered);
     }
 
+    record WrapParameters(String name, int terminalWidth, String features, String expected) {}
+
     static Stream<WrapParameters> appendTo__wrapsLastColumn() {
         String shortHeader = "##  Token  Features" + NEW_LINE + "--  -----  --------" + NEW_LINE;
         String wideHeader = "##  Token  Features     " + NEW_LINE + "--  -----  -------------" + NEW_LINE;
@@ -152,6 +139,13 @@ class TerminalTableTest {
         assertEquals(parameters.expected(), rendered);
     }
 
+    record BuildExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
+
     static Stream<BuildExceptionParameters> build__exception() {
         return Stream.of(
                 new BuildExceptionParameters(
@@ -185,6 +179,8 @@ class TerminalTableTest {
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
 
+    record DisplayWidthParameters(String name, String text, int expectedWidth) {}
+
     static Stream<DisplayWidthParameters> displayWidth() {
         return Stream.of(
                 new DisplayWidthParameters("ascii", "abc", 3),
@@ -204,6 +200,8 @@ class TerminalTableTest {
         // ASSERT //
         assertEquals(parameters.expectedWidth(), actual);
     }
+
+    record PadToWidthParameters(String name, String text, int cells, String expected) {}
 
     static Stream<PadToWidthParameters> padToWidth() {
         return Stream.of(
@@ -228,6 +226,8 @@ class TerminalTableTest {
         table.appendTo(builder);
         return builder.toAttributedString().toString();
     }
+
+    record TruncateToWidthParameters(String name, String text, int cells, String expected) {}
 
     static Stream<TruncateToWidthParameters> truncateToWidth() {
         return Stream.of(

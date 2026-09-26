@@ -30,26 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SubstringFeatureExtractorTest {
+    private static final Function<String, Feature> PREFIX_MAPPER = substring -> createFeature("PREFIX_" + substring);
+    private static final Function<String, Feature> SUFFIX_MAPPER = substring -> createFeature("SUFFIX_" + substring);
+
     record BuilderExceptionParameters(
             String name,
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
     ) {}
-
-    record ExtractAtParameters(
-            String name,
-            Function<String, Feature> featureMapper,
-            boolean ending,
-            boolean includeIfLessThanLength,
-            int length,
-            List<String> tokens,
-            int position,
-            Set<Feature> expectedResult
-    ) {}
-
-    private static final Function<String, Feature> PREFIX_MAPPER = substring -> createFeature("PREFIX_" + substring);
-    private static final Function<String, Feature> SUFFIX_MAPPER = substring -> createFeature("SUFFIX_" + substring);
 
     @SuppressWarnings("WriteOnlyObject")
     static Stream<BuilderExceptionParameters> builder__exception() {
@@ -78,6 +67,17 @@ class SubstringFeatureExtractorTest {
         // ASSERT //
         assertEquals(parameters.expectedMessage(), exception.getMessage());
     }
+
+    record ExtractAtParameters(
+            String name,
+            Function<String, Feature> featureMapper,
+            boolean ending,
+            boolean includeIfLessThanLength,
+            int length,
+            List<String> tokens,
+            int position,
+            Set<Feature> expectedResult
+    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(

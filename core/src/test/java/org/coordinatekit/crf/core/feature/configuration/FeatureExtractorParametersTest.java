@@ -39,13 +39,6 @@ import java.util.stream.Stream;
  * {@code get} is a factory bug that throws {@link IllegalStateException}.
  */
 class FeatureExtractorParametersTest {
-    record IllegalUseParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
-
     private static final URL BASE = ConfigurationTestSupport
             .resourceUrl("/org/coordinatekit/crf/core/feature/configuration/states.xml");
 
@@ -101,6 +94,13 @@ class FeatureExtractorParametersTest {
         assertEquals("fast", parameters.getEnumeration("mode"));
         assertEquals(BASE.toURI().resolve("states.xml").toURL().toString(), parameters.getResource("file").toString());
     }
+
+    record IllegalUseParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     static Stream<IllegalUseParameters> illegalUse() {
         return Stream.of(

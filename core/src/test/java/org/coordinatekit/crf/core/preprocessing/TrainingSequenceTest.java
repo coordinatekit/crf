@@ -37,15 +37,6 @@ class TrainingSequenceTest {
             String expectedMessage
     ) {}
 
-    record SequenceParameters(
-            String name,
-            List<String> tokens,
-            List<String> tags,
-            List<String> expectedTokens,
-            List<Integer> expectedPositions,
-            List<String> expectedTags
-    ) {}
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -88,6 +79,36 @@ class TrainingSequenceTest {
 
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
+    }
+
+    record SequenceParameters(
+            String name,
+            List<String> tokens,
+            List<String> tags,
+            List<String> expectedTokens,
+            List<Integer> expectedPositions,
+            List<String> expectedTags
+    ) {}
+
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters(
+                        "single_token",
+                        List.of("Hello"),
+                        List.of("GREETING"),
+                        List.of("Hello"),
+                        List.of(0),
+                        List.of("GREETING")
+                ),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of("GREETING", "NOUN", "PUNCT"),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2),
+                        List.of("GREETING", "NOUN", "PUNCT")
+                )
+        );
     }
 
     @ParameterizedTest
@@ -152,27 +173,6 @@ class TrainingSequenceTest {
         assertIterableEquals(
                 List.of(SegmentKind.TOKEN, SegmentKind.TOKEN),
                 sequence.segments().stream().map(TrainingSegment::kind).toList()
-        );
-    }
-
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters(
-                        "single_token",
-                        List.of("Hello"),
-                        List.of("GREETING"),
-                        List.of("Hello"),
-                        List.of(0),
-                        List.of("GREETING")
-                ),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of("GREETING", "NOUN", "PUNCT"),
-                        List.of("Hello", "world", "!"),
-                        List.of(0, 1, 2),
-                        List.of("GREETING", "NOUN", "PUNCT")
-                )
         );
     }
 
