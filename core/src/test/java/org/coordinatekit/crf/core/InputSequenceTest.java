@@ -34,13 +34,6 @@ class InputSequenceTest {
             String expectedMessage
     ) {}
 
-    record SequenceParameters(
-            String name,
-            List<String> input,
-            List<String> expectedTokens,
-            List<Integer> expectedPositions
-    ) {}
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -78,6 +71,25 @@ class InputSequenceTest {
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
     }
 
+    record SequenceParameters(
+            String name,
+            List<String> input,
+            List<String> expectedTokens,
+            List<Integer> expectedPositions
+    ) {}
+
+    static Stream<SequenceParameters> sequences() {
+        return Stream.of(
+                new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
+                new SequenceParameters(
+                        "three_tokens",
+                        List.of("Hello", "world", "!"),
+                        List.of("Hello", "world", "!"),
+                        List.of(0, 1, 2)
+                )
+        );
+    }
+
     @ParameterizedTest
     @MethodSource("sequences")
     void iterator(SequenceParameters parameters) {
@@ -93,18 +105,6 @@ class InputSequenceTest {
 
         assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
         assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
-    }
-
-    static Stream<SequenceParameters> sequences() {
-        return Stream.of(
-                new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
-                new SequenceParameters(
-                        "three_tokens",
-                        List.of("Hello", "world", "!"),
-                        List.of("Hello", "world", "!"),
-                        List.of(0, 1, 2)
-                )
-        );
     }
 
     @ParameterizedTest

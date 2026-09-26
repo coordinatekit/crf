@@ -39,25 +39,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * factory overloads (including the enum convenience forms) with their null-argument guards.
  */
 class FeatureTest {
-    record CompareToParameters(String name, Feature left, Feature right, int expectedSign) {}
-
-    record EqualsAndHashCodeParameters(String name, Feature other, boolean expectedEqual) {}
-
-    record FactoryExceptionParameters(String name, Executable action, String expectedMessage) {}
-
-    record FactoryParameters(
-            String name,
-            Feature feature,
-            int expectedOffset,
-            String expectedName,
-            @Nullable String expectedValue
-    ) {}
-
     private enum SampleName {
         CAP, LOWER
     }
-
-    record WithOffsetParameters(String name, Feature start, int offsetToApply, Feature expected) {}
 
     private static final Feature FEATURE = createFeatureWithValue("TOKEN", "cat").withOffset(1);
     private static final Feature FEATURE_DIFFERENT_NAME = createFeatureWithValue("SHAPE", "cat").withOffset(1);
@@ -65,6 +49,8 @@ class FeatureTest {
     private static final Feature FEATURE_DIFFERENT_VALUE = createFeatureWithValue("TOKEN", "dog").withOffset(1);
     private static final Feature FEATURE_NULL_VALUE = createFeature("TOKEN").withOffset(1);
     private static final Feature FEATURE_SAME = createFeatureWithValue("TOKEN", "cat").withOffset(1);
+
+    record CompareToParameters(String name, Feature left, Feature right, int expectedSign) {}
 
     static Stream<CompareToParameters> compareTo() {
         return Stream.of(
@@ -103,6 +89,8 @@ class FeatureTest {
         assertNotEquals(FEATURE, FEATURE_DIFFERENT_VALUE);
     }
 
+    record EqualsAndHashCodeParameters(String name, Feature other, boolean expectedEqual) {}
+
     static Stream<EqualsAndHashCodeParameters> equalsAndHashCode() {
         return Stream.of(
                 new EqualsAndHashCodeParameters("same", FEATURE_SAME, true),
@@ -133,6 +121,14 @@ class FeatureTest {
         assertNotEquals(FEATURE, null);
         assertNotEquals(FEATURE, "TOKEN=cat");
     }
+
+    record FactoryParameters(
+            String name,
+            Feature feature,
+            int expectedOffset,
+            String expectedName,
+            @Nullable String expectedValue
+    ) {}
 
     static Stream<FactoryParameters> factory() {
         return Stream.of(
@@ -186,6 +182,8 @@ class FeatureTest {
         assertEquals(createFeature("CAP"), createFeature(SampleName.CAP));
         assertEquals(createFeatureWithValue("CAP", "LOWER"), createFeatureWithValue(SampleName.CAP, SampleName.LOWER));
     }
+
+    record FactoryExceptionParameters(String name, Executable action, String expectedMessage) {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<FactoryExceptionParameters> factory__exception() {
@@ -248,6 +246,8 @@ class FeatureTest {
         assertEquals("Feature[offset=1, name=TOKEN, value=cat]", FEATURE.toString());
         assertEquals("Feature[offset=1, name=TOKEN, value=null]", FEATURE_NULL_VALUE.toString());
     }
+
+    record WithOffsetParameters(String name, Feature start, int offsetToApply, Feature expected) {}
 
     static Stream<WithOffsetParameters> withOffset() {
         return Stream.of(

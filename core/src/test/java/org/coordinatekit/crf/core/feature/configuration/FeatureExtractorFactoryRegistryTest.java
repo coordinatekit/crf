@@ -135,13 +135,6 @@ class FeatureExtractorFactoryRegistryTest {
         }
     }
 
-    record OfInvalidDeclarationParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessageFragment
-    ) {}
-
     /** A factory that implements only the root interface, neither leaf nor nesting. */
     private static final class RootOnlyFactory implements FeatureExtractorFactory {
         @Override
@@ -237,6 +230,13 @@ class FeatureExtractorFactoryRegistryTest {
         assertSame(window, registry.find("window").orElseThrow());
         assertSame(length, registry.find("length").orElseThrow());
     }
+
+    record OfInvalidDeclarationParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessageFragment
+    ) {}
 
     static Stream<OfInvalidDeclarationParameters> of__invalidDeclaration() {
         return Stream.of(

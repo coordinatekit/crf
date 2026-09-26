@@ -29,6 +29,9 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PositionFeatureExtractorTest {
+    private static final Function<Integer, Feature> END_MAPPER = position -> createFeature("END_" + position);
+    private static final Function<Integer, Feature> START_MAPPER = position -> createFeature("START_" + position);
+
     record ExtractAtParameters(
             String name,
             @Nullable Feature firstFeature,
@@ -39,9 +42,6 @@ class PositionFeatureExtractorTest {
             int position,
             Set<Feature> expectedResult
     ) {}
-
-    private static final Function<Integer, Feature> END_MAPPER = position -> createFeature("END_" + position);
-    private static final Function<Integer, Feature> START_MAPPER = position -> createFeature("START_" + position);
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(

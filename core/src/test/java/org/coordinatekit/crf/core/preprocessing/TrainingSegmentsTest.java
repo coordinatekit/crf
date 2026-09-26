@@ -30,13 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TrainingSegmentsTest {
-    record ExceptionParameters(
-            String name,
-            Executable action,
-            Class<? extends Exception> expectedClass,
-            String expectedMessage
-    ) {}
-
     @Test
     void excluded__hasNoTag() {
         // ACT //
@@ -47,6 +40,13 @@ class TrainingSegmentsTest {
         assertEquals("  ", segment.text());
         assertNull(segment.tag());
     }
+
+    record ExceptionParameters(
+            String name,
+            Executable action,
+            Class<? extends Exception> expectedClass,
+            String expectedMessage
+    ) {}
 
     @SuppressWarnings({"DataFlowIssue", "NullAway"})
     static Stream<ExceptionParameters> factory__exception() {

@@ -37,15 +37,6 @@ class FeatureSequenceTest {
             String expectedMessage
     ) {}
 
-    record SequenceParameters(
-            String name,
-            List<String> tokens,
-            List<Set<Feature>> features,
-            List<String> expectedTokens,
-            List<Integer> expectedPositions,
-            List<Set<Feature>> expectedFeatures
-    ) {}
-
     @MethodSource
     @ParameterizedTest
     void constructor__exception(ExceptionParameters parameters) {
@@ -93,25 +84,14 @@ class FeatureSequenceTest {
         assertThrows(IndexOutOfBoundsException.class, () -> sequence.get(1));
     }
 
-    @ParameterizedTest
-    @MethodSource("sequences")
-    void iterator(SequenceParameters parameters) {
-        var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
-
-        var actualFeatures = new ArrayList<Set<Feature>>();
-        var actualPositions = new ArrayList<Integer>();
-        var actualTokens = new ArrayList<String>();
-
-        for (var token : sequence) {
-            actualFeatures.add(token.features());
-            actualPositions.add(token.position());
-            actualTokens.add(token.token());
-        }
-
-        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
-        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
-        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
-    }
+    record SequenceParameters(
+            String name,
+            List<String> tokens,
+            List<Set<Feature>> features,
+            List<String> expectedTokens,
+            List<Integer> expectedPositions,
+            List<Set<Feature>> expectedFeatures
+    ) {}
 
     static Stream<SequenceParameters> sequences() {
         return Stream.of(
@@ -140,6 +120,26 @@ class FeatureSequenceTest {
                         )
                 )
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("sequences")
+    void iterator(SequenceParameters parameters) {
+        var sequence = new FeatureSequence(parameters.tokens(), parameters.features());
+
+        var actualFeatures = new ArrayList<Set<Feature>>();
+        var actualPositions = new ArrayList<Integer>();
+        var actualTokens = new ArrayList<String>();
+
+        for (var token : sequence) {
+            actualFeatures.add(token.features());
+            actualPositions.add(token.position());
+            actualTokens.add(token.token());
+        }
+
+        assertIterableEquals(parameters.expectedFeatures(), actualFeatures, parameters.name());
+        assertIterableEquals(parameters.expectedPositions(), actualPositions, parameters.name());
+        assertIterableEquals(parameters.expectedTokens(), actualTokens, parameters.name());
     }
 
     @ParameterizedTest

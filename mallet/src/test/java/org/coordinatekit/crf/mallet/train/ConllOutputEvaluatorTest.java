@@ -45,16 +45,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConllOutputEvaluatorTest {
-    record EvaluateParameters(
-            String name,
-            ConllOutputConfiguration.Builder conllOutputConfigurationBuilder,
-            @Nullable Path outputDirectory,
-            boolean relativeOutputDirectory,
-            TestSequenceFixture testSequenceFixture,
-            int iterations,
-            Set<Path> expectedFiles
-    ) {}
-
     private enum TestSequenceFixture {
         MULTIPLE, NONE, SINGLE_WITH_SPACES_IN_TOKENS
     }
@@ -191,6 +181,16 @@ class ConllOutputEvaluatorTest {
 
         return instances;
     }
+
+    record EvaluateParameters(
+            String name,
+            ConllOutputConfiguration.Builder conllOutputConfigurationBuilder,
+            @Nullable Path outputDirectory,
+            boolean relativeOutputDirectory,
+            TestSequenceFixture testSequenceFixture,
+            int iterations,
+            Set<Path> expectedFiles
+    ) {}
 
     static Stream<EvaluateParameters> evaluate() {
         return Stream.of(

@@ -55,18 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XmlTrainingDataTest {
-    record GenerateSchemaParameters(StringTagProvider tagProvider, @Nullable String targetNamespace, String expected) {}
-
-    record ReadRejectsParameters(String name, String xml, String expectedMessageSubstring) {}
-
-    record ReadSegmentsParameters(
-            String name,
-            String xml,
-            List<SegmentKind> expectedKinds,
-            List<String> expectedTexts,
-            String expectedSurface
-    ) {}
-
     private static final XmlTrainingData<String> DATA = new XmlTrainingData<>(new StringTagProvider("0"));
 
     // language=XML
@@ -284,6 +272,8 @@ class XmlTrainingDataTest {
         assertArrayEquals(builderOutput.toByteArray(), deprecatedOutput.toByteArray());
     }
 
+    record GenerateSchemaParameters(StringTagProvider tagProvider, @Nullable String targetNamespace, String expected) {}
+
     static Stream<GenerateSchemaParameters> generateSchema() {
         return Stream.of(
                 new GenerateSchemaParameters(
@@ -372,6 +362,14 @@ class XmlTrainingDataTest {
         }
     }
 
+    record ReadSegmentsParameters(
+            String name,
+            String xml,
+            List<SegmentKind> expectedKinds,
+            List<String> expectedTexts,
+            String expectedSurface
+    ) {}
+
     static Stream<ReadSegmentsParameters> read__capturesSegments() {
         List<SegmentKind> brownFoxKinds = List
                 .of(SegmentKind.TOKEN, SegmentKind.EXCLUDED, SegmentKind.TOKEN, SegmentKind.EXCLUDED);
@@ -426,6 +424,8 @@ class XmlTrainingDataTest {
             assertEquals(parameters.expectedTexts(), sequence.segments().stream().map(TrainingSegment::text).toList());
         }
     }
+
+    record ReadRejectsParameters(String name, String xml, String expectedMessageSubstring) {}
 
     static Stream<ReadRejectsParameters> read__rejects() {
         return Stream.of(

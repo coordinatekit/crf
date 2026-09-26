@@ -31,8 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TokenizationTest {
-    record SurfaceParameters(String name, List<Segment> segments, String expectedSurface) {}
-
     @Test
     void constructor__rejectsNoTokenSegments() {
         // ACT //
@@ -73,6 +71,8 @@ class TokenizationTest {
         assertEquals(1, sequence.get(1).position());
         assertIterableEquals(List.of("Hello", "world"), sequence.stream().map(PositionedToken::token).toList());
     }
+
+    record SurfaceParameters(String name, List<Segment> segments, String expectedSurface) {}
 
     static Stream<SurfaceParameters> surface() {
         return Stream.of(

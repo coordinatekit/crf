@@ -32,8 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ManagedSequenceStreamsTest {
 
-    record PropagateParameters(String name, Throwable failure, Class<? extends Throwable> expectedClass) {}
-
     /** An input stream that counts {@code close()} calls and optionally fails them. */
     static final class TrackingInputStream extends InputStream {
         int closeCount;
@@ -75,6 +73,8 @@ class ManagedSequenceStreamsTest {
         // ASSERT //
         assertEquals(1, input.closeCount);
     }
+
+    record PropagateParameters(String name, Throwable failure, Class<? extends Throwable> expectedClass) {}
 
     static Stream<PropagateParameters> readManaged__propagatesDelegateFailureAndCloses() {
         return Stream.of(

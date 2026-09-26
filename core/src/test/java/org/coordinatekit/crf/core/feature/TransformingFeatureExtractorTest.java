@@ -31,14 +31,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class TransformingFeatureExtractorTest {
-    record ExtractAtParameters(
-            String name,
-            Function<String, Set<Feature>> transformer,
-            List<String> tokens,
-            int position,
-            Set<Feature> expectedResult
-    ) {}
-
     private static final Function<String, Set<Feature>> CLASSIFYING_TRANSFORMER = token -> {
         if (token.matches("\\d+")) {
             return Set.of(createFeature("IS_NUMBER"));
@@ -48,6 +40,14 @@ class TransformingFeatureExtractorTest {
             return Set.of(createFeature("OTHER"));
         }
     };
+
+    record ExtractAtParameters(
+            String name,
+            Function<String, Set<Feature>> transformer,
+            List<String> tokens,
+            int position,
+            Set<Feature> expectedResult
+    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(

@@ -49,21 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XmlTrainingDataValidationTest {
-    record InvalidDocumentParameters(
-            String name,
-            Supplier<XmlTrainingData<String>> data,
-            String xml,
-            String expectedElement
-    ) {}
-
-    record ValidDocumentParameters(String name, Supplier<XmlTrainingData<String>> data, String xml) {}
-
-    record WrittenRoundTripParameters(
-            String name,
-            Supplier<XmlTrainingData<String>> data,
-            boolean expectsDefaultNamespace
-    ) {}
-
     // A crf:Excluded run directly under the root, where the structure permits only crf:Sequence.
     // language=XML
     private static final String INVALID__EXCLUDED_UNDER_ROOT = """
@@ -253,6 +238,13 @@ class XmlTrainingDataValidationTest {
         assertEquals(emptyTagProviderMessage(StringTagProvider.class), exception.getMessage());
     }
 
+    record InvalidDocumentParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            String xml,
+            String expectedElement
+    ) {}
+
     static Stream<InvalidDocumentParameters> validate__invalidDocument() {
         return Stream.of(
                 new InvalidDocumentParameters(
@@ -348,6 +340,8 @@ class XmlTrainingDataValidationTest {
         );
     }
 
+    record ValidDocumentParameters(String name, Supplier<XmlTrainingData<String>> data, String xml) {}
+
     static Stream<ValidDocumentParameters> validate__validDocument() {
         return Stream.of(
                 new ValidDocumentParameters(
@@ -387,6 +381,12 @@ class XmlTrainingDataValidationTest {
         // ACT & ASSERT //
         assertDoesNotThrow(() -> data.validate(inputStream(parameters.xml())));
     }
+
+    record WrittenRoundTripParameters(
+            String name,
+            Supplier<XmlTrainingData<String>> data,
+            boolean expectsDefaultNamespace
+    ) {}
 
     static Stream<WrittenRoundTripParameters> validate__writtenDocumentValidates() {
         return Stream.of(

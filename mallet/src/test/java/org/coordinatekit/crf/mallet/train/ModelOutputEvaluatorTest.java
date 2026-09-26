@@ -48,15 +48,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModelOutputEvaluatorTest {
-    record EvaluateParameters(
-            String name,
-            ModelOutputConfiguration.Builder modelOutputConfigurationBuilder,
-            @Nullable Path outputDirectory,
-            boolean relativeOutputDirectory,
-            int iterations,
-            Set<Path> expectedFiles
-    ) {}
-
     private static final Path CURRENT_DIRECTORY = Paths.get("");
     private static final String FILE_PREFIX = "model_iter";
     private static final String FILE_SUFFIX = ".ser";
@@ -141,6 +132,15 @@ class ModelOutputEvaluatorTest {
 
         return instances;
     }
+
+    record EvaluateParameters(
+            String name,
+            ModelOutputConfiguration.Builder modelOutputConfigurationBuilder,
+            @Nullable Path outputDirectory,
+            boolean relativeOutputDirectory,
+            int iterations,
+            Set<Path> expectedFiles
+    ) {}
 
     static Stream<EvaluateParameters> evaluate() {
         return Stream.of(

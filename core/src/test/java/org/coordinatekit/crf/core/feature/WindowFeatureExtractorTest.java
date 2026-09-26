@@ -29,23 +29,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class WindowFeatureExtractorTest {
+    private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
+            .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
+
     record BuilderExceptionParameters(
             String name,
             Executable action,
             Class<? extends Exception> expectedClass,
             String expectedMessage
     ) {}
-
-    record ExtractAtParameters(
-            String name,
-            WindowFeatureExtractor extractor,
-            List<String> tokens,
-            int position,
-            Set<Feature> expectedResult
-    ) {}
-
-    private static final FeatureExtractor TOKEN_EXTRACTOR = (seq, pos) -> Set
-            .of(createFeatureWithValue("TOKEN", seq.get(pos).token()));
 
     static Stream<BuilderExceptionParameters> builder__exception() {
         return Stream.of(
@@ -77,6 +69,14 @@ class WindowFeatureExtractorTest {
     private static WindowFeatureExtractor defaultExtractor() {
         return WindowFeatureExtractor.builder(TOKEN_EXTRACTOR).build();
     }
+
+    record ExtractAtParameters(
+            String name,
+            WindowFeatureExtractor extractor,
+            List<String> tokens,
+            int position,
+            Set<Feature> expectedResult
+    ) {}
 
     static Stream<ExtractAtParameters> extractAt() {
         return Stream.of(
