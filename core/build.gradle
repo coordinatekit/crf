@@ -1,3 +1,5 @@
 dependencies {
+    implementation libs.coordinatekit.concordance
+
     testImplementation libs.jackson.databind
 }

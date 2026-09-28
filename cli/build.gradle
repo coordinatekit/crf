@@ -17,6 +17,7 @@ dependencies {
     implementation libs.picocli
     implementation libs.jline
     implementation libs.coordinatekit.cli.brand
+    implementation libs.coordinatekit.concordance
 
     annotationProcessor libs.picocli.codegen
 

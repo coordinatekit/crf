@@ -15,6 +15,10 @@
  */
 package org.coordinatekit.crf.annotator;
 
+import org.coordinatekit.foundation.concordance.IntentionalOrder;
+
+import static org.coordinatekit.foundation.concordance.MemberCategory.ENUM_CONSTANT;
+
 /**
  * Which display-feature sources an {@link AnnotatorSequence} carries: the four reachable
  * combinations of key features and verbose features.
@@ -24,6 +28,7 @@ package org.coordinatekit.crf.annotator;
  * what is currently <em>shown</em>. Key features back the key-feature view and verbose features
  * back the all-features view, so a sequence with {@link #NONE} offers no feature views at all.
  */
+@IntentionalOrder(members = ENUM_CONSTANT, reason = "increasing availability")
 public enum FeatureAvailability {
     /** Neither key nor verbose display features are available. */
     NONE,

@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.sonatype.central.portal.publisher) apply false
     alias libs.plugins.git.changelog
     id "signing"
+    alias(libs.plugins.coordinatekit.concordance) apply false
 }
 
 allprojects {
@@ -92,6 +93,7 @@ subprojects {
     apply plugin: "jacoco"
     apply plugin: "java-library"
     apply plugin: "net.ltgt.errorprone"
+    apply plugin: "org.coordinatekit.foundation.concordance"
 
     // Publishing plugins are applied per module: cli goes to GitHub Packages, the libraries to Maven
     // Central. Apply them before the java {} block below because the central-portal plugin registers its

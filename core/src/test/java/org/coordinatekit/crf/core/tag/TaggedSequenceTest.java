@@ -17,6 +17,7 @@ package org.coordinatekit.crf.core.tag;
 
 import static org.coordinatekit.crf.core.feature.Feature.createFeature;
 import org.coordinatekit.crf.core.feature.Feature;
+import org.coordinatekit.foundation.concordance.IgnoreOrder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -122,6 +123,7 @@ class TaggedSequenceTest {
             List<Integer> expectedPositions
     ) {}
 
+    @IgnoreOrder(reason = "feeds the parameterized test immediately below")
     static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters(
