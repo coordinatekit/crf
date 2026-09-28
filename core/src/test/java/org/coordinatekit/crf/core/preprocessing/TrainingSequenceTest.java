@@ -18,6 +18,7 @@ package org.coordinatekit.crf.core.preprocessing;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.excluded;
 import static org.coordinatekit.crf.core.preprocessing.TrainingSegments.token;
 
+import org.coordinatekit.foundation.concordance.IgnoreOrder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -90,6 +91,7 @@ class TrainingSequenceTest {
             List<String> expectedTags
     ) {}
 
+    @IgnoreOrder(reason = "feeds the parameterized test immediately below")
     static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters(

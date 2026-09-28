@@ -62,6 +62,15 @@ class ResourceMetadataTest {
     }
 
     @Test
+    void resourceConfig__isNotEmpty() throws IOException {
+        // ACT //
+        List<String> patterns = patterns();
+
+        // ASSERT //
+        assertTrue(patterns.size() >= 3, "expected at least the crf-* and cli-brand entries, was: " + patterns);
+    }
+
+    @Test
     void resourceConfig__namesResourcesThatExist() throws IOException {
         // ARRANGE //
         List<String> patterns = patterns();
@@ -74,14 +83,5 @@ class ResourceMetadataTest {
 
         // ASSERT //
         assertTrue(missing.isEmpty(), "resource-config.json names resource(s) not found on the classpath: " + missing);
-    }
-
-    @Test
-    void resourceConfig__isNotEmpty() throws IOException {
-        // ACT //
-        List<String> patterns = patterns();
-
-        // ASSERT //
-        assertTrue(patterns.size() >= 3, "expected at least the crf-* and cli-brand entries, was: " + patterns);
     }
 }

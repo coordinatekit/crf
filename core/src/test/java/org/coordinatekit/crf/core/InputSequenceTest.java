@@ -15,6 +15,7 @@
  */
 package org.coordinatekit.crf.core;
 
+import org.coordinatekit.foundation.concordance.IgnoreOrder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,6 +79,7 @@ class InputSequenceTest {
             List<Integer> expectedPositions
     ) {}
 
+    @IgnoreOrder(reason = "feeds the parameterized test immediately below")
     static Stream<SequenceParameters> sequences() {
         return Stream.of(
                 new SequenceParameters("single_token", List.of("Hello"), List.of("Hello"), List.of(0)),
