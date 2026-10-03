@@ -24,7 +24,7 @@ errorprone-plugin = "5.1.1"
 git-changelog = "3.4.0"
 graalvm-native = "1.1.14"
 sonatype-central-portal-publisher = "1.2.4"
-spotless = "8.10.2"
+spotless = "8.10.3"
 
 [libraries]
 coordinatekit-cli-brand = { module = "org.coordinatekit.foundation:cli-brand", version.ref = "coordinatekit-foundation" }
