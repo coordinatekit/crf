@@ -5,7 +5,7 @@ picocli = "4.7.7"
 
 # implementation — keep current
 coordinatekit-foundation = "0.2.0"
-jline = "4.4.6"
+jline = "4.4.7"
 mallet = "2.0.8"
 slf4j = "2.0.20"
 
