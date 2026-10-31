@@ -49,13 +49,13 @@ repos:
             "--schemafile",
             "https://json.schemastore.org/github-issue-config.json",
           ]
-  - repo: local
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.9.10
     hooks:
       - id: prettier
-        name: prettier
-        entry: prettier --write --ignore-unknown
-        language: node
-        additional_dependencies: ["prettier@3.7.4"]
+        stages: [pre-commit]
+  - repo: local
+    hooks:
       - id: spotless-apply
         name: Spotless Apply
         entry: ./gradlew spotlessApply
