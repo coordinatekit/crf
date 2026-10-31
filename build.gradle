@@ -115,7 +115,13 @@ subprojects {
         }
     }
 
+    // Oracle GraalVM 21's javac cannot run NullAway in JSpecify mode, so the native-image job passes
+    // -PskipErrorProne. The Temurin test job still runs Error Prone over every module.
+    def skipErrorProne = providers.gradleProperty("skipErrorProne").map { it.isEmpty() || it.toBoolean() }.getOrElse(false)
+
     tasks.withType(JavaCompile).configureEach {
+        options.errorprone.enabled = !skipErrorProne
+
         // Deprecated APIs are kept for one release as plain forwarding shims; we don't want them
         // rewritten into callers, so silence Error Prone's suggestion to annotate them with @InlineMe.
         options.errorprone.disable("InlineMeSuggester")

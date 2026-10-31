@@ -32,4 +32,5 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Verify native image
-        run: ./gradlew :verification:nativeRun
+        # Oracle GraalVM's javac can't run NullAway's JSpecify mode; test.yml covers Error Prone.
+        run: ./gradlew :verification:nativeRun -PskipErrorProne
