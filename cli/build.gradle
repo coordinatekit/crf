@@ -45,8 +45,19 @@ distributions {
 }
 
 thirdPartyLicenses {
+    copyrightNotices = [
+        'com.googlecode.netlib-java:netlib-java' : 'Copyright (c) 2013 Samuel Halliday',
+        'net.sf.jwordnet:jwnl'                   : 'Copyright (C) 2000-2007 the JWNL development team (http://www.sourceforge.net/projects/jwordnet). All rights reserved.',
+        'net.sourceforge.f2j:arpack_combined_all': 'Copyright (c) 1996-2008 Rice University. Developed by D.C. Sorensen, R.B. Lehoucq, C. Yang, and K. Maschhoff. All rights reserved.',
+        'org.jline:jline'                        : 'Copyright (c) 2002-2023, the original author or authors. All rights reserved.',
+        'org.slf4j:slf4j-api'                    : 'Copyright (c) 2004-2023 QOS.ch. All rights reserved.',
+    ]
+
     licenses {
-        register('Apache License, Version 2.0') { text = file('licenses/Apache-2.0.txt') }
+        register('Apache License, Version 2.0') {
+            text = file('licenses/Apache-2.0.txt')
+            includeNoticeFile = true
+        }
         register('Common Public License, Version 1.0') {
             text = file('licenses/CPL-1.0.txt')
             reciprocalLabel = 'the Common Public License'
@@ -59,9 +70,18 @@ thirdPartyLicenses {
             text = file('licenses/LGPL-3.0.txt')
             reciprocalLabel = 'the GNU Lesser General Public License'
         }
-        register('MIT License') { text = file('licenses/MIT.txt') }
-        register('The 2-Clause BSD License') { text = file('licenses/BSD-2-Clause.txt') }
-        register('The 3-Clause BSD License') { text = file('licenses/BSD-3-Clause.txt') }
+        register('MIT License') {
+            text = file('licenses/MIT.txt')
+            noticeRequired = true
+        }
+        register('The 2-Clause BSD License') {
+            text = file('licenses/BSD-2-Clause.txt')
+            noticeRequired = true
+        }
+        register('The 3-Clause BSD License') {
+            text = file('licenses/BSD-3-Clause.txt')
+            noticeRequired = true
+        }
     }
 }
 
