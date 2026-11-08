@@ -22,7 +22,7 @@ nullaway = "0.14.3"
 dependency-license-report = "3.1.5"
 errorprone-plugin = "5.1.1"
 git-changelog = "3.4.2"
-graalvm-native = "1.1.17"
+graalvm-native = "1.1.18"
 sonatype-central-portal-publisher = "1.2.4"
 spotless = "8.11.0"
 
