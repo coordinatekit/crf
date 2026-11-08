@@ -412,14 +412,9 @@ class XmlFeatureConfigurationParserTest {
         // ARRANGE //
         // A filler stream that yields MAXIMUM_DOCUMENT_BYTES + 1 bytes then EOF. Content need not be
         // valid XML: the size guard trips before any parsing.
-        InputStream oversized = new InputStream() {
-            private int remaining = XmlFeatureConfigurationParser.MAXIMUM_DOCUMENT_BYTES + 1;
-
-            @Override
-            public int read() {
-                return remaining-- > 0 ? 'a' : -1;
-            }
-        };
+        InputStream oversized = new ByteArrayInputStream(
+                new byte[XmlFeatureConfigurationParser.MAXIMUM_DOCUMENT_BYTES + 1]
+        );
 
         // ACT //
         FeatureConfigurationParseException exception = assertThrows(

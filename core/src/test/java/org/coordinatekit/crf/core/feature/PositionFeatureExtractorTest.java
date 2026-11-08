@@ -29,8 +29,9 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PositionFeatureExtractorTest {
-    private static final Function<Integer, Feature> END_MAPPER = position -> createFeature("END_" + position);
-    private static final Function<Integer, Feature> START_MAPPER = position -> createFeature("START_" + position);
+    private static Feature endMapper(Integer position) {
+        return createFeature("END_" + position);
+    }
 
     record ExtractAtParameters(
             String name,
@@ -119,7 +120,7 @@ class PositionFeatureExtractorTest {
                         "positionFromStart_atZero",
                         null,
                         null,
-                        START_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
                         null,
                         List.of("a", "b", "c"),
                         0,
@@ -129,7 +130,7 @@ class PositionFeatureExtractorTest {
                         "positionFromStart_atMiddle",
                         null,
                         null,
-                        START_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
                         null,
                         List.of("a", "b", "c"),
                         1,
@@ -139,7 +140,7 @@ class PositionFeatureExtractorTest {
                         "positionFromStart_atEnd",
                         null,
                         null,
-                        START_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
                         null,
                         List.of("a", "b", "c"),
                         2,
@@ -150,7 +151,7 @@ class PositionFeatureExtractorTest {
                         null,
                         null,
                         null,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         2,
                         Set.of(createFeature("END_0"))
@@ -160,7 +161,7 @@ class PositionFeatureExtractorTest {
                         null,
                         null,
                         null,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         1,
                         Set.of(createFeature("END_1"))
@@ -170,7 +171,7 @@ class PositionFeatureExtractorTest {
                         null,
                         null,
                         null,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         0,
                         Set.of(createFeature("END_2"))
@@ -179,8 +180,8 @@ class PositionFeatureExtractorTest {
                         "allFeatures_atFirstPosition",
                         createFeature("FIRST"),
                         createFeature("LAST"),
-                        START_MAPPER,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         0,
                         Set.of(createFeature("FIRST"), createFeature("START_0"), createFeature("END_2"))
@@ -189,8 +190,8 @@ class PositionFeatureExtractorTest {
                         "allFeatures_atMiddlePosition",
                         createFeature("FIRST"),
                         createFeature("LAST"),
-                        START_MAPPER,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         1,
                         Set.of(createFeature("START_1"), createFeature("END_1"))
@@ -199,8 +200,8 @@ class PositionFeatureExtractorTest {
                         "allFeatures_atLastPosition",
                         createFeature("FIRST"),
                         createFeature("LAST"),
-                        START_MAPPER,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("a", "b", "c"),
                         2,
                         Set.of(createFeature("LAST"), createFeature("START_2"), createFeature("END_0"))
@@ -219,8 +220,8 @@ class PositionFeatureExtractorTest {
                         "singleToken_allFeatures",
                         createFeature("FIRST"),
                         createFeature("LAST"),
-                        START_MAPPER,
-                        END_MAPPER,
+                        PositionFeatureExtractorTest::startMapper,
+                        PositionFeatureExtractorTest::endMapper,
                         List.of("only"),
                         0,
                         Set.of(
@@ -250,5 +251,9 @@ class PositionFeatureExtractorTest {
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);
+    }
+
+    private static Feature startMapper(Integer position) {
+        return createFeature("START_" + position);
     }
 }

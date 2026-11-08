@@ -30,9 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SubstringFeatureExtractorTest {
-    private static final Function<String, Feature> PREFIX_MAPPER = substring -> createFeature("PREFIX_" + substring);
-    private static final Function<String, Feature> SUFFIX_MAPPER = substring -> createFeature("SUFFIX_" + substring);
-
     record BuilderExceptionParameters(
             String name,
             Executable action,
@@ -83,7 +80,7 @@ class SubstringFeatureExtractorTest {
         return Stream.of(
                 new ExtractAtParameters(
                         "prefix_tokenLongerThanLength",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         true,
                         3,
@@ -93,7 +90,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenEqualsLength",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         true,
                         5,
@@ -103,7 +100,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenShorterThanLength_includeTrue",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         true,
                         10,
@@ -113,7 +110,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "prefix_tokenShorterThanLength_includeFalse",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         false,
                         10,
@@ -123,7 +120,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenLongerThanLength",
-                        SUFFIX_MAPPER,
+                        SubstringFeatureExtractorTest::suffixMapper,
                         true,
                         true,
                         3,
@@ -133,7 +130,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenEqualsLength",
-                        SUFFIX_MAPPER,
+                        SubstringFeatureExtractorTest::suffixMapper,
                         true,
                         true,
                         5,
@@ -143,7 +140,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenShorterThanLength_includeTrue",
-                        SUFFIX_MAPPER,
+                        SubstringFeatureExtractorTest::suffixMapper,
                         true,
                         true,
                         10,
@@ -153,7 +150,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "suffix_tokenShorterThanLength_includeFalse",
-                        SUFFIX_MAPPER,
+                        SubstringFeatureExtractorTest::suffixMapper,
                         true,
                         false,
                         10,
@@ -163,7 +160,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "differentPositions_extractsCorrectToken",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         true,
                         2,
@@ -173,7 +170,7 @@ class SubstringFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "defaultLength_extractsTwo",
-                        PREFIX_MAPPER,
+                        SubstringFeatureExtractorTest::prefixMapper,
                         false,
                         true,
                         2,
@@ -250,5 +247,13 @@ class SubstringFeatureExtractorTest {
 
         // ASSERT //
         assertEquals(parameters.expectedResult(), actual);
+    }
+
+    private static Feature prefixMapper(String substring) {
+        return createFeature("PREFIX_" + substring);
+    }
+
+    private static Feature suffixMapper(String substring) {
+        return createFeature("SUFFIX_" + substring);
     }
 }

@@ -31,7 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class TransformingFeatureExtractorTest {
-    private static final Function<String, Set<Feature>> CLASSIFYING_TRANSFORMER = token -> {
+    private static Set<Feature> classifyingTransformer(String token) {
         if (token.matches("\\d+")) {
             return Set.of(createFeature("IS_NUMBER"));
         } else if (token.matches("[A-Z]+")) {
@@ -39,7 +39,7 @@ class TransformingFeatureExtractorTest {
         } else {
             return Set.of(createFeature("OTHER"));
         }
-    };
+    }
 
     record ExtractAtParameters(
             String name,
@@ -103,21 +103,21 @@ class TransformingFeatureExtractorTest {
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_number",
-                        CLASSIFYING_TRANSFORMER,
+                        TransformingFeatureExtractorTest::classifyingTransformer,
                         List.of("123", "ABC", "hello"),
                         0,
                         Set.of(createFeature("IS_NUMBER"))
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_caps",
-                        CLASSIFYING_TRANSFORMER,
+                        TransformingFeatureExtractorTest::classifyingTransformer,
                         List.of("123", "ABC", "hello"),
                         1,
                         Set.of(createFeature("IS_CAPS"))
                 ),
                 new ExtractAtParameters(
                         "conditional_logic_other",
-                        CLASSIFYING_TRANSFORMER,
+                        TransformingFeatureExtractorTest::classifyingTransformer,
                         List.of("123", "ABC", "hello"),
                         2,
                         Set.of(createFeature("OTHER"))
