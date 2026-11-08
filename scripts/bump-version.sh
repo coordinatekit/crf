@@ -75,7 +75,8 @@ git ls-files -z | xargs -0 "${SED_INPLACE[@]}" \
 
 # Replace the previously released version, but ONLY in dependency-coordinate
 # position. The bare version also appears in CHANGELOG history and in the
-# changelog's `fromRevision` anchor, which must stay pinned to the prior release.
+# `fromRevision` anchor of build.gradle's `foundationChangelog` block, which must
+# stay pinned to the prior release.
 if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "$NEW_VERSION" ]; then
   ESCAPED_PREVIOUS=$(printf '%s' "$PREVIOUS_VERSION" | sed 's/\./\\./g')
   git ls-files -z | xargs -0 "${SED_INPLACE[@]}" \
@@ -99,7 +100,8 @@ echo "$CHANGED_FILES" | sed 's/^/  /'
 # snippets in formats the replacements above did not anticipate, so a missed
 # file fails loudly instead of silently shipping stale docs. Scoping to those
 # positions leaves alone the version strings that legitimately stay put:
-# CHANGELOG history, the `fromRevision` anchor, and this script's own examples.
+# CHANGELOG history, the `foundationChangelog` `fromRevision` anchor, and this
+# script's own examples.
 STALE=""
 COORDINATE_PREFIX='(version = "|:|<version>)'
 for STALE_VERSION in "$CURRENT_VERSION" "$PREVIOUS_VERSION"; do

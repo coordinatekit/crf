@@ -31,22 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - handle unchecked exceptions in model loading and parsing ([#43](https://github.com/coordinatekit/crf/pull/43))
 - ensure proper spacing between consecutive XML elements in training data serialization ([#26](https://github.com/coordinatekit/crf/pull/26))
 
-### Refactoring
-
-- remove unused imports, switch visibility for methods, and consolidate resource path resolution ([#64](https://github.com/coordinatekit/crf/pull/64))
-- move CLI to dedicated module ([#36](https://github.com/coordinatekit/crf/pull/36))
-- simplify CLI structure by centralizing shared logic ([#35](https://github.com/coordinatekit/crf/pull/35))
-- distinguish strict and lax wildcards for tag validation ([#33](https://github.com/coordinatekit/crf/pull/33))
-- make target namespace optional for schemas and documents ([#32](https://github.com/coordinatekit/crf/pull/32))
-- decompose and reorganize terminal components ([#31](https://github.com/coordinatekit/crf/pull/31))
-- model tokenization as segments to preserve excluded characters ([#27](https://github.com/coordinatekit/crf/pull/27))
-- consolidate `ui` package into `annotator` package ([#23](https://github.com/coordinatekit/crf/pull/23))
-
-### Documentation
-
-- add guide for annotating training data and update examples ([#41](https://github.com/coordinatekit/crf/pull/41))
-- add design documentation and refactor .gitignore ([5e91ef922a65790](https://github.com/coordinatekit/crf/commit/5e91ef922a6579091762f2720fd4c584dccd920b))
-
 ### Build
 
 - enhance version bump script to support previous version updates and stale reference checks ([#70](https://github.com/coordinatekit/crf/pull/70))
@@ -70,13 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix Gradle deprecation and suppress Error Prone InlineMeSuggester check ([af6aa2816910a3f](https://github.com/coordinatekit/crf/commit/af6aa2816910a3fb44fa626744f8e60c3aa0eed9))
 - refactor dependency management to use centralized versions catalog ([#25](https://github.com/coordinatekit/crf/pull/25))
 - update project version to 0.2.0-SNAPSHOT for ongoing development ([48ada0f904b7b77](https://github.com/coordinatekit/crf/commit/48ada0f904b7b77e3d4801cdb0c183a2bfa83c79))
-
-### CI
-
-- update actions/checkout to v7 across all workflows ([#69](https://github.com/coordinatekit/crf/pull/69))
-- add workflow for publishing Maven Central snapshots ([#67](https://github.com/coordinatekit/crf/pull/67))
-- expand path triggers in workflows for Gradle files and scripts ([#58](https://github.com/coordinatekit/crf/pull/58))
-- add "annotator" to allowed PR title scopes in lint-pr-title workflow ([7b8f1c20af2b87a](https://github.com/coordinatekit/crf/commit/7b8f1c20af2b87a7f249e254386e74905b9ef26f))
 
 [0.2.0]: https://github.com/coordinatekit/crf/releases/tag/v0.2.0
 

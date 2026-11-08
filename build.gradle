@@ -1,7 +1,4 @@
-import com.github.jknack.handlebars.Helper
 import net.thebugmc.gradle.sonatypepublisher.PublishingType
-import se.bjurr.gitchangelog.internal.semantic.ConventionalCommitParser
-import se.bjurr.gitchangelog.plugin.gradle.HelperParam
 
 plugins {
     alias libs.plugins.spotless
@@ -9,7 +6,7 @@ plugins {
     id "java-library"
     alias libs.plugins.errorprone
     alias(libs.plugins.sonatype.central.portal.publisher) apply false
-    alias libs.plugins.git.changelog
+    alias libs.plugins.coordinatekit.changelog
     id "signing"
     alias(libs.plugins.coordinatekit.concordance) apply false
 }
@@ -23,25 +20,9 @@ allprojects {
     }
 }
 
-gitChangelog {
-    templateContent.set(project.file(".infra/changelog.hbs").text)
-    templateBaseDir.set(project.file(".infra").absolutePath)
-    templateSuffix.set(".hbs")
-    dateFormat.set("yyyy-MM-dd")
-    fromRevision.set("v0.1.0")
-    file.set(project.file("CHANGELOG.md"))
-
-    // Squash-merged commits carry a trailing "(#NN)" pointing at their pull request. `description`
-    // renders the conventional-commit description with that reference removed, and `pullRequest`
-    // extracts the number so the template can link to the PR (falling back to the commit hash when
-    // a commit landed without one).
-    handlebarsHelpers.add(new HelperParam("description", { commit, options ->
-        ConventionalCommitParser.commitDescription(commit.message).replaceAll(/\s*\(#\d+\)$/, "").trim()
-    } as Helper))
-    handlebarsHelpers.add(new HelperParam("pullRequest", { commit, options ->
-        def matcher = commit.message =~ /\(#(\d+)\)/
-        matcher.find() ? matcher.group(1) : ""
-    } as Helper))
+foundationChangelog {
+    fromRevision = "v0.1.0"
+    initialRelease = file(".infra/changelog_initial_release.md")
 }
 
 def isPublishingToCentral = { gradle.taskGraph.allTasks.any { it.name == "publishToCentralPortal" } }
