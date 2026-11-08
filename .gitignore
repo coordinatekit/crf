@@ -10,13 +10,13 @@ build/
 !/.gitignore
 !/.infra
 !/.pre-commit-config.yaml
-!/.prettierignore
 !/AGENTS.md
 !/build.gradle
 !/CHANGELOG.md
 !/CLAUDE.md
 !/CONTRIBUTING.md
 !/gradlew
+!/gradle.properties
 !/gradlew.bat
 !/LICENSE.txt
 !/README.md
