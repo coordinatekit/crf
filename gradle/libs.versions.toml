@@ -19,7 +19,6 @@ errorprone = "2.50.0"
 nullaway = "0.14.3"
 
 # plugins
-dependency-license-report = "3.1.5"
 errorprone-plugin = "5.1.1"
 graalvm-native = "1.1.18"
 sonatype-central-portal-publisher = "1.2.4"
@@ -47,7 +46,7 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 coordinatekit-aggregate-javadoc = { id = "org.coordinatekit.foundation.aggregate-javadoc", version.ref = "coordinatekit-foundation" }
 coordinatekit-changelog = { id ="org.coordinatekit.foundation.changelog", version.ref = "coordinatekit-foundation" }
 coordinatekit-concordance = { id = "org.coordinatekit.foundation.concordance", version.ref = "coordinatekit-foundation" }
-dependency-license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "dependency-license-report" }
+coordinatekit-third-party-licenses = { id = "org.coordinatekit.foundation.third-party-licenses", version.ref = "coordinatekit-foundation" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-native" }
 sonatype-central-portal-publisher = { id = "net.thebugmc.gradle.sonatype-central-portal-publisher", version.ref = "sonatype-central-portal-publisher" }

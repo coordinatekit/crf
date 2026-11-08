@@ -1,10 +1,6 @@
-import com.github.jk1.license.render.JsonReportRenderer
-import com.github.jk1.license.filter.LicenseBundleNormalizer
-import groovy.json.JsonSlurper
-
 plugins {
     id "application"
-    alias libs.plugins.dependency.license.report
+    alias libs.plugins.coordinatekit.third.party.licenses
 }
 
 dependencies {
@@ -48,105 +44,29 @@ distributions {
     }
 }
 
-// ---------------------------------------------------------------------------------------------------
-// Third-party license compliance.
-//
-// The dependency-license-report plugin (jk1) derives each runtime dependency's license from its POM.
-//   - checkLicense fails the build when a dependency's license is not allowed (allowed-licenses.json).
-//     Entries are keyed per module, so a relicensed dependency or a new runtime dependency forces a
-//     re-review instead of shipping silently.
-//   - generateThirdPartyLicenses renders the THIRD-PARTY-LICENSES.txt shipped in the distribution,
-//     reusing jk1's JSON inventory and the canonical license texts checked in under cli/licenses/.
-//
-// Jar-byte integrity is a separate, native concern: enable Gradle dependency verification with
-// `./gradlew --write-verification-metadata sha256` if you want resolved jars pinned.
-// ---------------------------------------------------------------------------------------------------
-
-// jk1's normalized display name -> the canonical license text file under cli/licenses/. An unmapped
-// name fails generateThirdPartyLicenses rather than shipping an incomplete attribution; keep this in
-// sync with allowed-licenses.json.
-ext.LICENSE_TEXT_FILE = [
-        'Apache License, Version 2.0'                    : 'Apache-2.0.txt',
-        'Common Public License, Version 1.0'             : 'CPL-1.0.txt',
-        'GNU Lesser General Public License, Version 2.1' : 'LGPL-2.1.txt',
-        'GNU Lesser General Public License, Version 3.0' : 'LGPL-3.0.txt',
-        'MIT License'                                    : 'MIT.txt',
-        'The 2-Clause BSD License'                       : 'BSD-2-Clause.txt',
-        'The 3-Clause BSD License'                       : 'BSD-3-Clause.txt',
-]
-
-def licensesDirectory = file('licenses')
-def jk1ReportFile = layout.buildDirectory.file('reports/dependency-license/third-party-report.json')
-def reportDirectory = layout.buildDirectory.dir('reports/third-party-licenses')
-
-licenseReport {
-    configurations = ['runtimeClasspath']            // == what the dist bundles
-    excludeGroups = ['org.coordinatekit.crf']        // omit our own modules (Apache 2.0, covered by LICENSE.txt)
-    // Merge our rules with jk1's built-in bundle to canonicalize the CPL/LGPL name spellings.
-    // See license-normalizer-bundle.json.
-    filters = [new LicenseBundleNormalizer(bundlePath: file('license-normalizer-bundle.json').path)]
-    allowedLicensesFile = file('allowed-licenses.json')
-    renderers = [new JsonReportRenderer('third-party-report.json', false)]
-}
-
-tasks.named('check') { dependsOn 'checkLicense' }
-
-// Render the attribution file shipped in the distribution from jk1's inventory + cli/licenses/ texts.
-tasks.register('generateThirdPartyLicenses') {
-    group = 'documentation'
-    description = 'Render THIRD-PARTY-LICENSES.txt from the jk1 license report and cli/licenses/.'
-    dependsOn 'generateLicenseReport', 'checkLicense'
-    inputs.file(jk1ReportFile)
-    inputs.dir(licensesDirectory)
-    outputs.dir(reportDirectory)
-    doLast {
-        def report = new JsonSlurper().parse(jk1ReportFile.get().asFile)
-        def dependencies = report.dependencies
-                .collect { dependency ->
-                    [gav    : "${dependency.moduleName}:${dependency.moduleVersion}".toString(),
-                     license: (dependency.moduleLicenses ?: []).collect { it.moduleLicense }.find { it }]
-                }
-                .sort { it.gav }
-
-        def unmapped = dependencies.findAll { !LICENSE_TEXT_FILE[it.license] }
-        if (!unmapped.isEmpty()) {
-            throw new GradleException("No canonical license text mapped for: " +
-                    unmapped.collect { "${it.gav} (${it.license ?: 'no license'})" }.join(', ') +
-                    ". Add the SPDX text under cli/licenses/ and an entry to LICENSE_TEXT_FILE in cli/build.gradle.")
+thirdPartyLicenses {
+    licenses {
+        register('Apache License, Version 2.0') { text = file('licenses/Apache-2.0.txt') }
+        register('Common Public License, Version 1.0') {
+            text = file('licenses/CPL-1.0.txt')
+            reciprocalLabel = 'the Common Public License'
         }
-
-        def builder = new StringBuilder()
-        builder << 'Third-party license attribution\n'
-        builder << '================================================================================\n\n'
-        builder << 'This distribution bundles the third-party dependencies listed below. Each is shown\n'
-        builder << 'with its license; the full license texts follow, one copy per distinct license.\n\n'
-        builder << 'Each dependency is shipped as a separate jar under lib/ (this distribution builds no\n'
-        builder << 'fat jar). For the reciprocal and copyleft licenses below (Common Public License and the\n'
-        builder << 'GNU Lesser General Public License), that separation preserves your right to replace a\n'
-        builder << 'covered jar with a modified build of the same library. The corresponding source is\n'
-        builder << 'available from each library\'s project, reachable from the Maven coordinate shown.\n\n'
-        dependencies.each { builder << "${it.gav} — ${it.license}\n" }
-
-        builder << '\nFull license texts\n'
-        builder << '================================================================================\n'
-        dependencies.collect { it.license }.unique().sort().each { license ->
-            def text = new File(licensesDirectory, LICENSE_TEXT_FILE[license] as String).text
-            builder << "\n${license}\n\n" << text
-            if (!text.endsWith('\n')) builder << '\n'
-            builder << '--------------------------------------------------------------------------------\n'
+        register('GNU Lesser General Public License, Version 2.1') {
+            text = file('licenses/LGPL-2.1.txt')
+            reciprocalLabel = 'the GNU Lesser General Public License'
         }
-
-        def outputDirectory = reportDirectory.get().asFile
-        outputDirectory.mkdirs()
-        new File(outputDirectory, 'THIRD-PARTY-LICENSES.txt').text = builder.toString()
+        register('GNU Lesser General Public License, Version 3.0') {
+            text = file('licenses/LGPL-3.0.txt')
+            reciprocalLabel = 'the GNU Lesser General Public License'
+        }
+        register('MIT License') { text = file('licenses/MIT.txt') }
+        register('The 2-Clause BSD License') { text = file('licenses/BSD-2-Clause.txt') }
+        register('The 3-Clause BSD License') { text = file('licenses/BSD-3-Clause.txt') }
     }
 }
 
-// Ship the project's own license and the generated third-party attribution at the archive root.
+// Ship the project's own license at the archive root.
 distributions.main.contents.from(rootProject.file("LICENSE.txt"))
-distributions.main.contents.from(tasks.named("generateThirdPartyLicenses")) {
-    include "THIRD-PARTY-LICENSES.txt"
-}
 
 startScripts {
     doLast {
