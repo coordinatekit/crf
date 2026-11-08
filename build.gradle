@@ -6,6 +6,7 @@ plugins {
     id "java-library"
     alias libs.plugins.errorprone
     alias(libs.plugins.sonatype.central.portal.publisher) apply false
+    alias libs.plugins.coordinatekit.aggregate.javadoc
     alias libs.plugins.coordinatekit.changelog
     id "signing"
     alias(libs.plugins.coordinatekit.concordance) apply false
@@ -293,30 +294,12 @@ tasks.register('aggregateJacocoReport', JacocoReport) {
     }
 }
 
-tasks.register('aggregateJavadoc', Javadoc) {
-    description = "Generate aggregated Javadoc for all modules"
-    group = "documentation"
-
-    source publishedProjects.collect { it.sourceSets.main.allJava }
-    classpath = files(publishedProjects.collect { it.sourceSets.main.compileClasspath })
-
-    options {
-        title = "CoordinateKit CRF ${project.version} API"
-        windowTitle = "CoordinateKit CRF API"
-        links = [
-                "https://docs.oracle.com/en/java/javase/21/docs/api/",
-                "https://jspecify.dev/docs/api/"
-        ]
-        encoding = "UTF-8"
-        docEncoding = "UTF-8"
-        charSet = "UTF-8"
-
-        publishedProjects.each { subproject ->
-            def pkgPattern = "org.coordinatekit.crf.${subproject.name}*"
-            //noinspection GroovyAssignabilityCheck, ForeignDelegate
-            group("${subproject.name.capitalize()} Module", [pkgPattern])
-        }
-
-        addBooleanOption('Werror', true)
-    }
+aggregateJavadoc {
+    title = "CoordinateKit CRF"
+    projects = publishedProjects
+    links = [
+            "https://docs.oracle.com/en/java/javase/21/docs/api/",
+            "https://jspecify.dev/docs/api/"
+    ]
+    wordForms = ["cli": "CLI"]
 }
