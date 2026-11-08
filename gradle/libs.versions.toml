@@ -44,7 +44,8 @@ picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "pico
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 [plugins]
-coordinatekit-changelog = { id = "org.coordinatekit.foundation.changelog", version.ref = "coordinatekit-foundation" }
+coordinatekit-aggregate-javadoc = { id = "org.coordinatekit.foundation.aggregate-javadoc", version.ref = "coordinatekit-foundation" }
+coordinatekit-changelog = { id ="org.coordinatekit.foundation.changelog", version.ref = "coordinatekit-foundation" }
 coordinatekit-concordance = { id = "org.coordinatekit.foundation.concordance", version.ref = "coordinatekit-foundation" }
 dependency-license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "dependency-license-report" }
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
