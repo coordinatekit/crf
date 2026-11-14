@@ -19,7 +19,7 @@ errorprone = "2.50.0"
 nullaway = "0.14.3"
 
 # plugins
-errorprone-plugin = "5.1.1"
+errorprone-plugin = "5.2.0"
 graalvm-native = "1.1.18"
 sonatype-central-portal-publisher = "1.2.4"
 spotless = "8.11.0"
