@@ -59,7 +59,7 @@ import java.nio.file.Paths;
  */
 @NullMarked
 public class ModelOutputEvaluator extends TransducerEvaluator {
-    private static final Logger logger = LoggerFactory.getLogger(ModelOutputEvaluator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ModelOutputEvaluator.class);
 
     private Path basePath = Paths.get("").toAbsolutePath();
     private final ModelOutputConfiguration configuration;
@@ -88,9 +88,9 @@ public class ModelOutputEvaluator extends TransducerEvaluator {
 
         try {
             writeModel(trainer.getTransducer(), outputFile);
-            logger.atInfo().addArgument(iteration).addArgument(outputFile).log("Iteration {}: Wrote model to {}");
+            LOG.atInfo().addArgument(iteration).addArgument(outputFile).log("Iteration {}: Wrote model to {}");
         } catch (IOException e) {
-            logger.atError()
+            LOG.atError()
                     .addArgument(iteration)
                     .addArgument(outputFile)
                     .setCause(e)

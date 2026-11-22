@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  */
 @NullMarked
 public class CompositeTestAccuracyEvaluator extends TransducerEvaluator {
-    private static final Logger logger = LoggerFactory.getLogger(CompositeTestAccuracyEvaluator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CompositeTestAccuracyEvaluator.class);
 
     private final InstanceAccuracyEvaluator instanceAccuracyEvaluator;
     private final TokenAccuracyEvaluator tokenAccuracyEvaluator;
@@ -69,7 +69,7 @@ public class CompositeTestAccuracyEvaluator extends TransducerEvaluator {
 
     @Override
     public void evaluateInstanceList(TransducerTrainer trainer, InstanceList instances, String description) {
-        if (!logger.isInfoEnabled()) {
+        if (!LOG.isInfoEnabled()) {
             return;
         }
 
@@ -77,7 +77,7 @@ public class CompositeTestAccuracyEvaluator extends TransducerEvaluator {
         double logLikelihood = getLogLikelihood(trainer);
 
         if (instances.isEmpty()) {
-            logger.atInfo().addArgument(iteration).addArgument(logLikelihood).log("Iteration {}: log likelihood = {}");
+            LOG.atInfo().addArgument(iteration).addArgument(logLikelihood).log("Iteration {}: log likelihood = {}");
         } else {
             instanceAccuracyEvaluator.evaluateInstanceList(trainer, instances, description);
             tokenAccuracyEvaluator.evaluateInstanceList(trainer, instances, description);
@@ -85,7 +85,7 @@ public class CompositeTestAccuracyEvaluator extends TransducerEvaluator {
             double instanceAccuracy = instanceAccuracyEvaluator.getAccuracy(description);
             double tokenAccuracy = tokenAccuracyEvaluator.getAccuracy(description);
 
-            logger.atInfo()
+            LOG.atInfo()
                     .addArgument(iteration)
                     .addArgument(logLikelihood)
                     .addArgument(instanceAccuracy)

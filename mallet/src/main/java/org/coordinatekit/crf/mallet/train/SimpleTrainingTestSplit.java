@@ -31,4 +31,4 @@ import cc.mallet.types.LabelAlphabet;
  * @param test the instances to use for model evaluation; may be empty if
  *        {@link MalletCrfTrainerConfiguration#trainingFraction()} is 1.0
  */
-public record SimpleTrainingTestSplit(InstanceList training, InstanceList test) implements TrainingTestSplit {}
+record SimpleTrainingTestSplit(InstanceList training, InstanceList test) implements TrainingTestSplit {}
