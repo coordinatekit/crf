@@ -16,7 +16,7 @@ logback = "1.6.7"
 
 # build — keep current
 errorprone = "2.50.0"
-nullaway = "0.14.3"
+nullaway = "0.14.4"
 
 # plugins
 errorprone-plugin = "5.2.0"
