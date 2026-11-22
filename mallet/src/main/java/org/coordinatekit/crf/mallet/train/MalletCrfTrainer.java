@@ -69,7 +69,7 @@ import java.util.stream.Stream;
  */
 @NullMarked
 public class MalletCrfTrainer<T extends Comparable<T>> implements CrfTrainer {
-    private static final Logger logger = LoggerFactory.getLogger(MalletCrfTrainer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MalletCrfTrainer.class);
 
     /**
      * The configuration parameters controlling the training process.
@@ -307,11 +307,11 @@ public class MalletCrfTrainer<T extends Comparable<T>> implements CrfTrainer {
         CompositeTestAccuracyEvaluator evaluator = new CompositeTestAccuracyEvaluator(trainingTestSplit.test(), "test");
 
         CRF crf = createCrf(trainingTestSplit.training());
-        logger.info("{} instances provided", trainingTestSplit.size());
-        logger.info("Training on {} instances", trainingTestSplit.training().size());
+        LOG.info("{} instances provided", trainingTestSplit.size());
+        LOG.info("Training on {} instances", trainingTestSplit.training().size());
 
         if (!trainingTestSplit.test().isEmpty()) {
-            logger.info("Testing on {} instances", trainingTestSplit.test().size());
+            LOG.info("Testing on {} instances", trainingTestSplit.test().size());
         }
 
         CRFTrainerByThreadedLabelLikelihood trainer = null;

@@ -49,7 +49,7 @@ import java.util.Objects;
  * </pre>
  */
 @NullMarked
-public class Serializables {
+public final class Serializables {
     private Serializables() {}
 
     /**

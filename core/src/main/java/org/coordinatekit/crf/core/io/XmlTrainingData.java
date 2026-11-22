@@ -320,7 +320,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
             }
 
             if (hasChildElement) {
-                logger.debug("Skipped an element run because it contained a nested child element.");
+                LOG.debug("Skipped an element run because it contained a nested child element.");
                 return null;
             }
             return text.toString();
@@ -503,7 +503,7 @@ public class XmlTrainingData<T extends Comparable<T>> implements TrainingDataApp
      */
     public static final String EXCLUDED_ELEMENT_NAME = "Excluded";
 
-    private static final Logger logger = LoggerFactory.getLogger(XmlTrainingData.class);
+    private static final Logger LOG = LoggerFactory.getLogger(XmlTrainingData.class);
 
     /**
      * The local name of the element that contains a training sequence.
