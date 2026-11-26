@@ -25,6 +25,7 @@ sonatype-central-portal-publisher = "1.2.4"
 spotless = "8.11.0"
 
 [libraries]
+coordinatekit-architecture = { module = "org.coordinatekit.foundation:architecture", version.ref = "coordinatekit-foundation" }
 coordinatekit-cli-brand = { module = "org.coordinatekit.foundation:cli-brand", version.ref = "coordinatekit-foundation" }
 coordinatekit-concordance = { module = "org.coordinatekit.foundation:concordance", version.ref = "coordinatekit-foundation" }
 coordinatekit-conventions = { module = "org.coordinatekit.foundation:conventions", version.ref = "coordinatekit-foundation" }

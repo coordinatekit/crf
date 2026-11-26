@@ -227,6 +227,7 @@ subprojects {
         api catalog.jspecify
         implementation catalog.slf4j.api
 
+        testImplementation catalog.coordinatekit.architecture
         testImplementation(platform(catalog.junit.bom))
         testImplementation(catalog.junit.jupiter)
         testRuntimeOnly(catalog.junit.platform.launcher)
