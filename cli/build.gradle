@@ -49,7 +49,7 @@ thirdPartyLicenses {
         'com.googlecode.netlib-java:netlib-java' : 'Copyright (c) 2013 Samuel Halliday',
         'net.sf.jwordnet:jwnl'                   : 'Copyright (C) 2000-2007 the JWNL development team (http://www.sourceforge.net/projects/jwordnet). All rights reserved.',
         'net.sourceforge.f2j:arpack_combined_all': 'Copyright (c) 1996-2008 Rice University. Developed by D.C. Sorensen, R.B. Lehoucq, C. Yang, and K. Maschhoff. All rights reserved.',
-        'org.jline:jline'                        : 'Copyright (c) 2002-2023, the original author or authors. All rights reserved.',
+        'org.jline:jline'                        : 'Copyright (c) the original author(s).',
         'org.slf4j:slf4j-api'                    : 'Copyright (c) 2004-2023 QOS.ch. All rights reserved.',
     ]
 
