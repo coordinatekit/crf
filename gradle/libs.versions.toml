@@ -22,7 +22,7 @@ nullaway = "0.14.4"
 errorprone-plugin = "5.2.0"
 graalvm-native = "1.1.19"
 sonatype-central-portal-publisher = "1.2.4"
-spotless = "8.11.0"
+spotless = "8.12.0"
 
 [libraries]
 coordinatekit-architecture = { module = "org.coordinatekit.foundation:architecture", version.ref = "coordinatekit-foundation" }
